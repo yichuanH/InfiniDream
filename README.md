@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="InfiniDream" width="520">
+  <img src="assets/logo.png" alt="InfiniDream" width="340">
 </p>
 
 <h3 align="center">Open-Ended Photorealistic 3D Worlds through Procedural Generation</h3>
@@ -34,6 +34,16 @@ InfiniDream turns a single text prompt into a photorealistic, open-ended 3D worl
 <p align="center"><img src="assets/teaser.gif" width="720" alt="Scene build-up"></p>
 
 Objects are planned, generated, and placed one by one into a living, animated scene.
+
+## Worlds InfiniDream dreamed up
+
+| | |
+|:---:|:---:|
+| <img src="assets/scene_cliff.gif" width="400" alt="Cliff with maple and butterflies"> | <img src="assets/scene_coral_reef.gif" width="400" alt="Coral reef with clownfish"> |
+| <img src="assets/scene_sakura.gif" width="400" alt="Sakura riverside with fireflies"> | <img src="assets/scene_snowy.gif" width="400" alt="Snowy mountain with paragliders"> |
+| <img src="assets/scene_coast.gif" width="400" alt="Flamingo coast"> | <img src="assets/scene_desert.gif" width="400" alt="Desert garden"> |
+
+Every scene starts as one sentence. Twenty worlds and counting, all animated, all procedural.
 
 ## Quality beyond existing VLM methods
 
