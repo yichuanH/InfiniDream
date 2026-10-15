@@ -37,11 +37,7 @@ Objects are planned, generated, and placed one by one into a living, animated sc
 
 ## Worlds InfiniDream dreamed up
 
-| | |
-|:---:|:---:|
-| <img src="assets/scene_cliff.gif" width="400" alt="Cliff with maple and butterflies"> | <img src="assets/scene_coral_reef.gif" width="400" alt="Coral reef with clownfish"> |
-| <img src="assets/scene_sakura.gif" width="400" alt="Sakura riverside with fireflies"> | <img src="assets/scene_snowy.gif" width="400" alt="Snowy mountain with paragliders"> |
-| <img src="assets/scene_coast.gif" width="400" alt="Flamingo coast"> | <img src="assets/scene_desert.gif" width="400" alt="Desert garden"> |
+<p align="center"><img src="assets/worlds.gif" width="720" alt="Scene gallery: cliff, coral reef, sakura, snowy mountain, flamingo coast, desert"></p>
 
 Every scene starts as one sentence. Twenty worlds and counting, all animated, all procedural.
 
