@@ -1,5 +1,10 @@
+<h3 align="center">🚧 Full version coming soon 🚧</h3>
+
 <p align="center">
-  <img src="assets/logo.png" alt="InfiniDream" width="340">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
+    <img src="assets/logo_light.png" alt="InfiniDream" width="280">
+  </picture>
 </p>
 
 <h3 align="center">Open-Ended Photorealistic 3D Worlds through Procedural Generation</h3>
