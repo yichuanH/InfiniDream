@@ -1,9 +1,7 @@
-<h3 align="center">🚧 Full version coming soon 🚧</h3>
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
-    <img src="assets/logo_light.png" alt="InfiniDream" width="280">
+    <img src="assets/logo_light.png" alt="InfiniDream" width="220">
   </picture>
 </p>
 
@@ -31,6 +29,8 @@
 ---
 
 InfiniDream turns a single text prompt into a photorealistic, open-ended 3D world. A VLM plans the scene and edits sophisticated procedural code rather than raw geometry, so every asset stays high-quality, every scene stays coherent, and a new seed grows a new world.
+
+### 🚧 Full version coming soon 🚧
 
 ⭐ **Code is on the way. Star the repo to get notified when it lands.**
 
