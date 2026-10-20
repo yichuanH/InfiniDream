@@ -21,9 +21,10 @@
 </p>
 
 <p align="center">
+  <a href="https://arxiv.org/abs/2610.26853"><img src="https://img.shields.io/badge/arXiv-2610.26853-b31b1b" alt="arXiv"></a>
+  <a href="https://huggingface.co/papers/2610.26853"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-ffd21e" alt="Hugging Face"></a>
   <a href="https://yichuanh.github.io/infinidream-page/"><img src="https://img.shields.io/badge/Project-Page-2dd4bf" alt="Project Page"></a>
-  <a href="#citation"><img src="https://img.shields.io/badge/Paper-coming%20soon-lightgrey" alt="Paper"></a>
-  <img src="https://img.shields.io/badge/Code-coming%20soon-orange" alt="Code coming soon">
+  <img src="https://img.shields.io/badge/Full%20code-coming%20soon-orange" alt="Full code coming soon">
 </p>
 
 ---
