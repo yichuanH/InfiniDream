@@ -68,11 +68,12 @@ A vanilla procedural scene, before and after InfiniDream rewrites it to match th
 ## Citation
 
 ```bibtex
-@misc{infinidream2026,
-  title  = {InfiniDream: Open-Ended Photorealistic 3D Worlds
-            through Procedural Generation},
-  author = {Huang, Yi-Chuan and Chien, Hao-Jen and Huang, Zheng-Hui
-            and Liu, Yu-Lun and Zhang, Kaipeng and Wang, Zhixiang},
-  year   = {2026}
+@article{infinidream2026,
+  title   = {InfiniDream: Open-Ended Photorealistic 3D Worlds
+             through Procedural Generation},
+  author  = {Huang, Yi-Chuan and Chien, Hao-Jen and Huang, Zheng-Hui
+             and Liu, Yu-Lun and Zhang, Kaipeng and Wang, Zhixiang},
+  journal = {arXiv preprint arXiv:2610.26853},
+  year    = {2026}
 }
 ```
