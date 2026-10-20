@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <sup>1</sup>Alaya Lab &nbsp; <sup>2</sup>National Yang Ming Chiao Tung University &nbsp; <sup>3</sup>National Taiwan University
+  <sup>1</sup><a href="https://alayalab.ai/">Alaya Lab</a> &nbsp; <sup>2</sup>National Yang Ming Chiao Tung University &nbsp; <sup>3</sup>National Taiwan University
 </p>
 
 <p align="center">
