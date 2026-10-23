@@ -1,0 +1,57 @@
+SUMMARY: PillarFactory builds a single procedural architectural pillar (a tapered/fluted column) as one coherent mesh assembly. The upper-level file pillars.py defines all geometry: it constructs a cylindrical shaft with fluting/reeding grooves, lofts a stack of profile cross-sections along its height for taper and detail variation, bridges/subdivides them into a smooth surface, and assigns a marble-family material. The __init__.py only re-exports the factory.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/elements/pillars.py
+  PillarFactory.__init__: samples all geometry/profile parameters (under FixedSeed) and picks the surface material.
+    knobs: height(=constants.wall_height - wall_thickness, fixed from RoomConstants) -> overall pillar height
+    knobs: n(randint 5..9) -> number of flutes/base facets (circle vertices = 4*n)
+    knobs: radius(uniform 0.08..0.12) -> shaft base radius
+    knobs: outer_radius(radius * uniform 1.3..1.5) -> max bulge/capital radius
+    knobs: lower_offset(uniform 0.05..0.15) -> fraction of height for bottom flare/base
+    knobs: upper_offset(uniform 0.05..0.15) -> fraction of height for top flare/capital
+    knobs: detail_type(choice "fluting"/"reeding") -> concave grooves vs convex ridges
+    knobs: inset_width(width * log_uniform 0.1..0.2) -> groove/ridge outer width
+    knobs: inset_width_((width - 2*inset_width) * uniform -0.1..0.3) -> secondary inset width, groove sharpness
+    knobs: inset_depth(uniform 0.1..0.15) -> declared but unused here
+    knobs: inset_scale(uniform 0.05..0.1) -> groove/ridge depth (in/out amount, sign set by detail_type)
+    knobs: outer_n(choice [1,2,n]) -> facet count used on flared sections, controls smoothness of ends
+    knobs: m(randint 12..19) -> number of stacked profile cross-sections (loft resolution)
+    knobs: z_profile(cumsum of uniform 1..3, length m) -> vertical spacing of profile rings
+    knobs: r_profile(uniform-based, smoothed by alpha, scaled radius..outer_radius) -> radius taper curve along height
+    knobs: alpha(uniform 0.7..0.85) -> smoothing of the radius profile (higher = smoother taper)
+    knobs: n_profile(outer_n below random cutoff index randint 2..m-2, else n) -> where facet count switches along height
+    knobs: inset_profile(uniform<0.3 per ring) -> which rings get per-vertex inset detailing (probability 0.3)
+    knobs: surface(weighted_sample(material_assignments.marble)) -> pillar material (stone/marble family; change to alter sandstone look)
+
+  PillarFactory.create_asset: builds the mesh — cylinder + inset grooves + lofted profile rings + bridge + subsurf.
+    knobs: vertices=4*self.n (cylinder base) -> shaft facet density
+    knobs: subdivide_edge_ring(obj, 16) -> vertical subdivisions on shaft grooves
+    knobs: stride(choice [2,4,8]) -> spacing of per-vertex inset detail on detailed rings
+    knobs: z_rot(pi/2 * randint(2)) -> 0 or 90deg profile rotation
+    knobs: number_cuts(=0) -> extra loop cuts when bridging end caps (increase for smoother flares)
+    knobs: smoothness(uniform 1..1.4) -> bridge_edge_loops smoothness of top/bottom flares
+    knobs: subsurf(obj,1,True) + subsurf(obj,1) -> two subdivision passes for final smoothing
+
+  PillarFactory.finalize_assets: applies self.surface() material to generated assets.
+    knobs: (material choice inherited from __init__.surface)
+
+FILE: assets/objects/elements/__init__.py
+  (re-export only): exposes PillarFactory and sibling element factories; no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides material pools (e.g. marble) sampled for the surface
+  assets/materials/** -> shader/material node implementations (marble, stone, wear_tear, etc.)
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> weathering/chip/scratch material effects
+  assets/utils/decorate.py -> mesh edit helpers (read_co, write_co, select_edges, subdivide_edge_ring, subsurf, read_edge_center, read_selected)
+  assets/utils/object.py -> object constructors (new_cylinder, new_base_circle, join_objects)
+  assets/utils/shapes.py -> geometric shape helpers
+  core/constraints/constraint_language/constants.py -> RoomConstants (wall_height, wall_thickness) driving pillar height
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle
+  core/placement/detail.py -> LOD/detail placement support
+  core/surface.py -> surface.assign_material material application
+  core/nodes/** -> node graph construction backend for materials
+  core/util/blender.py -> Blender utilities (ViewportMode, apply_transform, deep_clone_obj)
+  core/util/math.py -> FixedSeed for deterministic sampling
+  core/util/random.py -> log_uniform, weighted_sample samplers
+  core/tags.py -> semantic tagging of generated geometry

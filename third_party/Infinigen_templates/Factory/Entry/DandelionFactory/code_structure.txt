@@ -1,0 +1,61 @@
+SUMMARY: DandelionFactory procedurally builds a dandelion plant: a curved green stem topped by a spherical seed head made of many radiating "petal stems" (pappus filaments), each with a branched feathery tip, an end spark/cone, and a small head sphere. The upper-level file defines all geometry-node groups (stem, seed head sphere, petal-stem filaments with branching contours, and seed placement/selection) plus two AssetFactories (full plant and single seed) and a flower "mode" system that controls how densely seeds populate the head. To match a bursting-firework look, tune the petal-stem branch lengths/counts/scatter and the bright spark tips at filament ends.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/grassland/__init__.py
+  module exports: re-exports DandelionFactory, DandelionSeedFactory (+ other grassland factories). No knobs.
+
+FILE: assets/objects/grassland/dandelion.py
+
+  nodegroup_petal_stem_head_geometry: small sphere at each filament head (attach point).
+    knobs: UVSphere Segments(64) -> head smoothness; Radius(input, from petal_stem_top_radius) -> head size; material=simple_brownish -> head color.
+
+  nodegroup_petal_stem_end_geometry: the glowing "spark" tip at each filament end (sphere + cone).
+    knobs: UVSphere Radius(0.04 fixed) -> spark size; scale Vector(x,y=uniform(0.45,0.7), z=uniform(2,3) random) -> spark elongation; cone Radius Bottom(0.004)/Depth(0.004) -> spark spike; material=simple_brownish -> tip color (change to a bright emissive shader for glowing sparks).
+
+  nodegroup_petal_stem_branch_shape: the feathery radiating branches on each filament tip (firework trails).
+    knobs: petal_stem_branches_num(integer 40) -> number of trails per filament; curve_circle Resolution(=branches_num)/Radius(input) -> spread ring; petal_stem_branch_length(0.5 fixed) -> trail length (raise + randomize for very-different lengths); resample Count(40) -> trail smoothness; float_curve points (0.08,0.22,0.45,0.7 each *normal(1,0.15-0.2) random) -> trail droop/curvature; multiply factor(uniform(0.15,0.4) random) -> z-bend amount; random_value X/Y/Z rotations(-0.2..0.2, seeds 0/1/2) -> per-trail angular scatter; scale random_value(min 0.8) -> per-trail size variation.
+
+  nodegroup_petal_stem_branch_contour: adds fine barbs/contour offset along each branch.
+    knobs: petal_stem_branch_rsample(10.0) -> barb sample density; float_curve dist(uniform(-0.05,-0.25) random) + normal(0,0.05) jitter -> contour shape; random_value(0.05..0.35) -> barb magnitude.
+
+  nodegroup_petal_stem_branch_geometry: converts branch curves to thin mesh tubes.
+    knobs: set_curve_radius(1.0); curve_circle Radius(uniform(0.001,0.0025) random) -> filament thickness; Resolution(4) -> cross-section detail; Translation(input top point).
+
+  nodegroup_petal_stem_geometry: the main filament stalk (bezier from base to head).
+    knobs: Middle/End inputs -> filament curvature; curve_circle Radius(0.2)/Resolution(8) -> stalk profile; material=simple_whitish -> filament color.
+
+  nodegroup_petal_stem: assembles one full pappus filament (stalk + branches + end spark + head).
+    knobs: petal_stem_top_point((0,0,1)); petal_stem_mid_point((normal(0,0.05),normal(0,0.05),0.5) random) -> filament lean; petal_stem_radius(uniform(0.02,0.045) random) -> stalk base radius; petal_stem_top_radius(uniform(0.005,0.008) random) -> head/branch-ring size; branch material=simple_whitish.
+
+  nodegroup_petal_selection: boolean mask deciding which seed-head positions get a filament (drives flower modes).
+    knobs: params["random_dropout"] -> fraction of seeds kept; row/col less_than & great_than thresholds -> which head rows/columns are cleared (bursting/sparse patterns).
+
+  nodegroup_flower_geometry: the seed-head sphere and instancing of filaments over it.
+    knobs: num_core_segments(randint(8,25) random), num_core_rings(randint(8,20) random) -> head grid resolution/seed count; UVSphere Radius(uniform(0.02,0.05) random) -> core size; flower_core_shape((uniform(0.8,1.2),uniform(0.8,1.2),uniform(0.5,0.8)) random) -> head ellipsoid shape; random_value_1(0.4..0.7)*multiply -> per-filament scale; core material=simple_whitish; uses selection_params from mode.
+
+  nodegroup_flower_on_stem: places the whole seed head at the stem tip, aligned to tangent. No numeric knobs (endpoint selection + tangent align).
+
+  geometry_dandelion_nodes: top-level graph = stem bezier + seed head + join.
+    knobs: quadratic_bezier Middle/End (normal(0,0.1) random) -> stem curvature/lean; value_2 head scale(uniform(-0.15,-0.5) random, negative=orientation flip) -> overall head size.
+
+  geometry_dandelion_seed_nodes: single-filament (seed) output graph. No knobs.
+
+  DandelionFactory: builds full plant; picks a flower mode then applies geometry.
+    knobs: flower_mode list(full/no/top_half/top_missing/sparse) -> seed distribution style; flower_mode_pb([0.4,0.04,0.23,0.13,0.2] random pick) -> mode probabilities.
+    get_mode_params: per-mode random_dropout & row/col thresholds (all sampled with uniform ranges shown) -> controls burst density/gaps.
+
+  DandelionSeedFactory: builds a single detached seed/filament. No mode knobs.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/plant/simple_brownish.py -> shader_simple_brown (seed head/spark tip color).
+  assets/materials/plant/simple_whitish.py -> shader_simple_white (filament/pappus color).
+  assets/materials/plant/simple_greenery.py -> shader_simple_greenery (stem color).
+  assets/materials/plant/__init__.py, assets/materials/__init__.py, assets/colors.py -> material/color registration & palettes.
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry/shader node graph construction (Nodes, NodeWrangler, to_nodegroup, assign_curve).
+  core/surface.py -> add_geomod / shaderfunc_to_material application onto objects.
+  core/placement/factory.py -> AssetFactory base class + seeding.
+  core/placement/detail.py -> level-of-detail / adaptive subdivision.
+  core/tagging.py, core/tags.py -> tag_object / tag_nodegroup semantic labeling ("dandelion","stem","flower","seed").
+  assets/utils/object.py, core/util/blender.py -> Blender object/mesh helpers.
+  core/util/math.py, color.py, random.py, logging.py -> math, color-space, RNG, logging utilities.
+  assets/__init__.py, core/__init__.py, core/nodes/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package init/exports.

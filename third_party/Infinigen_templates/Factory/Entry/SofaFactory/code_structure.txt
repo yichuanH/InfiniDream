@@ -1,0 +1,59 @@
+SUMMARY: SofaFactory procedurally builds a single upholstered sofa (or loveseat/armchair) as one coherent assembly of arms, backboard, baseboard, seat cushions, tufted backrest cushions, and legs, driven by a large Geometry Nodes group. The upper-level sofa.py defines all geometry nodegroups, the randomized parameter distribution, and two factory classes (SofaFactory and the smaller ArmChairFactory) that sample params, apply a random fabric material, and produce a smoothed hi-poly mesh. Editing this file changes sofa dimensions, arm/back/leg shapes, cushion counts, and material selection.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/seating/sofa.py
+
+  nodegroup_array_fill_line: instances a mesh (cushion) evenly along a line between two points.
+    knobs: Count(int) -> number of cushions placed; Line Start/End -> span; Instance Dimensions -> per-instance spacing offset.
+
+  nodegroup_corner_cube: builds a cube positioned by a corner/centering location; base primitive for arms, boards, cushions.
+    knobs: CenteringLoc(default 0.5,0.5,0) -> anchor corner; Dimensions -> size; Vertices X/Y/Z(default 4) -> mesh resolution; SupportingEdgeFac(0) -> edge factor.
+
+  ARM_TYPE_SQUARE=0 / ARM_TYPE_ROUND=1 / ARM_TYPE_ANGULAR=2: arm style enum consumed by Arm Type switch.
+
+  nodegroup_sofa_geometry: master geometry group assembling the whole sofa; all inputs below are default socket values (overridden by params).
+    knobs: Dimensions(default 0,0.9,2.5; sampled in distribution) -> overall depth/width/height; Arm Dimensions -> arm size; Back Dimensions -> backrest board size; Seat Dimensions -> cushion size; Foot Dimensions -> leg-cube foot size;
+    Baseboard Height(0.13) -> baseboard thickness; Backrest Width(0.11) -> back cushion thickness; Seat Margin(0.97) -> cushion inset vs frame; Backrest Angle(-0.20) -> recline of tufted back;
+    arm_width(0.70) -> FloatCurve profile of arm taper; Arm Type(0) -> square/round/angular arm; Arm_height(0.7318) -> arm height curve factor; arms_angle(0.8727 rad) -> angular-arm rotation;
+    Footrest(False) -> adds chaise/footrest section; Count(4) -> seat-layout mode (1=single-row, 4=chaise/L layout); Scaling footrest(1.5) -> footrest X stretch; Reflection(0) -> mirror side of footrest;
+    leg_type(False) -> cone leg vs cube foot; leg_dimensions(0.5) -> leg XY thickness; leg_z(1.0) -> leg height scale; leg_faces(20) -> cone leg polygon count; Subdivide(True) -> use joined vs subdivision-surface output.
+    Fixed internals worth noting: leg cone Radius Top 0.01 / Bottom 0.025 / Depth 0.07; tufting via ExtrudeMesh Offset Scale 0.03 + ScaleElements 0.6; SubdivideMesh Level 2; back cushion UV randomized (RandomValue).
+    Tagging: seat cushion top faces tagged SupportSurface / TAG_support / TAG_cushion (fixed selections).
+
+  sofa_parameter_distribution(dimensions=None): samples all node inputs per instance (mostly uniform/random).
+    knobs: dimensions -> (uniform(0.95,1.1), clip_gaussian(1.75,0.75,0.9,3), uniform(0.69,0.97)) depth/width/height;
+    Arm Dimensions -> (1, uniform(0.06,0.15), uniform(0.5,0.75)); Back Dimensions -> (uniform(0.15,0.25),0,uniform(0.5,0.75));
+    Seat Dimensions -> (depth, uniform(0.7,1), uniform(0.15,0.3)); Foot Dimensions -> (uniform(0.07,0.25),0.06,0.06);
+    Baseboard Height uniform(0.05,0.09); Backrest Width uniform(0.1,0.2); Seat Margin uniform(0.97,1); Backrest Angle uniform(-0.15,-0.5);
+    Arm Type choice p=[0.4 square,0.2 round,0.4 angular]; arm_width uniform(0.6,0.9); Arm_height uniform(0.7,1.0); arms_angle uniform(0.0,1.08);
+    Footrest True if uniform>0.5 and width>2 else False; Count 1 (prob 0.8) else 4; Scaling footrest uniform(1.3,1.6); Reflection ±1 (50/50);
+    leg_type True/False (50/50); leg_dimensions uniform(0.4,0.9); leg_z uniform(1.1,2.5); leg_faces uniform(4,25).
+    To force the requested pastel loveseat: shrink dimensions[1] (width) to loveseat range, prefer ARM_TYPE_ROUND, set leg_type=True with small legs, ensure two seat cushions via Seat Dimensions/Count.
+
+  SofaFactory.__init__: seeds params via sofa_parameter_distribution and picks a fabric.
+    knobs: self.sofa_fabric = weighted_sample(material_assignments.fabrics) -> random upholstery fabric (edit for fixed/pastel color); commented ClothesCover blanket scatter (disabled).
+
+  SofaFactory.create_placeholder / create_asset: applies the geometry nodegroup, tags, assigns fabric, then copies+subsurf(level 1)+shade_smooth for hi-poly.
+    knobs: SUBSURF levels=1 -> final smoothness/poly count.
+
+  ArmChairFactory(SofaFactory): overrides dimensions to a compact chair.
+    knobs: dimensions -> (uniform(0.8,1), uniform(0.9,1.1), uniform(0.69,0.97)) -> single-seat proportions (closest base for a small loveseat).
+
+FILE: assets/objects/seating/__init__.py
+  module exports: registers SofaFactory, ArmChairFactory (and other seating factories); no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides weighted `fabrics` list for upholstery material selection.
+  assets/materials/fabric/__init__.py -> fabric shader generators used as sofa material.
+  core/placement/factory.py -> AssetFactory base class (seeding, spawn lifecycle).
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py -> Geometry Nodes construction API (Nodes, NodeWrangler, to_nodegroup, assign_curve).
+  core/surface.py -> assign_material helper.
+  core/tagging.py, core/tags.py -> face/part tagging (SupportSurface, tag_system.relabel_obj).
+  core/util/blender.py -> spawn_vert, modify_mesh, copy, SelectObjects utilities.
+  core/util/math.py -> FixedSeed, clip_gaussian for reproducible sampling.
+  core/util/random.py -> weighted_sample, clip_gaussian, uniform helpers.
+  core/placement/detail.py -> LOD/detail handling for asset generation.
+  assets/materials/* (wood, metal, plastic, ceramic, wear_tear, etc.) -> material libraries available to composition (not directly invoked here beyond fabrics).
+  core/util/color.py -> color utilities used by materials.
+  Other core/__init__, util/logging, compatibility -> engine plumbing.

@@ -1,0 +1,53 @@
+SUMMARY: This factory procedurally builds single chairs (seat, legs, backrest, optional arms, and leg cross-bars) using bezier curves and Blender mesh modifiers, with randomized proportions, leg/back styles, and material assignments. The entry file chair.py fully defines ChairFactory; the __init__.py files just re-export it (and sibling BarChair/OfficeChair factories). All geometry dimensions, style choices, and probabilities are sampled per-seed in __init__/post_init.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/seating/chairs/chair.py
+  ChairFactory.back_types (class attr): weighted choice of backrest style
+    knobs: weights for "whole"/"partial"/"horizontal-bar"/"vertical-bar" (each 1, equal) -> relative frequency of each back style
+  ChairFactory.__init__: samples all core dimensions & flags (FixedSeed random)
+    knobs: width(uniform 0.4-0.5) -> chair seat width; size(0.38-0.45) -> seat depth; thickness(0.04-0.08) -> seat slab thickness; bevel_width(=thickness*0.1 or *0.5, p=0.4) -> edge rounding
+    knobs: seat_back(0.7-1.0 w/ p=0.75 else 1.0) -> rear seat width taper; seat_mid(0.7-0.8), seat_mid_x(sampled≥seat_back), seat_mid_z(0-0.5) -> seat contour bulge; seat_front(1.0-1.2) -> front width flare
+    knobs: is_seat_round(p=0.6) -> rounded vs cornered seat front; is_seat_subsurf(p=0.5) -> smooth-subdivided seat
+    knobs: leg_thickness(0.04-0.06) -> leg diameter; limb_profile(1.5-2.5) -> curved-leg splay; leg_height(0.45-0.5) -> seat height; back_height(0.4-0.5) -> backrest height
+    knobs: is_leg_round(p=0.5) -> round vs square legs/arms; leg_type(choice vertical/straight/up-curved/down-curved) -> leg shape family
+    knobs: has_leg_x_bar(p=0.6), has_leg_y_bar(p=0.6) -> stretcher bars between legs; leg_offset_bar((0.2-0.4),(0.6-0.8)) -> bar height fraction range
+    knobs: has_arm(p=0.7) -> armrests present; arm_thickness(0.04-0.06); arm_height(=arm_thickness*0.6-1); arm_y(0.8-1.0*size) -> arm front attach; arm_z(0.3-0.6*back_height) -> arm back attach height; arm_mid(x[-0.03,0.03],y[-0.03,0.09],z[-0.09,0.03]) -> arm midpoint curve; arm_profile(log_uniform 0.1-3, ×2) -> arm taper
+    knobs: back_thickness(0.04-0.05) -> backrest slat thickness; back_vertical_cuts(randint 1-4) -> vertical-bar spindle count; back_partial_scale(1-1.4) -> partial-back depth scale
+    knobs: material selection via weighted_sample(material_assignments.*): limb_surface (furniture_leg), surface & panel_surface (furniture_hard_surface); panel_surface=surface with p=0.3 else independent
+    knobs: scratch/edge_wear sampled per wear_tear_prob (currently apply is commented out in create_asset/finalize_assets); clothes_scatter = NoApply (blanket scatter code commented out)
+  ChairFactory.post_init: derives offsets & back_profile from leg_type/back_type
+    knobs: leg_x_offset(width*0.05-0.2), leg_y_offset(size*0.05-0.2), back_x_offset(width*[-0.1,0.15]), back_y_offset(size*0.1-0.25) -> leg/back splay (zero if leg_type=="vertical")
+    knobs: partial back_profile start(0.4-0.8); horizontal-bar n_cuts(randint 2-4), ratio(0.5-0.75), lowest(0-0.4) -> horizontal slat layout; vertical-bar profile start(0.8-0.9)
+  ChairFactory.make_seat: bezier seat outline; fill_grid + solidify + subsurf + bevel (edit x/y/z_anchors formula to reshape seat)
+  ChairFactory.make_legs/make_limb: leg placement & bezier limb generation per leg_type
+  ChairFactory.make_backs: two vertical back posts
+  ChairFactory.make_leg_decors: stretcher bar geometry
+  ChairFactory.make_back_decors: bridges back posts into panel; knobs: smoothness(uniform 0-1), profile_shape_factor(uniform 0-0.4), number_cuts(64) -> backrest surface curvature/detail
+  ChairFactory.make_arms: armrest bezier + solidify/geo_radius
+  ChairFactory.solidify: round (geo_radius, 32 segs) vs square (solidify+bevel) limb finishing
+  ChairFactory.create_placeholder / create_asset: bbox and assembly; rotates chair +90° about Z
+
+FILE: assets/objects/seating/chairs/__init__.py
+  re-exports BarChairFactory, ChairFactory, OfficeChairFactory (edit to add/rename chair variants)
+
+FILE: assets/objects/seating/__init__.py
+  aggregates all seating factories (bed, sofa, chairs, etc.) for package import
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material pools (furniture_leg, furniture_hard_surface) & wear_tear probabilities
+  assets/materials/**/* -> concrete material node-group shaders (wood, metal, plastic, ceramic, fabric, wear_tear, etc.)
+  assets/utils/decorate.py -> mesh read/write co & edges, solidify, subsurf, select/remove helpers
+  assets/utils/draw.py -> bezier_curve, align_bezier curve construction
+  assets/utils/nodegroup.py -> geo_radius geometry-node group for round limbs
+  assets/utils/object.py -> join_objects, new_bbox
+  assets/utils/mesh.py, misc.py -> mesh/general utilities
+  core/surface.py -> assign_material, add_geomod, NoApply
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> level-of-detail placement support
+  core/nodes/* -> geometry-node graph construction backend
+  core/tags.py -> attribute/tag system (limb/panel face tags)
+  core/util/blender.py -> ViewportMode, modify_mesh, apply_transform, deep_clone_obj
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform, weighted_sample, random_general (rg)
+  core/util/logging.py -> logging setup
+  __init__.py / assets/__init__.py / core/__init__.py -> package wiring

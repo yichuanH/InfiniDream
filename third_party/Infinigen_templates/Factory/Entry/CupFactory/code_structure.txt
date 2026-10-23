@@ -1,0 +1,45 @@
+SUMMARY: This factory (CupFactory) procedurally generates cup/mug tableware: a spun body profile (short or tall), optional handle ("guard"), optional decorative wrap/graphic on the sides, solidified walls with a distinct inside surface, and material/wear assignment. The upper-level files are the base tableware class (`base.py`, shared material/guard/solidify logic) and `cup.py` (the concrete cup geometry and randomized shape parameters). Note: the selecting request (triple-monitor gaming setup) does not match this asset — CupFactory only produces cups, not monitors; to match, geometry would need a full rewrite.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tableware/base.py
+  TablewareFactory (base class): shared material, guard/handle extrusion, solidify+inside logic
+    knobs: is_fragile(False) -> flags fragility; allow_transparent(False, overridden True in Cup) -> permits transparent materials; thickness(0.01 fixed, overridden in Cup) -> wall thickness; surface(sampled via material_assignments.cup) -> outer material; inside_surface(sampled via cup) -> inner material; guard_surface(sampled via woods) -> handle material; scratch_prob/edge_wear_prob(material_assignments.wear_tear_prob) -> probability wear applied; scratch/edge_wear(sampled if uniform()<prob) -> surface wear detail; guard_depth(=thickness) -> handle extrude depth; has_guard(False default) -> whether handle exists; has_inside(False default) -> whether inside material assigned; lower_thresh(uniform 0.5-0.8) -> z-cutoff for lower-inside region; scale(1.0 default) -> global size; metal_color("bw+natural") -> metal tint mode
+    make_double_sided: normal.z>0.8 threshold -> restricts selection to near-vertical faces
+    solidify_with_inside: offset=1 -> shell direction; writes "inside"/"lower_inside" face attrs
+
+FILE: assets/objects/tableware/cup.py
+  CupFactory.__init__: samples all cup shape parameters (per factory_seed)
+    knobs: x_end(0.25 fixed) -> max radius scale; is_short(uniform<0.5) -> short mug vs tall cup branch;
+      [short branch] is_profile_straight(uniform<0.2) -> straight vs curved wall; x_lowest(log_uniform 0.6-0.9) -> base radius fraction; depth(log_uniform 0.25-0.5) -> height; has_guard(uniform<0.8) -> handle present;
+      [tall branch] is_profile_straight(True fixed); x_lowest(log_uniform 0.9-1.0); depth(log_uniform 0.5-1.0); has_guard(False);
+      handle_location(uniform 0.45-0.65 if straight else -0.1-0.3) -> vertical handle attach point;
+      handle_type("shear"/"round", uniform<0.5) -> handle style flag; handle_radius(depth*uniform 0.2-0.4) -> handle outer size; handle_inner_radius(radius*log_uniform 0.2-0.3) -> handle tube thickness; handle_taper_x(uniform 0-2), handle_taper_y(uniform 0-2) -> handle taper deformation;
+      x_lower_ratio(log_uniform 0.8-1.0) -> mid-profile radius blend; thickness(log_uniform 0.01-0.04) -> wall thickness; has_wrap(uniform<0.3 then forced True) -> decorative side graphic; wrap_margin(uniform 0.1-0.2) -> graphic border inset; wrap_surface(sampled from graphicdesign; Text special-cased) -> graphic material; has_inside(uniform<0.5) -> distinct inner material; scale(log_uniform 0.15-0.3) -> final object size
+  create_asset: builds profile anchors, spins, bevels, solidifies, adds handle+wrap
+    knobs: bevel width_pct(uniform 10-50), segments(8) -> rim/edge rounding; subsurf level(2) -> body smoothness; handle_angle(uniform between profile slope angles) -> handle tilt; z_anchors mid=depth*0.5 -> curve midpoint height
+  add_handle: torus primitive + taper + boolean difference -> handle mesh; subsurf level(1) -> handle smoothness
+  make_wrap: removes verts outside wrap_margin band + front gap(np.pi*wrap_margin) -> graphic decal region; scale 1.01 offset -> decal float above surface
+  finalize_assets: wrap_sides(u,v,z) applies wrap_surface to "text" faces; re-applies scratch/edge_wear
+
+FILE: assets/objects/tableware/__init__.py
+  module exports: registers CupFactory and sibling tableware factories; edit to add/remove exported factories
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material pools (cup, woods, graphicdesign) + wear_tear probabilities sampled from
+  assets/materials/text.py -> procedural Text graphic material for cup wrap
+  assets/materials/{ceramic,metal,plastic,fabric,wood,...}/__init__.py -> shader/material generators for surfaces
+  assets/materials/wear_tear/{edge_wear,scratches}.py -> surface wear/scratch effects
+  assets/utils/draw.py -> spin() to revolve profile into cup body
+  assets/utils/decorate.py -> read_co, remove_vertices, subsurf, write_attribute mesh ops
+  assets/utils/uv.py -> wrap_sides() UV projection for decal graphic
+  assets/utils/object.py -> join_objects merging body/handle/wrap
+  assets/utils/misc.py -> assign_material helper
+  core/nodes/node_wrangler.py, core/nodes/node_info.py -> geometry-node graph construction (guard extrude, inside attrs)
+  core/surface.py -> add_geomod, assign_material, eval_argument node evaluation
+  core/placement/factory.py -> AssetFactory base (asset lifecycle)
+  core/placement/detail.py -> LOD/detail handling
+  core/util/blender.py -> modify_mesh, apply_transform, deep_clone_obj, split_object, delete
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform, weighted_sample samplers
+  core/util/logging.py -> logging utilities

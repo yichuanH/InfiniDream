@@ -1,0 +1,40 @@
+SUMMARY: The NumLeafGrassFactory builds a small grassy plant: several curved stems arch upward from a base point, each stem grown from a quadratic bezier curve converted to a tapered tube mesh, and each stem is topped with a small ring of 2-4 leaf/heart-leaf instances rotated around the tip. The upper-level files define the leaf shapes (leaf_general, leaf_heart), the geometry-node graph that builds stems + places leaves + assigns a green material, and the top factory that picks leaf type/count and drives the node graph. To match the "lavender" request you would tune stem count/thinness/color, leaf density and shape, and swap the green material for grey-green stems with purple flower spikes.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/small_plants/num_leaf_grass.py
+  nodegroup_leaf_on_stem: places one leaf instance oriented to the curve tip and rotated around Z.
+    knobs: z_rotation(default (0,0,0), set per-leaf in geo_face_colors) -> angular spread of leaves around stem tip; leaf_scale(1.0, overridden) -> leaf size; endpoint_selection Start Size(0) -> which curve endpoint gets the leaf (tip only)
+  nodegroup_stem_geometry: turns the stem curve into a tapered tube mesh.
+    knobs: MapRange radius 3->1.0, 4->0.4 -> stem thickness taper base-to-tip (lower for thin lavender stems); CurveCircle Resolution(12) -> stem cross-section smoothness; CurveCircle Radius(0.03) -> stem thickness (reduce for thin stems)
+  geo_face_colors: builds each stem's bezier path, applies noise wobble, adds tube geometry, rings the leaves, assigns material.
+    knobs: mid_z(uniform 0.35-0.65 random) -> height of stem bend midpoint; mid_x/mid_y & top_x/top_y (normal(0, stem_rotation) random) -> lateral lean/curvature of stem; QuadraticBezier Resolution(25) -> stem smoothness; QuadraticBezier End z(1.0) -> stem height; NoiseTexture Scale(1.0), Roughness(0.2) -> jitter along stem; add offset(-0.5,-0.5,-0.5) & multiply by spline factor -> noise grows toward tip; leaf_scale(uniform 0.15-0.35 random * params leaf_scale) -> flower/leaf size; leaf_num loop step 6.28/leaf_num -> even angular leaf spacing; Material=simple_greenery.shader_simple_greenery -> plant color (swap/replace for grey-green stem + purple flowers)
+  NumLeafGrassFactory.__init__: sets available leaf counts and leaf models.
+    knobs: self.leaf_num([2,3,4]) -> possible leaves per stem tip; self.leaf_model([LeafFactory, LeafHeartFactory]) -> available leaf shapes
+  NumLeafGrassFactory.create_asset: picks leaf type/count and per-run genome, drives the node graph on a single plane point.
+    knobs: leaf_num choice p=[0.2,0.4,0.4] -> probability of 2/3/4 leaves; z_offset(normal(0,0.05) random) -> leaf z_scaling curl; branch leaf_width (2->0.95, 3->1.1, 4->0.85) -> leaf width per count; width_rand (0.1/0.05) -> leaf width variance; params leaf_scale (2.0 for count2 else 1.0) -> leaf size per count; params stem_rotation(0.15 fixed) -> overall stem lean spread; NOTE only ONE stem/point is generated per asset (primitive_plane_add gives one instance point set) — increase point count for a bushy multi-stem lavender base
+
+FILE: assets/objects/small_plants/leaf_general.py
+  LeafFactory: builds a simple pointed leaf outline from a sin/cos parametric curve.
+    knobs: scale(0.3 class attr) -> overall leaf size; genome.leaf_width(0.5) -> leaf breadth; genome.alpha(0.3) -> tip curvature offset; genome.use_wave(True) -> wavy leaf surface; genome.x_offset(0) -> lateral asymmetry; genome.flip_leaf(False) -> reverse tip direction; genome.z_scaling(0) -> upward/downward curl; genome.width_rand(0.33) -> random width variance; Wave modifier height(randn*0.3), width(0.75+randn*0.1), speed(rand) -> leaf ripple shape (random)
+  LeafHeartFactory (leaf_heart.py): builds a heart-shaped leaf from a cardioid parametric curve.
+    knobs: scale(0.2) -> leaf size; genome.leaf_width(1.0) -> heart width; genome.use_wave(True) -> wavy surface; genome.z_scaling(0) -> curl; genome.width_rand(0.1) -> width variance; Wave modifier height(0.64*randn), width(3.5+randn), speed(40±[-10,20]) -> ripple (random)
+
+FILE: assets/objects/small_plants/__init__.py
+  module exports: registers sibling small-plant factories (Fern, SnakePlant, SpiderPlant, Succulent); NOTE does not export NumLeafGrassFactory — add here if you need it importable via the package.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/trees/utils/mesh.py -> low-level Blender mesh helpers (vertex selection/subdivide, finalize/convert to mesh) used by leaf builders
+  assets/materials/plant/simple_greenery.py -> green plant shader applied to stems+leaves (replace here-side to change plant color)
+  assets/materials/plant/__init__.py -> plant material package registry
+  assets/colors.py, core/util/color.py -> color sampling/space utilities
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry-node graph construction (Nodes enum, NodeWrangler, to_nodegroup)
+  core/surface.py -> add_geomod / shaderfunc_to_material to attach geo-node + material to object
+  core/placement/factory.py -> AssetFactory base class (seeding, asset lifecycle)
+  core/placement/detail.py -> level-of-detail/resampling support
+  core/tagging.py, core/tags.py -> tag_object / tag_nodegroup semantic labeling
+  core/util/blender.py -> butil helpers (apply_transform, delete, SelectObjects)
+  core/util/math.py, random.py -> math and randomness utilities
+  core/util/logging.py -> logging
+  assets/utils/object.py -> object creation/manipulation helpers
+  core/__init__.py, core/nodes/__init__.py, core/placement/__init__.py, core/util/__init__.py, assets/__init__.py, assets/materials/__init__.py -> package initialization

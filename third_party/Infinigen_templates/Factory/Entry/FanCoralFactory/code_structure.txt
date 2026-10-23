@@ -1,0 +1,68 @@
+SUMMARY: This factory builds procedural coral assets; the FanCoralFactory specifically generates a broad, lace-like branching sea-fan via a shortest-path skeleton on a fan-shaped disk, then applies radius (thickness) and a shared coral shader. generate.py orchestrates the base-shape factory (FanBaseCoralFactory), material shading (color ramp, subsurface), and optional tentacle/polyp instancing and bump noise. fan.py controls the fan geometry; tentacles.py controls the tiny polyp spikes; the shader in generate.py controls the base→tip color grading.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/corals/generate.py
+  FanCoralFactory: entry point; wraps FanBaseCoralFactory with CoralFactory pipeline.
+  CoralFactory.create_asset: builds base mesh, scales, remeshes, assigns material, applies bump/noise, instances tentacles (polyps).
+    knobs: face_size(0.01) -> mesh resolution; scale jitter uniform(0.8,1.2,3) -> per-axis size variation; tentacle applied if uniform<tentacle_prob AND not has_bump (Fan tentacle_prob=0.0, so polyps OFF by default — raise FanBaseCoralFactory.tentacle_prob to enable visible polyps); bump applied if uniform<bump_prob(0.3) but Fan noise_strength=0.0 disables both bump & noise.
+  CoralFactory.build_base_hue: sets base color hue.
+    knobs: 0.25 prob -> full random hue uniform(0,1); else uniform(-0.2,0.3)%1 (red-orange-yellow-violet band, good for violet→yellow request).
+  CoralFactory.shader_coral: coral surface color/material.
+    knobs: shift(uniform(0.05,0.1), ± random) -> hue offset between dark/bright; subsurface_color hsv2rgba(random,random,1.0); bright_color hue=(base+shift), sat uniform(0.7,0.9), val 0.2; dark_color hue=base, sat uniform(0.5,0.7), val 0.1; light_color hue=base±0.2, sat uniform(0.2,0.4), val 0.4; specular uniform(0.25,0.5); color_ramp stops [0,0.3,0.7,1.0] dark→bright (drives base→tip grading — widen ramp/add magenta+orange stops here for violet→magenta→orange→yellow); musgrave scale uniform(10,20) -> color mottling frequency; float_curve threshold uniform(0.3,0.4) -> light-color mix extent; noise roughness curve (0,0.5)→(1,1.0); subsurface_ratio uniform(0,0.05) 50% else 0; subsurface_radius uniform(0.05,0.2).
+  apply_noise_texture / apply_bump: surface displacement (inactive for Fan since noise_strength=0.0).
+    knobs: STUCCI/MARBLE noise_scale log_uniform(0.01,0.02); VORONOI noise_scale log_uniform(0.02,0.03), intensity log_uniform(1.5,2), minkovsky_exponent uniform(1,1.5).
+
+FILE: assets/objects/corals/fan.py
+  FanBaseCoralFactory: fan-shaped branching skeleton (the sea-fan plane).
+    knobs: tentacle_prob(0.0) -> raise to add polyps; noise_strength(0.0) -> raise to add surface bump.
+  FanBaseCoralFactory.create_asset: builds disk, warps to fan, extracts shortest-path branch network, adds radius, subsurfaces.
+    knobs: new_circle vertices(512) -> disk/branch density (raise for denser lace); displace_vertices uniform(-0.005,0.005) -> vertex jitter; shape_by_angles angles[-π/2,0,π/2] & factors [uniform(0.2,0.8),1,uniform(0.2,0.8)] -> fan lobe silhouette; STUCCI texture noise_scale uniform(0.5,1), DISPLACE strength uniform(0.5,1.0) dir Y -> out-of-plane crinkle (keep low for one broad plane); obj.scale x uniform(0.6,1.2) -> fan aspect ratio; geo_shortest_path merge_dist 0.05 -> branch merge/interconnection; end_index np.random.choice(...,5) -> number of branch tips/roots (raise for more branches).
+  FanBaseCoralFactory.weight: shortest-path edge cost (controls branch tortuosity).
+    knobs: scalar_multiply(length,0.4) lower bound of uniform cost -> branch straightness/randomness.
+  FanBaseCoralFactory.add_radius: per-branch thickness from downstream vertex count.
+    knobs: base radius 0.008 -> overall branch thinness (lower = thinner lace); thresh uniform(100,200) -> count where thickening begins; ratio uniform(0.5,1.5) -> base-vs-tip thickness taper (base thicker); r = 1+ratio*log(c/thresh).
+
+FILE: assets/objects/corals/tentacles.py
+  build_tentacles: geometry of individual polyp spikes.
+    knobs: n_branch(5), n_major(8); path std(0.5), momentum(0.5), sz(0.008); spawn init_vec sample_direction(0.6); base radius uniform(0.002,0.004).
+  make_radius_points_fn / make_upward_points_fn: where polyps are placed (Fan currently inherits base points_fn=identity).
+    knobs: min_distance, radius_threshold spacing/masking.
+  geo_tentacles: instancing of polyps on surface.
+    knobs: density(500; passed as factory.density=500) -> polyp count; scale uniform(0.6,1.0) -> polyp size variation; random rotation uniform(0,2π).
+  shader_tentacles: polyp color.
+    knobs: base_hue+uniform(-0.1,0.1), sat uniform(0.4,0.6), val 0.5; roughness 0.8; specular 0.25; fresnel_color hsv2rgba(random,0.6,0.6); subsurface 0.01.
+
+FILE: assets/objects/corals/base.py
+  BaseCoralFactory: shared defaults inherited by Fan.
+    knobs: default_scale([0.8]*3) -> overall size; density(500) -> polyp density; tentacle_prob(0.5)/bump_prob(0.3)/noise_strength(0.02) (overridden to 0/0/0 by Fan); tentacle_distance(0.05).
+
+FILE: assets/objects/corals/__init__.py
+  Re-exports factories; edit only to add/rename exposed coral types.
+
+FILE: assets/objects/corals/{diff_growth,elkhorn,laplacian,reaction_diffusion,star,tree,tube}.py
+  Other coral base shapes (not used by FanCoralFactory); edit only if switching coral type.
+
+FILE: assets/objects/trees/tree.py
+  build_radius_tree / recursive_path / rand_path: skeleton builder used by tentacles (polyp spikes) and tree corals.
+    knobs: path std/momentum/sz, sz_decay, spawn angles — affect polyp/tree branch shape only.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> vertex read/write, displace, geo_extension noise deformation, subsurface2face_size.
+  assets/utils/draw.py -> shape_by_angles (fan silhouette shaping), make_circular_interp.
+  assets/utils/mesh.py -> treeify (convert mesh to tree graph), polygon_angles, convex mesh builders.
+  assets/utils/misc.py -> assign_material, sample_direction.
+  assets/utils/nodegroup.py -> geo_radius (thickens curve skeleton into tubes).
+  assets/utils/object.py -> new_circle/icosphere, mesh2obj, join_objects, origin2lowest, separate_loose.
+  assets/utils/shortest_path.py -> geo_shortest_path (builds the branch network on the fan disk).
+  assets/utils/laplacian.py, reaction_diffusion.py -> alternative coral base generators (unused by Fan).
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> geometry/shader node graph API (build_color_ramp, musgrave, etc.).
+  core/surface.py -> shaderfunc_to_material, add_geomod (apply node graphs to objects).
+  core/placement/factory.py -> AssetFactory base, make_asset_collection (polyp instances).
+  core/placement/detail.py -> remesh_with_attrs (final adaptive remesh at face_size).
+  core/tagging.py, tags.py -> tag_object semantic labeling.
+  core/util/color.py -> hsv2rgba color conversion for shader.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> log_uniform sampling helper.
+  core/util/blender.py -> mesh modifiers, transforms, viewport/edit-mode helpers.
+  infinigen_gpl/extras/diff_growth.py -> differential growth solver (unused by Fan).

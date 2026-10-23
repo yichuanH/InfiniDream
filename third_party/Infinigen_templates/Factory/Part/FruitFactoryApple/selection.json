@@ -1,0 +1,29 @@
+{
+  "prompt": "a red apple",
+  "factory": "FruitFactoryApple",
+  "role": "PART",
+  "factory_fqn": "infinigen.assets.objects.fruits.apple.FruitFactoryApple",
+  "entry_file": "assets/objects/fruits/apple.py",
+  "reason": "The user is requesting a single standalone apple fruit, which maps directly to FruitFactoryApple as an isolated element rather than a whole plant/tree.",
+  "upper_files": [
+    "assets/objects/fruits/__init__.py",
+    "assets/objects/fruits/apple.py",
+    "assets/objects/fruits/cross_section_lib.py",
+    "assets/objects/fruits/fruit_utils.py",
+    "assets/objects/fruits/general_fruit.py",
+    "assets/objects/fruits/stem_lib.py",
+    "assets/objects/fruits/surfaces/apple_surface.py"
+  ],
+  "infra_files": [
+    "assets/__init__.py",
+    "core/__init__.py",
+    "core/nodes/node_wrangler.py",
+    "core/placement/factory.py",
+    "core/surface.py",
+    "core/tagging.py",
+    "core/util/__init__.py",
+    "core/util/blender.py",
+    "core/util/color.py",
+    "core/util/math.py"
+  ]
+}

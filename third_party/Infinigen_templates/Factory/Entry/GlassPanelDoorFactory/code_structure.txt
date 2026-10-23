@@ -1,0 +1,74 @@
+SUMMARY: This factory builds a single glass panel door assembly: a beveled door slab subdivided into rectangular panels (some marked as glass), plus a door frame, optional handle/knob/lever/pull/push-bar, optional dome arc, and articulated hinge/slide joints for sim. GlassPanelDoorFactory extends PanelDoorFactory to force 2-column layouts, mark the upper panels as glass, and always enable glass material. base.py builds the mesh (door, frame, handle, arc) and geometry_node_join assembles everything with joint metadata; joint_utils.py / bar_handle.py provide the frame, arc, handle, and joint nodegroups. All geometry dimensions derive from RoomConstants (door_width/door_size/wall_thickness).
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/elements/doors/panel.py
+  GlassPanelDoorFactory.__init__: forces glass panel door variant
+    knobs: x_subdivisions(fixed 2) -> number of vertical panel columns; y_subdivisions(clip(binomial(5,0.5),2,inf), random) -> number of horizontal panel rows; merge_glass(=y_subdivisions<4) -> whether top glass panels merge into one big pane vs separate panes; has_glass(fixed True) -> always applies glass material
+  GlassPanelDoorFactory.make_panels: selects which panels become glass
+    knobs: which panels get attribute_name="glass" (last x_subdivisions row = top) -> location/count of clear glass area; merged dimension spans first->last of top row -> single vs multi glass pane
+  PanelDoorFactory.__init__: base panel-door subdivision (inherited)
+    knobs: x_subdivisions(1 or 2, uniform<0.5) -> vertical cut count; y_subdivisions(clip(binomial(5,0.45),1,inf)) -> horizontal cut count
+  PanelDoorFactory.make_panels: computes panel rectangle grid
+    knobs: x_cuts(randint(1,4,...), random cumulative) -> column width proportions; y_cuts(randint(2,5,...) sorted desc, random) -> row height proportions; panel_margin (from base) -> border thickness around panels
+  PanelDoorFactory.bevel: boolean-cuts each panel and insets it
+    knobs: shrink_width (base) -> inset gap width; bevel_width (base) -> recessed panel depth/bevel; cutter scale margins(2e-3 fixed) -> panel edge clearance
+
+FILE: assets/objects/elements/doors/base.py
+  BaseDoorFactory.__init__: all master door dimensions, materials, handle/frame choices (mostly random-sampled)
+    knobs: width/height(=constants.door_width/door_size, fixed) -> overall size; depth(wall_thickness*log_uniform(0.25,0.5)) -> slab thickness; panel_margin(log_uniform(0.08,0.12)) -> panel border; bevel_width(uniform(0.005,0.01)); out_bevel(uniform<0.7); shrink_width(log_uniform(0.005,0.06)); side_bevel(log_uniform(0.005,0.015))
+    knobs: surface(weighted hard_materials) -> door body material; has_glass(uniform<0.5 base, but forced True in glass factory); glass_surface(weighted glasses); louver_surface; handle_surface(metal_neutral); panel_surface(frame material); metal_color_hsv
+    knobs: handle_type(choice knob/lever/pull/bar/none) -> handle style (glass door still inherits this); handle_joint(derived: hinge/slide/rigid/none); door_frame_style(choice single_column/full_frame_square/full_frame_dome/full_frame_double_door) -> frame shape & double-door; door_frame_width(uniform(0.02,0.06)); door_orientation(choice left/right) -> handle side; handle_offset(=panel_margin*0.5); handle_height(height*uniform(0.45,0.5)); door_arc_surface(choice door/glass)
+    knobs (bar handle dict, if handle_type=="bar"): bar_length(uniform(0.7,0.9)*width); bar_thickness(uniform(0.025,0.045)*height); bar_aspect_ratio(uniform(0.4,0.6)); bar_height_ratio(uniform(0.7,0.9)); bar_length_ratio(uniform(0.5,0.8)); bar_end_length_ratio(uniform(0.1,0.15)); bar_end_height_ratio(uniform(1.8,3.0)); bar_overall_z_offset(-uniform(0,0.1)*height); shader(weighted metals)
+    knobs (knob): knob_radius(uniform(0.03,0.04)); knob_radius_mid/knob_depth_mid profiles(random); knob_depth(uniform(0.08,0.1))
+    knobs (lever): lever_radius/mid_radius/depth/mid_depth/length(random ranges); level_type(choice wave/cylinder/bent)
+    knobs (pull): pull_size(log_uniform(0.1,0.4)); pull_depth/width/extension/radius/bevel_width(random); pull_type(choice u/tee/zed); is_pull_circular(uniform<0.5)
+  BaseDoorFactory.create_asset: retries up to 100x, rejects if max dim>=5 (boolean sanity)
+  BaseDoorFactory._create_asset: builds slab, panels, frame, arc, joins via geometry_node_join
+    knobs: auto_bevel.amount(0.001) -> global edge softening; door_arc depth(self.depth*0.8) -> dome arc thickness
+  geometry_node_join (base.py): assembles door+handle+frame+arc, adds hinge/slide joints & metadata labels
+    knobs: hinge Max(2.0) -> door open angle range; push-bar sliding joint axis(0,-1,0); handle_position factor(uniform(0.42,0.45)*width) -> handle placement; double-door second hinge axis flip
+  BaseDoorFactory.make_knobs/make_levers/make_pulls/make_handles: procedural handle mesh generation (only used when handle_type != none/bar)
+
+FILE: assets/objects/elements/doors/bar_handle.py
+  nodegroup_push_bar_handle / nodegroup_handle_end / nodegroup_beveled_cylinder: build the push-bar handle geometry with sliding paddle
+    knobs: fillet Count(8)/Radius, resample Counts(32/64/16) -> handle smoothness; end multiply 0.3333, bump 0.75, paddle offset factors(0.4,0.95,-0.5) -> paddle shape/position; Joint Max output -> paddle slide travel
+
+FILE: assets/objects/elements/doors/joint_utils.py
+  nodegroup_door_frame(_warper): builds slim side frame / full frame / dome frame profile
+    knobs: frame_width, door_depth (from factory) -> frame cross-section; arc Radius/Sweep(3.1416)/Resolution for dome top; multiply_4=frame_width*1.4142 -> full-frame profile size; center_x/z_offset outputs
+  nodegroup_arc_on_door(_warper): dome arc glass/panel above door
+    knobs: arc Resolution(32), Sweep Angle(3.1416) -> arc smoothness/coverage
+  nodegroup_symmetry_along_y: mirrors handle to both sides of door
+  nodegroup_add_jointed_geometry_metadata: tags parts with semantic labels for sim
+  nodegroup_hinge_joint / nodegroup_sliding_joint / nodegroup_duplicate_joints_on_parent: articulation primitives (Min/Max/Axis/Value drive motion); joint marker sphere/cone radius(0.05)
+
+FILE: assets/objects/elements/doors/__init__.py
+  random_door_factory: picks a door type
+    knobs: door_probs([4,2,3,3] for Panel/GlassPanel/Louver/Lite) -> relative frequency of glass-panel variant
+  DoorFactory: wraps a randomly chosen sub-factory
+
+FILE: assets/objects/elements/__init__.py
+  re-exports door/element factories (no tunables)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/colors.py -> hsv color palettes (metal_hsv, hsv2rgba) for handle/metal tints
+  assets/composition/material_assignments.py -> weighted material pools (hard_materials, glasses, metals, metal_neutral, frame)
+  assets/utils/autobevel.py -> BevelSharp auto edge bevelling
+  assets/utils/decorate.py -> read/write attributes & coords, face selection helpers
+  assets/utils/draw.py -> spin() lathe for knobs/levers
+  assets/utils/joints.py -> canonical hinge/sliding joint & metadata nodegroups (sim rig)
+  assets/utils/mesh.py -> prepare_for_boolean cleanup
+  assets/utils/nodegroup.py -> geo_radius profile for circular pulls
+  assets/utils/object.py -> mesh/object construction (new_cube, new_line, join_objects, data2mesh)
+  assets/utils/shapes.py -> shape helpers
+  core/constraints/constraint_language/constants.py -> RoomConstants (door_width, door_size, wall_thickness)
+  core/nodes/node_wrangler.py, node_info.py, utils.py -> geometry-node graph builder API
+  core/placement/factory.py -> AssetFactory base class + create_asset contract
+  core/surface.py -> add_geomod, attribute read/write, material application
+  core/tags.py -> semantic tagging
+  core/util/bevelling.py -> add_bevel / get_bevel_edges
+  core/util/blender.py -> blender op wrappers (butil)
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform, weighted_sample, weighted material choice
+  assets/__init__.py, assets/utils/__init__.py, core/*/__init__.py, core/util/logging.py -> package/module init & logging

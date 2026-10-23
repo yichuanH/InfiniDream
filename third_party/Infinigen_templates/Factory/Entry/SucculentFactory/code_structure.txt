@@ -1,0 +1,64 @@
+SUMMARY: SucculentFactory procedurally builds a rosette-style succulent plant by generating individual petal meshes (from a curved profile line swept along a cross-section contour) and instancing them in concentric rings ("bases") of decreasing radius/scale to form the stacked-leaf rosette. Upper-level code defines all geometry-node groups (petal profile, curvature, ring placement) and the SucculentFactory that samples per-plant parameters and picks one of several plant shaders. NOTE: this factory produces a multi-ring ROSETTE of stacked leaves — it does NOT produce a two-lobed fused lithops/living-stone body, so major geometry changes (removing the concentric ring instancing, using two fused lobes with a top slit) would be required to satisfy the requested lithops.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/small_plants/succulent.py
+
+  nodegroup_petal_cross_contour_top / _bottom: control the petal cross-section profile deformation on upper/lower halves of a 128-vertex circle.
+    knobs: index threshold(63.0 top / 64.0 bottom, fixed) -> which half of the ring is offset (thickness distribution top vs bottom of leaf)
+
+  nodegroup_petal_cross_contour: builds the swept profile circle plus surface noise.
+    knobs: CurveCircle Resolution(128, fixed) -> profile smoothness; Radius(0.05, fixed) -> base cross-section size; NoiseTexture W(7.0)/Detail(15.0, fixed) -> surface bumpiness pattern; noise Scale(uniform 0.00-0.02, sampled) -> amount of surface irregularity
+
+  nodegroup_petal_z_contour(curve_param): shapes the leaf outline along its length via a FloatCurve.
+    knobs: control points at t=0/0.2/0.4/0.6/0.8/0.9/1.0 taken from curve_param with per-point normal() jitter (0.04/0.1/0.03/0.06/0.04 std, sampled) -> leaf width/taper profile; endpoint forced to 0.0
+
+  nodegroup_petal_stem_curvature: bends the petal along its length.
+    knobs: k(uniform 0.0-0.3, sampled) -> amount of downward/inward petal bending; VectorRotate Center(0,0,0.2, fixed), X_AXIS rotation
+
+  nodegroup_petal_rotation_on_base_circle: randomizes each petal's tilt on its ring.
+    knobs: RandomValue x jitter(-0.1..0.1)/z jitter(-0.3..0.3, sampled) -> per-petal rotation variance; base angles from Value1/Value2 inputs
+
+  nodegroup_base_perturbation(R): jitters petal base positions on the ring.
+    knobs: X/Y RandomValue(±0.8*R)/Z RandomValue(±0.2*R, sampled) -> irregularity of ring placement (scaled by ring radius R)
+
+  nodegroup_petal_geometry(curve_param): assembles one petal mesh (line -> curvature -> radius -> curve_to_mesh).
+    knobs: CurveLine End(0,0,0.2, fixed) -> petal length; ResampleCurve Count(64, fixed) -> lengthwise resolution; Fill Caps(True)
+
+  nodegroup_petal_on_base(R): instances petals around one ring circle.
+    knobs: RandomValue instance scale(0.7-1.2, sampled) -> per-petal size variance; AlignEulerto normal (Z pivot); Radius/Resolution/Scale/base_z from inputs
+
+  geometry_succulent_nodes(**kwargs): top graph — builds each ring, joins, shade-smooths, applies material, realizes.
+    knobs: petal_stem_curvature_scale(abs(normal(0,1.0)), sampled) -> overall petal bend strength; petal_z_coutour_scale(uniform 0.4-0.9, sampled) -> overall leaf width; base_z_rotation(-1.57 + normal(0,0.3), sampled) -> ring rotation offset; num_bases loop -> number of concentric leaf rings
+
+  SucculentFactory.__init__: chooses plant mode.
+    knobs: mode choice thin_petal/thick_petal (p=[0.65,0.35], sampled) -> slender vs chunky leaves
+
+  SucculentFactory.get_params("thin_petal"): parameters for slender-leaf rosette.
+    knobs: cross_y_bottom(0.08-0.25)/cross_y_top(-0.04-0.02)/cross_x(0.3-0.6, sampled) -> leaf cross-section shape; num_bases(randint 5-8, sampled) -> ring count; init_base_radius(0.09-0.11)/diff_base_radius(0.1, fixed) -> ring size falloff; init_x_R(-1.2..-1.35)/diff_x_R(-0.7..-1.1, sampled) -> leaf opening angle progression; init_petal_num(randint num_bases-15)/per-ring +randint(0,2) -> petals per ring; diff_petal_scale(0.5-0.9, sampled) -> inner-leaf shrink; base_z step(uniform 0.005-0.008) -> vertical stacking; contour_bit(0-2, sampled -> 3 preset petal_curve_param sets); material_bit(0-2, sampled -> green_transition/pink_transition/green shaders)
+
+  SucculentFactory.get_params("thick_petal"): parameters for chunky-leaf rosette.
+    knobs: cross_y_bottom(0.22-0.30)/cross_y_top(0.08-0.15)/cross_x(0.14-0.16, sampled) -> fatter cross-section; num_bases(randint 3-6, sampled); init_base_radius(0.12-0.14)/diff_base_radius(0.11); init_x_R(-1.3..-1.4)/diff_x_R(-0.1..-1.2, sampled); init_petal_num(randint num_bases-12); diff_petal_scale(0.6-0.9); base_z step(0.005-0.006); contour_bit(0-1, 2 presets); material_bit(0-1 -> yellow/whitish_green shaders)
+
+  SucculentFactory.create_asset: builds plane, applies geomod, scales/positions.
+    knobs: obj.scale(0.2,0.2,0.2, fixed) -> overall plant size; location.z += 0.01 (fixed) -> ground offset; tag "succulent"
+
+FILE: assets/objects/small_plants/__init__.py
+  module exports: registers FernFactory, SnakePlantFactory, SpiderPlantFactory, SucculentFactory (no tunables)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/plant/succulent.py -> defines all succulent shaders (green/pink transition, green, yellow, whitish_green) and their colors/marbling
+  assets/materials/plant/__init__.py -> plant material package exports
+  assets/materials/__init__.py, assets/__init__.py -> material/asset package registration
+  assets/utils/object.py -> mesh/object creation helpers
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry/shader node graph construction API (Nodes, NodeWrangler, to_nodegroup, assign_curve)
+  core/nodes/__init__.py -> node module init
+  core/surface.py -> add_geomod / shaderfunc_to_material bridge for applying node graphs
+  core/placement/factory.py -> AssetFactory base class (seeding, asset lifecycle)
+  core/placement/detail.py, __init__.py -> placement/detail utilities
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> apply_transform and Blender object utilities
+  core/util/color.py -> color sampling helpers used by shaders
+  core/util/math.py, random.py -> math/random sampling utilities
+  core/util/logging.py -> logging
+  core/util/__init__.py, core/__init__.py -> package init

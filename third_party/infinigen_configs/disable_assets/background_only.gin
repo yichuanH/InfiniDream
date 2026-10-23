@@ -1,0 +1,33 @@
+# background_only —— 疊在 no_assets 之後：關掉「你要自己擺的物體」，
+# 但把「背景環境元素」（貼地植被 + 雲）重新打開。
+#
+# 用法（順序重要，此檔要放在 no_assets 之後才能覆蓋它）:
+#   -g <biome> disable_assets/no_assets disable_assets/background_only
+#
+# 分類原則:
+#   保留(背景環境, 非你要擺的物體):
+#     - 貼地植被 grass / monocots / ferns / flowers —— 走 X.apply(target,selection)
+#       的 surface scatter, 貼地表, 不經 placeholder, 快。
+#     - 地被 ground_leaves / ground_twigs —— 同樣是貼地 surface scatter。
+#     - 雲 fancy_clouds —— 天空背景(kole clouds), 非地面物體。
+#   維持關閉(placeholder 物體, 你要自己擺):
+#     trees / bushes / boulders / rocks / glowing_rocks / cactus / kelp /
+#     chopped_trees / creatures(ground/flying) / corals / mushroom / pinecone 等
+#     —— 這些沿用 no_assets 的 0, 本檔不碰。
+#
+# 機率值 = 還原成 base_nature.gin 的預設(= biome「原本」繼承的值)。
+# no_assets 把它們蓋成 0, 這裡還原回原始機率, 所以「原本有草的 biome 就撒草、
+# 原本機率低的(如沙漠)就少長」——尊重每個 biome 的原始設定。
+
+# --- 貼地植被 (base_nature 原始機率) ---
+compose_nature.grass_chance = 0.8
+compose_nature.monocots_chance = 0.15
+compose_nature.ferns_chance = 0.25
+compose_nature.flowers_chance = 0.2
+
+# --- 地被 (base_nature 原始機率) ---
+compose_nature.ground_leaves_chance = 0.7
+compose_nature.ground_twigs_chance = 0.7
+
+# --- 雲 (天空背景, base_nature 原始機率) ---
+compose_nature.fancy_clouds_chance = 0.6

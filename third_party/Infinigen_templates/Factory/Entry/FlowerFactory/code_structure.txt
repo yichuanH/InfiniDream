@@ -1,0 +1,74 @@
+SUMMARY: FlowerFactory procedurally builds a single grassland flower: a flattened seed-bearing center disc with phyllotaxis-arranged petals grown from a parametric petal mesh (length, width, curl, wrinkle, bevel). The upper-level flower.py defines all geometry node groups (petal shape, phyllotaxis point placement, seed instance), the petal/center shaders, per-species/per-instance parameter sampling, and the FlowerFactory that assembles and materializes the asset. To satisfy the leopard-print request, the petal shader (shader_petal) and petal_color must be replaced with a spotted-texture material over a warm tan-to-orange base.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/grassland/flower.py
+
+  shader_petal(nw): petal surface material — currently a flat sampled color mixed with translucency. This is where leopard-print spotting must be added (e.g. Voronoi/Noise-driven color ramp: warm tan-to-orange base with dark rosette spots).
+    knobs: petal_color(colors.hsv2rgba(colors.petal_hsv()) — random hue) -> overall petal color; replace with tan/orange base + dark spot pattern
+    knobs: translucent_color_change(uniform(0.1,0.6), random) -> petal see-through tint variation
+    knobs: specular(normal(0.6,0.1), random) -> petal glossiness
+    knobs: roughness(normal(0.4,0.05), random) -> petal sheen/matte
+    knobs: translucent_amt(normal(0.3,0.05), random) -> backlit translucency strength (MixShader Fac)
+
+  shader_flower_center(nw): seed-disc center material via ambient-occlusion-driven color ramp.
+    knobs: colorramp element[0]=(0.0127,0.0075,0.0026) @0.4841 -> dark shadowed seed color
+    knobs: colorramp element[1]=(0.0848,0.0066,0.0007) @0.8591 -> mid brown/red
+    knobs: colorramp element[2]=(1.0,0.6228,0.1069) @1.0 -> bright orange highlight
+
+  geo_flower(nw, petal_material, center_material): assembles center disc, seed instances, and petals.
+    knobs: uv_sphere Segments/Rings(8/8, fixed) -> center mesh detail
+    knobs: center Transform Scale(1,1,0.05, fixed) -> disc flatness
+    knobs: DistributePointsOnFaces Density Max(50000, fixed), Distance Min(Seed Size*1.5) -> seed count/spacing
+    knobs: seed InstanceOnPoints Rotation(0,-1.5708,0.0541, fixed) -> seed orientation
+    knobs: musgrave_texture W(13.8)/Scale(2.41), map_range 0.34..1.21 -> per-seed size variation
+    knobs: petal count = Center Rad*2π/PetalDims.Y *1.2 (multiply_3) -> number of petals
+    knobs: flower_petal Point(0.56), Point height(-0.1), Bevel(1.83), Resolution H(8)/V(16) (fixed) -> petal tip sharpness, curvature, silhouette, mesh density
+    knobs: petal displacement noise Scale(3.73)/Detail(5.41)/Distortion(-1.0), Value(0.025) -> petal surface jitter
+    knobs: SetShadeSmooth(False, fixed) -> faceted vs smooth shading
+
+  nodegroup_flower_petal(nw): parametric single-petal mesh shape.
+    knobs: exposed inputs Length, Point(1.0), Point height(0.5), Bevel(6.8), Base width(0.2), Upper width(0.3), Resolution H(8)/V(4), Wrinkle(0.1), Curl(0.0) -> petal length, tip pointiness, width taper, edge bevel, wrinkle, curl (driven by geo_flower/params)
+    knobs: petal-surface noise_texture Scale(7.9)/Distortion(0.2) (fixed) -> micro wrinkling
+    knobs: X-flatten multiply(0.05, fixed) -> petal thinness
+
+  nodegroup_phyllo_points(nw): phyllotaxis point + rotation generator for petals.
+    knobs: Count(50), Min/Max Radius, Radius exp(0.5), Min angle(-0.5236)/Max angle(0.7854), Min z/Max z, Clamp z, Yaw offset(-1.5708) -> petal ring layout, tilt, spiral
+    knobs: random_value(-0.1..0.1, random) -> per-petal pitch jitter
+
+  nodegroup_plant_seed(nw): individual seed geometry (bezier + circle sweep).
+    knobs: float_curve pts [(0,0),(0.3159,0.4469),(1,0.0156)] -> seed silhouette/bulge
+    knobs: map_range max(3.0), Fill Caps(True) -> seed radius scaling
+
+  FlowerFactory.__init__(factory_seed, rad=0.15, diversity_fac=0.25): overall size and species-vs-instance blend.
+    knobs: rad(0.15) -> flower diameter; diversity_fac(0.25) -> unused in body (species blend uses fixed 0.25 in create_asset)
+
+  FlowerFactory.get_flower_params(overall_rad): samples per-species/instance geometry parameters (all random).
+    knobs: pct_inner(uniform(0.05,0.4)) -> center-disc vs petal size ratio
+    knobs: base_width = 2π·rad·pct_inner / normal(20,5) -> petal base width / petal count
+    knobs: top_width = rad·clip(normal(0.7,0.3),...) -> petal tip width
+    knobs: min/max angle(sort(uniform(-20,100°))) -> petal spread cone
+    knobs: Seed Size(uniform(0.005,0.01)) -> seed size
+    knobs: Wrinkle(uniform(0.003,0.02)) -> petal wrinkle
+    knobs: Curl(deg2rad(normal(30,50))) -> petal curl
+
+  FlowerFactory.create_asset: builds mesh, applies params, random z-rotation.
+    knobs: inst_params rad jitter(normal(1,0.05)) -> per-instance size variation
+    knobs: dict_lerp(...,0.25) -> species/instance param blend
+    knobs: rotation_euler.z(uniform(0,360)) -> random orientation
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/colors.py -> petal_hsv() color sampling and hsv2rgba conversion
+  core/surface.py -> shaderfunc_to_material, add_geomod (attaches shaders/geo node groups)
+  core/nodes/node_wrangler.py -> Nodes enum and node graph construction API
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve helper
+  core/nodes/node_info.py, utils.py, compatibility.py -> node metadata/version compatibility
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> level-of-detail / mesh resolution management
+  core/tagging.py, core/tags.py -> tag_object / tag_nodegroup semantic labeling
+  core/util/blender.py -> spawn_vert, set_geomod_inputs, apply_modifiers
+  core/util/math.py -> FixedSeed, dict_lerp
+  core/util/color.py -> color space utilities
+  core/util/random.py -> randomness helpers
+  core/util/logging.py -> logging
+  assets/utils/object.py -> object creation utilities

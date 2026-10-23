@@ -1,0 +1,63 @@
+SUMMARY:
+This factory builds a single kitchen cabinet assembly: a shelf frame (LargeShelfBaseFactory) fitted with a randomly chosen set of hinged doors, drawers, or open cells across one or more horizontal cabinet cells, joined into one object. The upper-level files split responsibilities: kitchen_cabinet.py orchestrates dimensions/cells and attaches doors/drawers; large_shelf.py generates the box frame (sides, back, bottom, division boards, screws); doors.py builds paneled/ramped doors with knob handles; drawers.py builds drawer boxes with fronts and knobs; utils.py provides tagged-cube helpers. To emulate a mid-century teak sliding-door sideboard, force wood materials, disable knob handles / recess finger grooves, set doors flush, and add tapered legs.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/shelves/kitchen_cabinet.py
+  KitchenCabinetFactory.sample_params: top-level cabinet sizing & cell layout.
+    knobs: dimensions=(uniform(0.25,0.35)[depth], uniform(1.0,4.0)[width], uniform(0.5,1.3)[height]) sampled -> overall box size; shelf_depth(=dim0-0.01); num_h=int((height-0.06)/0.3) -> vertical shelf count; side_board_thickness(0.02) & division_board_thickness(0.02) -> panel chunkiness; bottom_board_height(0.06) -> plinth/toe-kick height (set higher/leg space); n_cells=max(int(width/0.45),1) -> number of side-by-side cabinet cells; intervals uniform(0.55,1.0) sampled -> per-cell width distribution.
+  KitchenCabinetBaseFactory.create_cabinet_components: per-cell attachment choice.
+    knobs: attach_type probs np.choice(["drawer","door","none"],p=[0.4,0.4,0.2]) (or ["drawer","door"],p=[0.5,0.5] when drawer_only) -> mix of doors/drawers/open; force all "door" for sliding-door sideboard.
+  KitchenCabinetBaseFactory.get_material_params: frame/board material.
+    knobs: frame_material np.choice(["white","black_wood","wood"],p=[0.4,0.3,0.3]) sampled -> surface look; set p to force "wood" (teak); board_material mirrors frame.
+  KitchenCabinetBaseFactory.get_attach_params: door/drawer geometry from frame.
+    knobs: shelf_width<=0.6 -> single door else split double doors (door_width=width/2-0.0005); has_mid_ramp(False fixed); edge_thickness_1(0.01 fixed); door_hinge_pos offsets (0.0025/0.008) -> door standoff from frame; door_open_angle(0 fixed) -> closed doors.
+  KitchenCabinetBaseFactory.create_placeholder: bounding box for placement (derived from dimensions; no direct visual knobs).
+  geometry_nodes: assembles frames + transformed doors/drawers; y_translations space cells (0.0005 gap in get_cabinet_params).
+
+FILE: assets/objects/shelves/large_shelf.py
+  LargeShelfBaseFactory.get_asset_params: frame dimensions & hardware (used when frame_params unset).
+    knobs: shelf_depth normal(0.26,0.03)clip[0.18,0.36]; side_board_thickness normal(0.02)clip[0.015,0.025]; backboard_thickness(0.01); bottom_board_y_gap uniform(0.01,0.05); bottom_board_height normal(0.083)clip[0.05,0.11]*choice(1,0 p=0.8/0.2) -> plinth present/absent; division_board_thickness normal(0.02)clip[0.015,0.025]; screw_depth_head/screw_head_radius uniform(0.001,0.004) -> visible screw bumps (set 0 to hide); screw_width_gap uniform(0,0.02); screw_depth_gap uniform(0.025,0.06); attach_length/width/thickness/gap ranges -> mounting cleats; shelf_cell_width choice(0.76,0.36) & shelf_cell_height ~0.3 per cell (unused when driven by cabinet).
+    knobs(material): frame_material/board_material np.choice(["white","black_wood","wood"],p=[0.4,0.3,0.3]) sampled.
+  LargeShelfBaseFactory.update_translation_params: computes board positions from cell sizes (structural, no free knobs).
+  LargeShelfFactory.sample_params: standalone shelf sizing (not used by cabinet path).
+  nodegroup_side_board / back_board / bottom_board / division_board / screw_head: individual board geometry generators (cube sizes, screw cylinders).
+
+FILE: assets/objects/shelves/doors.py
+  CabinetDoorBaseFactory.get_asset_params: per-door proportions & materials.
+    knobs: door_height uniform(0.7,2.2); door_width uniform(0.3,0.4); edge_thickness_1 uniform(0.01,0.018); edge_width uniform(0.03,0.05) -> frame border width; edge_thickness_2 uniform(0.005,0.008); edge_ramp_angle uniform(0.6,0.8) -> beveled edge slope; board_thickness=edge_thickness_1-0.005; knob_R uniform(0.003,0.006) & knob_length uniform(0.018,0.035) -> protruding cylindrical handle (reduce/zero for finger-pull look); attach_height gap uniform(0.05,0.15); has_mid_ramp choice(True/False p=0.6/0.4) -> two-panel split door; door_left_hinge(False); frame_material choice(white/black_wood/wood p=0.5/0.2/0.3); panel_material choice incl "glass" p=0.3/0.4 -> glass panels.
+  geometry_door_nodes: builds ramped edge frame + mid board panel + knob_handle; door_left_hinge mirrors/flips.
+  nodegroup_knob_handle: cylindrical pull; positioning at edge (remove node to eliminate handle for recessed finger-pull).
+  nodegroup_ramped_edge / double_rampled_edge / panel_edge_frame / mid_board(_001): panel/bevel geometry (radii 0.01, subdivide level 4).
+
+FILE: assets/objects/shelves/drawers.py
+  CabinetDrawerBaseFactory.get_asset_params: drawer box & front.
+    knobs: drawer_board_thickness uniform(0.005,0.01); drawer_board_width uniform(0.3,0.7); drawer_board_height uniform(0.25,0.4); drawer_depth uniform(0.3,0.4); drawer_side_height uniform(0.05,0.2); drawer_width=board_width-uniform(0.015,0.025); side_tilt_width uniform(0.02,0.03); knob_radius uniform(0.003,0.006) & knob_length uniform(0.018,0.035) -> drawer pull; drawer_material choice(white/black_wood/wood p=0.5/0.2/0.3); knob_material choice([drawer_material,"metal"] p=0.5/0.5).
+  geometry_nodes: joins door_knob + drawer_door_board + kallax_drawer_frame.
+  nodegroup_door_knob / drawer_door_board / kallax_drawer_frame / board_rail: drawer part geometry (rail radii 0.003/0.004).
+
+FILE: assets/objects/shelves/utils.py
+  nodegroup_tagged_cube: cube with SupportSurface tag on top face (used for shelf boards).
+  blender_rotate / get_nodegroup_assets: coordinate & nodegroup extraction helpers (no visual knobs).
+
+FILE: assets/objects/shelves/__init__.py
+  Re-exports factory classes; no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/wood/plywood.py -> shader_shelves_wood/_z, _white, _black_wood/_z shelf surface shaders (teak grain lives here).
+  assets/materials/wood/wood.py -> base wood grain shader utilities.
+  assets/materials/ceramic/glass.py -> shader_glass for glass door panels.
+  assets/materials/metal/*.py -> metal shaders for knobs/hardware.
+  assets/materials/plastic/plastic_rough.py -> rough plastic shader option.
+  assets/materials/utils/common.py -> shared material node helpers.
+  assets/utils/object.py -> new_bbox and object creation helpers (placeholder bbox).
+  assets/utils/decorate.py -> mesh decoration utilities.
+  assets/utils/extract_nodegroup_parts.py -> extract geometry from nodegroups.
+  core/placement/factory.py -> AssetFactory base class (seeding, create_asset contract).
+  core/placement/detail.py -> level-of-detail / resampling support.
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry-node graph construction API (Nodes, NodeWrangler, to_nodegroup).
+  core/surface.py -> add_geomod, shaderfunc_to_material application.
+  core/tagging.py, core/tags.py -> semantic part tagging (SupportSurface, relabel_obj).
+  core/util/blender.py -> join_objects, delete, apply_transform, TemporaryObject.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py, color.py, logging.py -> RNG, color, logging utilities.

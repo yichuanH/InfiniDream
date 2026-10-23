@@ -1,0 +1,52 @@
+SUMMARY: This factory procedurally generates volumetric clouds (CumulusFactory being the entry point, one of five cloud-type factories). The upper-level files define cloud-shape classes (Cumulus/Cumulonimbus/Stratocumulus/Altocumulus) with per-type scale/curve/noise parameters, an AssetFactory wrapper that places clouds on a sky dome and picks resolution by camera distance, and geometry+shader node graphs that convert a 3D point grid into a density field, mesh it via points-to-volume, and render it as a Principled Volume. NOTE: the selecting request describes a butterfly, but this factory only produces clouds — it cannot render a butterfly without a completely different asset.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/cloud/generate.py
+  CloudFactory.__init__: overall placement/quality config; base class for all cloud factories.
+    knobs: max_distance(300) -> distance at which resolution drops to min; steps(128) -> ref grid density (base mesh detail); cloudy(("bool",0.01) sampled) -> if true forces Cumulonimbus + larger dome/spacing; min_distance(256 cloudy /64) -> min spacing between clouds on dome; dome_radius(1024 cloudy /256) -> sky dome size; dome_threshold(32 cloudy /0) -> min Z cutoff for placement; density_range([1e-5,1e-4] cloudy /[1e-4,2e-4]) -> cloud count on dome; resolutions(per-type [min,max]*4 scale) -> mesh resolution bounds per cloud type.
+  CloudFactory.create_asset: picks random cloud_type, computes resolution = lerp(min,max) by 1-distance/max_distance.
+  CloudFactory.geo_dome: node graph scattering cloud spawn points on an icosphere dome.
+    knobs: Subdivisions(8); Transform Scale((1.2,1.4,1.0)) -> dome ellipsoid shape; Density Max(uniform density_range); Seed(random); combine Z offset(uniform 32..random 64..1e5) -> vertical scatter height.
+  CumulusFactory / CumulonimbusFactory / StratocumulusFactory / AltocumulusFactory: subclass wrappers fixing cloud_types to a single type; edit to change which cloud shape a factory emits.
+
+FILE: assets/objects/cloud/cloud.py
+  Cumulus (base cloud shape): class-constant ranges sampled randomly per instance.
+    knobs: DENSITY_RANGE([1,1]); ANISOTROPY_RANGE([-0.5,0.5]) -> light scatter directionality; NOISE_SCALE_RANGE([8,16]) -> billow frequency; NOISE_DETAIL_RANGE([1,16]) -> fine wispiness; VORONOI_SCALE_RANGE([2,6]) -> lumpy cell size; MIX_FACTOR_RANGE([0.3,0.8]) -> blend of noise vs voronoi shape; ANGLE_ROTATE_RANGE([0,pi/4]) -> random orientation; EMISSION_RANGE([0,0]) -> self-glow; PLACEHOLDER_DENSITY(32); MAX_EXPECTED_SCALE(128); PLANE_SCALES([16,16,4]).
+    Cumulus.get_scale: scale_z(uniform 16..32), scale_x(1.2..2.0*z), scale_y(0.5..2.0*x) -> overall cloud dimensions (sampled).
+    Cumulus.sample_curves: 4 control points defining vertical density profile (each coord sampled in tight ranges) -> flat-bottom rounded-top silhouette.
+    Cumulus.update_shader_params: shader density(uniform 0.05..0.25) -> opacity.
+    Cumulus.make_cloud: builds mesh; marching_cubes(False) -> optional watertight remesh path; resolution(128).
+  Cumulonimbus(Cumulus): towering storm cloud override.
+    knobs: EMISSION_RANGE([0.01,0.01]); PLACEHOLDER_DENSITY(8); MAX_EXPECTED_SCALE(2048); PLANE_SCALES([16,16,32]); get_scale x(512..1024),y(0.5..2*x),z(256..512); sample_curves anvil-shaped points; shader density(0.1..0.3); make_cloud doubles resolution.
+  Stratocumulus(Cumulus): layered sheet clouds.
+    knobs: ANGLE_ROTATE_RANGE([0,pi/4]); shader density(0.01..0.10) -> thin; get_scale x(128..256),y,z(16..32); sample_y_curves n(randint 2..6) undulating rows -> multiple lobes along Y.
+  Altocumulus(Cumulus): grid of many small scattered sub-clouds.
+    knobs: SCATTER_VORONOI_SCALE_RANGE([1,4]) -> clumping pattern; SCATTER_GRID_VERTICES_RANGE([4,12]) -> grid density of sub-clouds; NUM_SUBCLOUDS(8); get_scale = base*4; shader density(0.05..0.25); make_cloud caps resolution at 64.
+  initialize()/main()/single(): standalone preview scripts (grid of sample clouds, lighting); not used by the factory pipeline.
+
+FILE: assets/objects/cloud/node.py
+  cloud_geometry_func/cloud_geometry_node: geometry node graph turning grid points into a density field and meshing it.
+    knobs: internal scale((1.5,1.5,2.0)); noise subtract offset(0.5); scale factors(0.1); voronoi/noise wired from params; greater_than threshold(0.01) -> density cutoff/edge; PointsToVolume Radius(0.0150) -> voxel blob size.
+  shader_material: Principled Volume shader from density/anisotropy/noise/voronoi params.
+    knobs: mapping scale((0.9,0.9,0.9)); mix_1 Fac(0.3); Color((1,1,1)) white; Absorption Color(white); Temperature(0.0); Emission Strength(param) -> glow; Density(param) -> opacity.
+  scatter_func/scatter_nodes: Altocumulus instancer.
+    knobs: selection greater_than(0.6); grid Size(2.0); DistributePoints Distance Min(0.3), Density Max(64.0); scale random(0.1..0.4); rotate random(-45..45 deg); translate random Z.
+
+FILE: assets/objects/cloud/__init__.py
+  Exports the five factory classes; edit to expose/rename factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/lighting/sky_lighting.py -> adds sun/sky HDRI lighting for preview scenes.
+  assets/utils/object.py -> new_cube/new mesh helpers used for spawn geometry.
+  assets/utils/decorate.py -> mesh decoration helpers.
+  core/surface.py -> add_material/add_geomod/shaderfunc_to_material application to objects.
+  core/nodes/node_wrangler.py -> Nodes registry + node graph builder (nw.new_node).
+  core/nodes/node_info.py, compatibility.py, utils.py -> node type metadata & version compat.
+  core/placement/factory.py -> AssetFactory base (placeholder/asset spawn lifecycle).
+  core/placement/detail.py -> LOD/detail utilities.
+  core/tagging.py, core/tags.py -> tag_object semantic labeling ("cloud").
+  core/util/blender.py -> spawn_empty/delete/select/apply_transform blender ops.
+  core/util/math.py -> FixedSeed deterministic seeding.
+  core/util/random.py -> random_general (rg) parameter sampling ("bool" etc.).
+  core/util/logging.py -> Suppress context manager for quiet bpy ops.

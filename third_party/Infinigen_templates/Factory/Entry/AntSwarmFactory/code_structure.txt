@@ -1,0 +1,79 @@
+SUMMARY: This factory procedurally builds insects (BeetleFactory) and swarms of them (AntSwarmFactory) that walk/climb across terrain as a Blender boid particle system. The upper-level files assemble a creature from NURBS body/head parts plus procedural legs and mandibles (beetle.py + parts + genome graph), rig and animate a walk cycle (run_cycle.py, rigging.py), join the parts into one mesh (joining.py, join_smoothing.py, creature.py), optionally add hair fur (hair.py), and drive the whole swarm via boid rules (boid_swarm.py). NOTE: the selecting request describes a "blue tang" fish, but this factory produces insects/beetles — to make a fish you would instead use FishFactory (not present here); the knobs below only alter the beetle/ant result.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/beetle.py
+  insect_hair_params(): controls fur applied to insect body when hair is enabled
+    knobs: mat_roughness(U(0.7,1) sampled) -> fur shine; length(U(0.01,0.04) sampled) -> fur strand length; puff(U(0.7,1) sampled) -> fur fluffiness; density(4000 fixed) -> fur count per area; clump_n(1 fixed) -> hairs per clump; avoid_features_dist(0.01) -> keep fur off eyes/features; Combing(U(0,0.2)) -> lay-down direction; Strand Perlin Scale(U(15,45)) -> waviness scale; Root Radius(0.001) -> strand thickness; Hair Length Pct Min(U(0.7,1)) -> length variation; IOR(1.55 fixed) -> fur refraction
+  beetle_genome(): builds the creature part tree (body, legs, head, mandibles)
+    knobs: body proportions noise (U(1,3) applied to last third, 50% chance) -> body segment bulge; n_leg_pairs(clip 2..15, from body_length*clip_gaussian(3,2,2,6)) -> number of leg pairs; leg length scaling(/(n_leg_pairs/1.8)) -> leg length vs body; splay(U(30,60)) -> sideways leg spread; leg xrot lerp(70..-100 along t) -> leg pitch front-to-back; leg attach t range(np.linspace(0.15,0.6)) -> leg placement along body; head joint((0,-15,0)) -> head tilt; mandible probability(U()<0.7) -> whether jaws present; mandible rot((120,20,80)*N(1,0.15)) -> jaw angle/spread; mandible coord(0.75,0.5,0.1) -> jaw placement
+  BeetleFactory: single-insect asset; picks body material and optionally animates/hairs
+    knobs: body_material (weighted_sample(material_assignments.beetle) — sampled from infra list); animation_mode(None|"walk_cycle") -> static vs walking; steps_per_sec(N(2,0.2)) -> walk speed; hair enable + probability(U()<0.5) -> chance of fur
+  AntSwarmFactory.ant_swarm_settings(): boid particle swarm behaviour & scale
+    knobs: mode(random choice queues|goal_swarm|random_swarm) -> formation style; land_speed_max(U(0.5,2)); land_acc_max(U(0.7,1)); land_personal_space(0.05 fixed) -> spacing; land_jump_speed(U(0,0.05)); rule_fuzzy(U(0.6,0.9)) -> rule strictness; queue_count(100 fixed, queues mode); particle_size(U(0.02,0.1)) -> insect size; size_random(U(0.3,0.7)) -> size variance; mass(2 fixed); use_flight/use_land/use_climb(False/True/True) -> movement modes; emit_from("VOLUME"); warmup_frames(1); emit_duration(0 -> all appear at once)
+  AntSwarmFactory.__init__(): assembles swarm
+    knobs: child collection n=1 (one beetle variant instanced); volume(N(0.1,0.015)) -> total swarm density/count; collider_col ("colliders" collection)
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  animate_run(): IK-driven walk cycle for legs/body/wings
+    knobs: stride_length(0.7*clip_gaussian(0.4,0.3,0.3,0.6)*dim) -> step length; spread(clip_gaussian(0.15,0.1,0,0.5)) -> gait phase spread; stride_height(U(0.15,0.4)) -> foot lift; body_height(stride_height*clip_gaussian(0.6,0.4,0.3,1.2)) -> body bob; offset(U(0.5,0.7)) -> front/back leg phase; squash_gait_pct(0.1) -> body-to-foot coupling; flap_height(U(0.3,1)) -> wingtip motion (if wings)
+  animate_wiggle_body_iks()/animate_wiggle_bones(): alt body wiggle (unused by beetle) — mag_deg, freq, wavelength, width knobs
+  foot_path()/body_path(): NURBS motion path shape (length,height,upturn,down_stroke,curve_resolution=8)
+
+FILE: assets/objects/creatures/util/boid_swarm.py
+  BoidSwarmFactory: converts creature collection to particle instances, spawns emitter, runs boid sim
+    knobs: volume default(0.1) -> count; placeholder cube size(4); step_size_range(speed*3*N(1,0.1)*[0.5,1.5]); yaw_dist(normal,0,70) -> wandering; count derived from volume/(avg_size^3*child_vol)
+
+FILE: assets/objects/creatures/util/genome.py
+  Joint/Attachment/CreatureNode/CreatureGenome + part()/attach(): syntactic graph for assembling parts; interp_* for morphing between genomes (t blend). Edit attach coords/joints here to re-place parts.
+
+FILE: assets/objects/creatures/util/creature_util.py
+  offset_center(): recenters/floor-aligns creature (x,z toggles). polar_skeleton()/interp_dict(): skeleton & param interpolation helpers.
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature(): turns genome tree into posed meshes; raycast_surface/attach handle part placement (rotation_basis normal|tangent|global). Mostly structural.
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts(): joins parts, remeshes, rigs, applies material
+    knobs: face_size / min_remesh_size(0.01) -> mesh resolution; adapt_mode("remesh"); smooth_joins(True); remove_doubles thresholds(0.01/0.001); SUBSURF levels(1); roll("GLOBAL_POS_Y"); select_large_component thresh(0.9)
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  create_bevel_connection()/smooth_around_line(): bevel & smoothing at part joins
+    knobs: segments(9/5), offset_pct(98), smooth iters(30), factor(0.9), simplify_thresh(1.5e-2), col_radius(0.07)
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig()/create_bones()/constrain_bones(): armature build, IK targets, joint limits
+    knobs: shoulder_auto_stiffness(0.85); connector_collapse_margin_radpct(0.5); trim_bounds_child_margin(0.15); ik target_size; create_ragdoll: min_col_length(0.1), col_joint_margin(0.2), col_radius(0.07), mass(5)
+
+FILE: assets/objects/creatures/util/hair.py
+  configure_hair()/nodegroup_hair_grooming(): geometry-nodes fur grooming and hair BSDF material; density/clump/grooming knobs are fed from insect_hair_params above.
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree + iter/map/fold/tzip: generic tree utilities used to build & traverse the part graph (no visual knobs).
+
+FILE: assets/objects/creatures/parts/__init__.py
+  imports part factories (body, leg, head_detail, generic_nurbs, fin_old, ridged_fin, wings, tail, etc.); swap which parts beetle_genome uses here.
+
+FILE: assets/objects/creatures/__init__.py
+  exports all creature factories (Fish, Bird, Crab, etc.); use to select a different factory than AntSwarm/Beetle.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material lists (material_assignments.beetle) used to color the body
+  assets/materials/creature/__init__.py -> creature surface shaders (skin/scales/chitin)
+  assets/materials/* -> shared material library (metal, plastic, fabric, wood, ceramic, art, etc.)
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> surface wear effects
+  assets/utils/geometry/lofting.py, __init__.py -> skeleton-to-surface lofting / tangents for parts
+  assets/utils/geometry/nurbs (via join_smoothing) -> NURBS mesh + cylinder topology helpers
+  assets/utils/nodegroups/hair.py -> hair grooming node subgroups (comb, clump, snap-to-surface)
+  assets/utils/object.py -> object creation helpers
+  core/placement/factory.py -> AssetFactory base + make_asset_collection
+  core/placement/particles.py -> particle_system + bake for the boid swarm
+  core/placement/animation_policy.py -> AnimPolicyRandomForwardWalk trajectory for placeholder motion
+  core/placement/detail.py -> adapt_mesh_resolution (remesh/subdivide)
+  core/nodes/node_wrangler.py, node_utils.py -> geometry/shader node graph construction
+  core/surface.py -> write_attribute / add_geomod / smooth_attribute
+  core/tagging.py, core/tags.py -> semantic object tagging
+  core/util/blender.py -> Blender object/mesh/modifier utilities
+  core/util/math.py -> lerp, clip_gaussian, homogenize, lerp_sample, FixedSeed
+  core/util/random.py -> weighted_sample, random_general sampling
+  core/util/logging.py -> Suppress / Timer logging helpers

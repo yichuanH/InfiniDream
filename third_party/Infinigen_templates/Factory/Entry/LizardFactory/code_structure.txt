@@ -1,0 +1,90 @@
+SUMMARY: This factory builds procedural reptiles (lizard, snake, frog, chameleon) assembled from a genome tree of parts joined and rigged into a single creature mesh. The upper-level files define genome functions (which parts attach where), animation parameter samplers, material postprocessing, and the AssetFactory entry classes; supporting util files handle part-to-creature conversion, bone rigging, join-smoothing, and locomotion animation. NOTE: the current LizardFactory produces only a head (all body/leg/eye attach code is commented out) — to build a sea turtle you must uncomment/rewrite `lizard_genome()` to attach a domed shell body, paddle flippers, and a blunt snout.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/reptile.py
+  lizard_genome(): builds the lizard genome (entry for LizardFactory). Currently returns ONLY a head; body/legs/eyes/jaw are commented out.
+    knobs: head_size["scale_x"](0.8+N(0,0.02), sampled) -> head length; head_size["scale_y"](0.3+N(0,0.02), sampled) -> head width; commented body_fac ReptileBody(type='lizard', n_bones=15, shoulder_ik_ts=[0,0.3,0.6,1.0]) -> body segment count/IK; commented leg attach coords (front U(0.05,0.07), back U(0.21,0.23)) -> limb placement; open_mouth(U()>0, unused) -> jaw open
+  snake_genome(): full snake body+head+eyes+teeth+jaw genome (good template for turtle assembly).
+    knobs: n_bones(15) -> body flexibility; w_mod/h_mod(N(1,0.05), sampled) -> body width/height scale; eye Radius(N(0.03,0.005)) -> eye size; eye splay(100/180) -> eye spread; horn(teeth) length(U(0.2,0.3)),rad1(0.4),rad2(0.3),thickness(U(0.04,0.08)) -> tooth shape; horn splay(60/180),coord(U(0.67,0.7),...,0.8) -> tooth placement; mouth_open_deg(0) -> jaw gap; attach bridge_rad/smooth_rad(0.1-0.2) -> join blending
+  frog_genome(): frog genome (head-only currently), uses reptile_postprocessing with anim mode='swim', speed_m_s=0.5
+    knobs: head_size["scale_y"](0.4+N(0,0.02)) -> head width
+  chameleon_genome(): chameleon body from parts.chameleon.Chameleon()
+  dinosaur(): dinosaur body genome (body-only, mostly commented)
+  snake_swim_params()/lizard_run_params()/chameleon_eye_params(): sample animation params
+    knobs: swim_freq(2*clip_gaussian(1,0.3,0.1,2) snake / 1*... lizard, sampled) -> wiggle speed; swim_mag(N(200,3) snake / N(50,3) lizard, sampled) -> wiggle amplitude deg; flipper_freq/flipper_mag/flipper_var(U(0,0.2)) -> limb motion
+  animate_snake_swim/animate_lizard_run/animate_chameleon_eye(): apply wiggle drivers to named bones
+    knobs: wavelength(U(0.2,0.4) snake, U(1,1.2) lizard) -> body wave length; bone name filters "Body"/"FrontLeg"/"BackLeg"/"Eye" -> which bones animate; off(1/2 or 0) -> phase
+  reptile_postprocessing()/chameleon_postprocessing(): assign materials to mesh + extras
+    knobs: main_template = weighted_sample(material_assignments.reptile) -> body skin/shell material (randomly sampled); tongue.Tongue/bone.Bone/eyeball.Eyeball(coord="X")/nose.Nose applied to extras named Tongue/Horn/Eyeball/Nose
+  LizardFactory: entry factory; max_distance(40) -> cull range; create_asset(animate,rigging,cloth) -> uses adapt_mode="remesh"
+  FrogFactory: max_distance(40); adapt_mode="remesh"
+  SnakeFactory: max_distance(40); snake_length(("uniform",0.5,3), sampled) -> length (scaled /20 to real units); AnimPolicyRandomForwardWalk speed(min(len,2)*U(0.5,1)), step_range((0.2,0.2)), yaw_dist(("uniform",-7,7)) -> path following
+  ChameleonFactory: max_distance(40)
+
+FILE: assets/objects/creatures/util/animation/curve_slither.py
+  add_curve_slithers(): adds slither wiggle geo-nodes to a snake path curve.
+    knobs: Wavelength(snake_length/U(2,4)) -> curve wave length; Magnitude(snake_length*0.05*N(1,0.2)) -> wave amplitude; MagRandom(U(0,0.7)) -> amplitude randomness; Loopyness(0)/LoopRandom(0) -> loops; AltitudeOffset(0.02) -> lift off floor
+  nodegroup_wiggles/add_wiggles/add_loopbacks(): geo-node definitions for curve wiggle (subdiv Level=3, modulo-4 zigzag pattern)
+  slither_along_path(): keyframes creature moving along curve (zoff_pct=0.7 -> ground offset)
+  snap_curve_to_floor(): raycasts curve points to bvh floor (step_height=1)
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  foot_path/body_path(): NURBS gait cycle curves (length,height,upturn,down_stroke,curve_resolution=8)
+  animate_run(): IK-target gait animation
+    knobs: stride_length(0.7*clip_gaussian(...)*dim.x), spread(clip_gaussian(0.15,...)), stride_height(U(0.15,0.4)), body_height(stride_height*clip_gaussian(0.6,...)), flap_height(U(0.3,1)), squash_gait_pct(0.1) -> gait shape/wing flap
+  animate_wiggle_body_iks(): steps_per_sec(clip_gaussian(1.5,0.5,...)), width(1.1*clip_gaussian(0.15,...)*dim.x), cycles_per_bodylen(1.5), compression_ratio(1.01)
+  animate_wiggle_bones/animate_running_front_leg/animate_running_back_leg(): sinusoid drivers on bones (mag_deg,freq,off,wavelength,fixed_head)
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature(): converts genome tree -> parts + attaches/raycasts/tags them (core assembly)
+  PartFactory/Part: base classes; ALL_TAGS(body,neck,head,jaw,head_detail,limb,foot,rigid) -> per-vertex tags
+  raycast_surface/attach/apply_attach_transform(): surface attachment math (edit only for advanced attach behavior)
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts(): joins body parts, computes rig, remeshes, applies materials.
+    knobs: adapt_mode("remesh"), min_remesh_size(0.01), smooth_joins(True), remove_doubles thresholds(0.01/0.001), SUBSURF levels(1), roll("GLOBAL_POS_Y"), select_large_component thresh(0.9) -> mesh resolution/cleanup
+  compute_joining_effects(): bevel/smooth connectors from att bridge_rad/smooth_rad
+
+FILE: assets/objects/creatures/util/genome.py
+  part()/attach(): genome-building sugar (coord,joint,side,rotation_basis,bridge_rad,smooth_rad)
+  Joint/Attachment/IKParams dataclasses: rest(deg), bounds, stiffness, stretch, chain_parts(1), rotation_weight(0), target_size(0.2)
+  interp_genome/interp_part_tree: genome blending between two creatures
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig(): builds armature, bones, IK targets, constraints (roll="GLOBAL_POS_Y")
+    knobs: shoulder_auto_stiffness(0.85) -> shoulder rigidity; connector_collapse_margin_radpct(0.5), trim_bounds_child_margin(0.15) -> bone placement
+  create_ragdoll(): physics colliders (min_col_length=0.1, col_joint_margin=0.2, col_radius=0.07, mass=5)
+
+FILE: assets/objects/creatures/util/creature_util.py
+  euler/interp_dict/polar_skeleton/offset_center: math helpers for part transforms (edit rarely)
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  create_bevel_connection(): bevel bridge geometry (segments=9, offset_pct=98); smooth_around_line (iters=30, factor=0.9)
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree + iterators/map/fold/tzip: generic tree utilities for genome traversal (do not usually edit)
+
+FILE: assets/objects/creatures/parts/__init__.py
+  imports all part factories (body, head, reptile_detail, eye, horn, leg, foot, fin, wings, chameleon, beak, etc.) — the palette of parts you attach in genome functions. For a turtle: use/add shell body, paddle-fin (ridged_fin/fin_old), beak, foot parts.
+
+FILE: assets/objects/creatures/__init__.py
+  exports factory classes (LizardFactory etc.) — edit to register new factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class (spawn/placeholder lifecycle)
+  core/placement/animation_policy.py -> AnimPolicyRandomForwardWalk + bezier path creation for locomotion
+  core/placement/detail.py -> adaptive mesh resolution / remeshing
+  core/placement/path_finding.py -> path finding for animated placeholders
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py -> geometry-node graph construction API (Nodes, NodeWrangler, to_nodegroup)
+  core/surface.py -> attribute writing/reading/smoothing on meshes
+  core/util/blender.py -> Blender object utilities (spawn, join, modifiers, viewport modes)
+  core/util/math.py -> lerp, clip_gaussian, homogenize, FixedSeed, sampling math
+  core/util/random.py -> random_general, weighted_sample (material/param sampling)
+  core/util/logging.py -> Suppress, Timer logging helpers
+  assets/composition/material_assignments.py -> `reptile` material template list (skin/shell shaders sampled)
+  assets/materials/creature/{bone,eyeball,nose,tongue}.py -> shaders applied to horn/eye/nose/tongue extras
+  assets/materials/... (all others) -> shared material shader library
+  assets/colors.py -> color palette sampling for materials
+  assets/utils/geometry/{lofting,curve}.py -> skeleton tangents, NURBS/curve helpers for part surfaces
+  ass

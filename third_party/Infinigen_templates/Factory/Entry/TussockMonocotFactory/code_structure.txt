@@ -1,0 +1,48 @@
+SUMMARY: This factory builds a single tussock/pampas-grass-style monocot clump: a dense fountain of long, arching, sharp-edged blades instanced along a curved stem, with a feathery grey-green/silver coloration. `tussock.py` subclasses the shared `MonocotGrowthFactory` (in `growth.py`), overriding blade shape, clump density, arch angles, and hue. `growth.py` provides the general engine: it builds leaf instances, distributes them on a stem via geometry nodes, deforms/twists the whole clump, and assigns a procedural leaf material.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/tussock.py
+  TussockMonocotFactory.__init__: per-tussock clump geometry (sampled per factory_seed via FixedSeed)
+    knobs: stem_offset(uniform 0.0-0.2) -> height of stem the blades attach along; angle(uniform pi/20-pi/18) -> tight azimuthal spacing between successive blades (dense spiral); z_drag(uniform 0.1-0.2) -> downward droop/arch of the fountain; min_y_angle(uniform 0.2pi-0.25pi) -> tilt of innermost blades; max_y_angle(fixed pi/2) -> outermost blades lie nearly horizontal; count(log_uniform 512-1024) -> number of blades (density of clump); scale_curve([(0,0.6-1.0),(1,0.6-1.0)]) -> blade length variation base-to-tip
+  TussockMonocotFactory.build_base_hue: leaf hue selection
+    knobs: 50% branch -> hue uniform 0.1-0.15 (yellow-tan pampas); else hue uniform 0.25-0.35 (grey-green); adjust ranges/probability to shift plume/blade color
+  TussockMonocotFactory.build_leaf: single blade profile
+    knobs: x_anchors([0, uniform 0.3-0.7, 1.0]) -> position of widest point along blade; y_anchors([0,0.01,0]) -> max blade width (very thin/grassy); increase mid y_anchor for broader blades
+
+FILE: assets/objects/monocot/growth.py  (base class — edits affect all monocots incl. tussock)
+  MonocotGrowthFactory.__init__: global defaults (most overridden by tussock)
+    knobs: perturb(0.05) -> per-instance random jitter of rotation/scale; leaf_prob(uniform 0.8-0.9) -> fraction of stem points that get a blade; leaf_range((0,1)) -> spline span over which blades appear; radius(0.01) -> stem thickness; bend_angle(pi/4) -> overall clump bend; twist_angle(pi/6) -> overall clump twist; z_scale(uniform 1.0-1.2) -> vertical stretch; align_factor(0)/align_direction((1,0,0)) -> blade orientation alignment; bright_color(hsv: base_hue, sat 0.6-0.8, val 0.05-0.1) / dark_color(hue±0.03, sat 0.8-1.0, val 0.05-0.2) -> two-tone leaf gradient
+  MonocotGrowthFactory.decorate_leaf: per-blade curl/noise
+    knobs: y_ratio(4) -> cupping curvature; y_bend_angle(pi/6) -> lengthwise arch; z_bend_angle(pi/6) -> sideways bend; noise_scale(0.1)/strength(0.02) -> surface roughness displacement
+  MonocotGrowthFactory.build_stem: stem mesh resolution
+    knobs: SUBSURF levels(9); geo_radius args(radius,16 segments); DISPLACE noise_scale(0.1)/strength(0.01)
+  MonocotGrowthFactory.decorate_monocot: whole-clump transform
+    knobs: z_drag droop; twist angle(uniform ±twist_angle); bend angle(uniform 0-bend_angle); scale(x,y uniform 0.8-1.2, z=z_scale); random Z rotation
+  MonocotGrowthFactory.shader_monocot: leaf material
+    knobs: specular(uniform 0.0-0.2); clearcoat(80% =0 else 0.2-0.5); color ramp stops([0,0.3,0.7,1] bright->dark) via musgrave(scale 10); roughness curve(0.5-0.8); Subsurface Weight(0.01)/Radius(0.01)
+  MonocotGrowthFactory.make_geo_flower: blade-on-stem distribution (geometry nodes)
+    knobs: stores z_rotation attribute; uses count, angle, min/max_y_angle, scale_curve, leaf_prob, leaf_range, perturb, align_factor
+
+FILE: assets/objects/monocot/__init__.py
+  module exports: registers TussockMonocotFactory and sibling monocot factories; no tunables
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/draw.py -> leaf() builds the blade mesh from x/y anchor curves
+  assets/utils/decorate.py -> displace_vertices, geo_extension (mesh warping/thickening)
+  assets/utils/nodegroup.py -> geo_radius node group (gives stem thickness)
+  assets/utils/object.py -> mesh2obj/data2mesh/origin2leftmost (mesh construction, pivot)
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/mesh.py -> mesh utility helpers
+  core/nodes/node_wrangler.py -> NodeWrangler geometry/shader node building API
+  core/nodes/node_info.py -> Nodes enum of Blender node types
+  core/nodes/node_utils.py -> build_color_ramp and node helpers
+  core/surface.py -> add_geomod, shaderfunc_to_material, eval_argument
+  core/placement/factory.py -> AssetFactory base, make_asset_collection
+  core/placement/detail.py -> adapt_mesh_resolution (face-size control)
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> modify_mesh, apply_transform, delete_collection
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform sampling
+  core/util/logging.py -> logging utilities

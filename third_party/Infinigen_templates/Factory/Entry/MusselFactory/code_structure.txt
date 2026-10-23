@@ -1,0 +1,57 @@
+SUMMARY: The MusselFactory builds a procedural bivalve mollusk (a mussel/pen-shell-shaped shell) by generating two mirrored valves joined at a hinge angle, then displacing and shading them. `generate.py` wires the chosen base geometry factory (MusselBaseFactory) to a shell shader; `shell.py` produces the actual valve mesh (ellipse profile shaped by angle, ribbing, solidify/displace); `snail.py` and `base.py` are the shared mollusk infrastructure. For the requested pen-shell look, the mussel_make geometry, valve solidify/displace, and the amber-brown shader hue are the primary tuning points.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mollusk/base.py
+  BaseMolluskFactory: shared defaults for all mollusk geometry factories
+    knobs: max_expected_radius(0.5) -> overall asset scale bound; noise_strength(0.02) -> DISPLACE roughness/scale amplitude; ratio(1) -> shader X/Z color-band mix; x_scale(2) -> horizontal wave stripe density; z_scale(1) -> vertical wave stripe density; distortion(1) -> wave pattern warping
+
+FILE: assets/objects/mollusk/generate.py
+  MolluskFactory.__init__: selects base factory + builds material
+    knobs: factory_methods([SnailBaseFactory,ShellBaseFactory]) -> mollusk family (MusselFactory forces MusselBaseFactory); weights([1,1]) -> random family probability (unused when method forced)
+  MolluskFactory.decorate_mollusk: mesh finishing
+    knobs: subsurface2face_size(face_size=0.01) -> mesh resolution; SOLIDIFY thickness(0.005) -> valve wall thickness (raise for thicker/lower for brittle thin wedge); texture type(random STUCCI|MARBLE) -> surface bump style (STUCCI≈scales); texture.noise_scale(log_uniform 0.1..0.2, random) -> bump/scale size; DISPLACE strength(=noise_strength 0.02), mid_level(0) -> surface roughness depth
+  MolluskFactory.build_base_hue: base color hue (random)
+    knobs: 0.4 prob branch uniform(0,0.2); else uniform(0.05,0.12) -> hue toward amber/orange-brown (bias lower branch for pen-shell amber)
+  MolluskFactory.shader_mollusk: shell material
+    knobs: roughness(uniform 0.2..0.8, random) -> gloss; specular(0.3) -> highlight; value_scale(log_uniform 1..20, random) -> brightness/darkness; saturation_scale(log_uniform 0.4..1, random) -> color intensity; dark_color value(0.005*value_scale**1.5), light_color value(0.05*value_scale) -> shade contrast; hue jitter(uniform -0.06..0.06) -> color variation; n(randint 3..5) -> number of color-ramp bands; wave_profile(SAW), bands_direction(X/Z) -> radiating-rib stripe orientation; MixRGB factor(ratio) -> blend of X vs Z bands
+  MusselFactory: entry class, forces MusselBaseFactory (no own knobs)
+
+FILE: assets/objects/mollusk/shell.py
+  ShellBaseFactory.__init__: shell type + vertical color scale (random)
+    knobs: makers list -> which shell maker; z_scale(log_uniform 2..10, random) -> vertical shader banding
+  ShellBaseFactory.build_ellipse: base valve profile
+    knobs: viewpoint((0,0,1)) -> dome bulge direction; softness(0.3 default, 0.5 for mussel) -> valve convexity/flatness; vertices(1024) -> profile resolution
+  ShellBaseFactory.mussel_make: THE pen-shell valve shape (primary for this request)
+    knobs: scale(1,3,1) -> elongation (raise Y for longer narrow wedge); s(uniform 0.6..0.8, random) -> mid taper; angles([-0.5,-uniform(0.1,0.15),uniform(0..0.25),0.5]*pi) -> where the wedge narrows/flares; scales([0,s,1,uniform(0.6,0.8)]) -> width profile from pointed base(0) to broad edge -> controls narrow-point-to-wide-flare taper
+  ShellBaseFactory.add_radial_groove: radiating rib lines (scallop only; call it in mussel_make to add ribs)
+    knobs: frequency(45) -> number of radial ribs; scale(0.02) -> rib depth; clip r-0.25 -> ribs only past radius 0.25
+  ShellBaseFactory.add_hinge: hinge slab (scallop only)
+    knobs: length(0.4), width(0.1), x(uniform 0.8..1.0) -> hinge size; SUBSURF levels(2); DISPLACE strength(0.2) STUCCI -> hinge roughness
+  ShellBaseFactory.create_asset: joins two valves, sets opening angle
+    knobs: upper.location[-1]+=0.005 -> valve gap; base rotation(uniform 0..pi/4, random) -> whole-shell tilt; upper open angle(base + uniform(pi/6..pi/3), random) -> how wide valves gape (small/zero = closed wedge standing point-down)
+  MusselBaseFactory: forces mussel_make
+
+FILE: assets/objects/mollusk/snail.py
+  SnailBaseFactory + subclasses: spiral snail geometry (not used by MusselFactory)
+    knobs: freq(256) spiral resolution; ratio/z_scale/distortion (random) shader params; per-maker scale/lateral/longitude/loop ranges -> snail shapes
+
+FILE: assets/objects/mollusk/__init__.py
+  re-exports factory classes (no knobs)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> subsurface2face_size, displace_vertices mesh helpers
+  assets/utils/draw.py -> shape_by_angles profile shaping used to sculpt valve outline
+  assets/utils/object.py -> new_circle, data2mesh, mesh2obj, join_objects, new_empty, center primitives
+  assets/utils/misc.py -> assign_material
+  core/surface.py -> shaderfunc_to_material, add_geomod material/geometry-node application
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> node graph building (WaveTexture, PrincipledBSDF, color ramps)
+  core/nodes/compatibility.py, utils.py -> Blender node version compatibility
+  core/placement/factory.py -> AssetFactory base class and seeding
+  core/placement/detail.py -> LOD/face-size management
+  core/tagging.py, core/tags.py -> tag_object semantic labeling
+  core/util/blender.py -> modify_mesh, apply_transform, deep_clone_obj, ViewportMode, delete
+  core/util/math.py -> FixedSeed deterministic randomness
+  core/util/random.py -> log_uniform sampling
+  core/util/color.py -> color utilities
+  core/util/logging.py -> logging

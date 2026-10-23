@@ -1,0 +1,48 @@
+SUMMARY: This factory builds a school of small fish that swims as one coherent particle swarm. FishFactory procedurally generates a single rigged, animated fish (NURBS body + attached fins/eyes with genome interpolation and swim animation); FishSchoolFactory wraps a small collection of FishFactory instances in a Blender boid particle system so one create_asset() call emits one flocking school. The upper-level files define the fish genome, fin/cloth/swim parameters, boid flocking rules, and joining/rigging/animation utilities.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/fish.py
+  fin_params(scale, dorsal): controls fin geometry per fin type
+    knobs: noise x/z scale(clip_gaussian(1,0.1,0.8,1.2)) -> fin size jitter (random); dorsal RoundWeight(sample_range 0.8-1) -> dorsal fin roundness (random); dorsal AffineZ(0-0.1)/OffsetWeightZ(0.6-1)/Freq(U 100-150) -> dorsal ridge shape/frequency; non-dorsal RoundingWeight(0.02-0.07)/AffineZ(0.8-1.2)/OffsetWeightZ(0.05-0.2)/OffsetWeightY(0.2-1)/Freq(U 60-80) -> body-fin ridge shape (all random)
+  fish_fin_cloth_sim_params(): fin cloth softness (only used if clothsim_skin=True)
+    knobs: compression/tension/shear_stiffness(1200), bending_stiffness(3000), *_damping(100), air_damping(5), mass(0.3), each *clip_gaussian(1,0.2,0.2,3) -> fin floppiness (random per fish)
+  fish_genome(): whole-fish part assembly
+    knobs: body var(U 0.3-1) -> body shape variation (random); temp_dict body_fish_eel(0.01)/puffer(0.001)/default(0.1) -> species blend temperatures; n_bones(15) -> spine resolution; dorsal fin prob(U()<0.9), n_dorsal(1), coord(U0.3-0.45,1,0.7), scale(U0.4-0.6,0.5,0.2) -> dorsal fin presence/placement/size; pectoral prob(<0.8), coord(U0.65-0.8, U55-65/180, 0.9), rot(-13) -> pectoral fins; pelvic prob(<0.8), coord(U0.5-0.65,U8-15/180,0.8) -> pelvic fins; hind prob(<0.8), coord(U0.2-0.3,N36/5/180,0.9) -> hind fins; tail angle(U140-170) -> tail fin spread; eye Radius(N0.036,0.01), coord(0.9,0.6,0.9) -> eye size/placement; jaw prob(U()<0 -> disabled) -> enable to add carnivore jaw
+  fish_swim_params(): per-fish swim animation
+    knobs: swim_freq(3*clip_gaussian(1,0.3,0.1,2)) -> body wiggle speed (random); swim_mag(N20,3) -> body bend amplitude degrees (random); flipper_freq(3*clip_gaussian*swim_freq), flipper_mag(0.35*N(1,0.1)*swim_mag), flipper_var(U0-0.2) -> fin flap speed/amplitude/variance
+  animate_fish_swim(arma, params): applies sinusoidal drivers to spine+fin bones
+    knobs: wavelength(U 0.5-2) -> how many bend waves along body; global_offset(U 0-1000) -> desyncs swim phase between fish (random)
+  FishFactory: generates one fish
+    knobs: max_distance(40) -> render culling distance; species_variety(clip_gaussian 0.2,0.1,0.05,0.45) -> genome interp amount between two samples (random); body_material(weighted_sample(material_assignments.fish)) -> silver/blue/gold body shader (random, gold detected by name); fin_material(FishFin), eye_material(FishEye); animation_mode(None/"idle"/"roam") -> rigging+swim on/off; clothsim_skin(False) -> enable fin cloth sim
+  FishSchoolFactory.fish_school_params(): boid flocking behavior — controls school shimmer/spacing
+    knobs: air_speed_max(U 5-10), air_acc_max(U 0.7-1) -> swim speed; air_personal_space(U 0.15-2) -> tightness of spacing (LOWER for "tight spacing"); bank(0)/pitch(0.4) -> no roll, slight pitch; rule_fuzzy(U 0.6-0.9) -> flocking looseness; rules(SEPARATE,GOAL,FLOCK) -> flocking rule set; particle_size(U 0.3-1), size_random(U 0.1-0.7) -> per-fish scale spread; mass(2), effect_gravity(0); emit_from("VOLUME"), warmup_frames(1), emit_duration(0) -> all fish appear at once
+  FishSchoolFactory.__init__: assembles the school
+    knobs: make_asset_collection n(3) -> number of distinct fish variants in the school; animation_mode="idle" (fixed); volume(("uniform",3,10)) -> total swarm volume, drives fish count (count = volume/(avg_size^3*child_vol)); collider_col ("colliders")
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/creatures/util/boid_swarm.py -> BoidSwarmFactory: wraps a creature collection into a Blender boid particle system with count derived from volume
+  assets/objects/creatures/util/creature.py -> genome_to_creature: builds mesh part tree, attaches parts via raycast, writes skeleton attributes
+  assets/objects/creatures/util/genome.py -> genome dataclasses, part/attach sugar, interp_genome part-tree interpolation
+  assets/objects/creatures/util/joining.py -> join_and_rig_parts: merges parts, remeshes, builds/binds armature, applies materials
+  assets/objects/creatures/util/rigging.py -> creature_rig: constructs armature bones/IK from skeleton and genome joints
+  assets/objects/creatures/util/animation/driver_wiggle.py -> animate_wiggle_bones: sinusoidal driver expressions for bone wiggle
+  assets/objects/creatures/util/cloth_sim.py -> bake_cloth + rigidity mask nodes for fin cloth simulation
+  assets/objects/creatures/util/creature_util.py -> euler/interp_dict/offset_center/polar_skeleton helpers
+  assets/objects/creatures/util/tree.py -> Tree data structure + traversal/map/zip used by genome & rigging
+  assets/objects/creatures/util/join_smoothing.py -> intersection curve computation & bevel connectors for part joins
+  assets/objects/creatures/parts/* (generic_nurbs, ridged_fin, eye, head, etc.) -> PartFactory implementations for body/fins/eye/jaw
+  assets/materials/creature/fish_body.py (FishGeomod), creature/__init__ (FishFin, FishEye) -> fish body/fin/eye shaders
+  assets/composition/material_assignments.py -> weighted list of fish body materials (silver/blue/gold options)
+  assets/materials/utils/surface_utils.py -> sample_range random helper for fin params
+  core/placement/factory.py -> AssetFactory base + make_asset_collection
+  core/placement/particles.py -> particle_system + bake for the boid swarm
+  core/placement/animation_policy.py -> AnimPolicyRandomForwardWalk trajectory for swarm placeholder path
+  core/placement/detail.py -> adapt_mesh_resolution for remesh/subdivide
+  core/surface.py -> write/assign material & attribute utilities
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/nodes/* -> node graph wrangler/info used by cloth rigidity mask & geomods
+  core/util/blender.py -> Blender object/mesh manipulation helpers
+  core/util/math.py -> clip_gaussian, lerp, homogenize, FixedSeed
+  core/util/random.py -> weighted_sample, random_general
+  assets/utils/geometry/lofting.py -> skeleton-to-tangents lofting for part raycasting

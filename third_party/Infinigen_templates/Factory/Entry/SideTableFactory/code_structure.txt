@@ -1,0 +1,62 @@
+SUMMARY: This factory builds parametric dining/side/coffee tables from a table-top plus procedurally-instanced legs (straight, single_stand, or square) and optional stretchers, assembled via geometry nodes. `SideTableFactory` subclasses `TableDiningFactory` and only overrides the sampled overall dimensions (small square footprint, ~0.55m). The upper-level files define the geometry nodegroups (top, legs, stretchers, shared utils) and the parameter-sampling / material-assignment logic that drives them. NOTE: the requested "one drawer, gold knob, lower shelf, pastel lacquered finish" are NOT implemented here — this base only makes a top + legs (+stretcher); to match the prompt you must add drawer/knob/shelf geometry and pastel/gloss materials.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tables/dining_table.py
+  SideTableFactory.__init__: sets side-table footprint/height (the object this factory emits).
+    knobs: w(0.55*normal(1,0.05), random) -> table width/depth footprint; h(0.95*w*normal(1,0.05), random) -> table height; dimensions=(w,w,h) fixed-square shape -> makes it a small square bedside table.
+  TableDiningFactory.sample_parameters: master parameter sampler for top + legs.
+    knobs: width(uniform(0.91,1.16)) & length (oblong uniform(1.4,2.8) 70% / square width*normal(1,0.1) 30%) & height uniform(0.65,0.85) -> only used when dimensions=None (overridden for side table);
+      leg_style(choice straight .5 / single_stand .1 / square .4, random) -> leg silhouette;
+      leg_number(single_stand=2, square=2, straight=4) -> number of legs;
+      leg_diameter(single_stand uniform(0.22x,0.28x); square uniform(0.07,0.10); straight uniform(0.05,0.07)) -> leg thickness (straight range gives the "slim legs" look);
+      leg_curve_ctrl_pts (per-style tuple lists, several uniform samples) -> taper/curvature profile of legs;
+      top_scale(single_stand uniform(0.6,0.7); square/straight 0.8) -> leg inset from top edge; bottom_scale(single_stand/square 1.0; straight uniform(1.0,1.2)) -> leg splay at floor;
+      top_thickness(uniform(0.03,0.06)) -> tabletop slab thickness;
+      "Top Profile Width"(1.414*x), "Top Profile Aspect Ratio"(y/x), "Top Profile Fillet Ratio"(uniform(0.0,0.02)) -> corner rounding of top; "Top Vertical Fillet Ratio"(uniform(0.1,0.3)) -> vertical edge rounding (rounded-corner look);
+      "Leg NGon"(4) -> leg cross-section; "Strecher Relative Pos"(uniform(0.2,0.6)) -> stretcher height; "Strecher Increament"(choice([0,1,2])) -> number/pattern of stretchers (0 = none).
+  TableDiningFactory.get_material_params: assigns materials & wear.
+    knobs: TopMaterial(weighted_sample(material_assignments.table_top)) -> tabletop surface (change here for pastel lacquer); LegMaterial(weighted_sample(material_assignments.tableware)) -> leg finish (change for gold/pastel); scratch/edge_wear(prob-gated by material_assignments.wear_tear_prob, currently unused in finalize_assets) -> surface aging.
+  geometry_create_legs: dispatches leg nodegroup by "Leg Style" and applies LegMaterial; sets Resolution (single_stand=64, straight=32), square width factor 0.707, straight stretcher Profile Width = Leg Diameter*0.5, Fillet Ratio 0.1.
+  geometry_assemble_table: joins tabletop (transformed to Top Height, TopMaterial) with legs into one object -> the single logical assembly.
+  CoffeeTableFactory.__init__: alt dimensions (uniform(1,1.5), uniform(0.6,0.9), uniform(0.4,0.5)) -> low wide variant.
+
+FILE: assets/objects/tables/table_top.py
+  nodegroup_generate_table_top: builds the top slab from an n-gon profile with horizontal + vertical fillets; tags top face as SupportSurface. knobs: Fillet Radius Vertical scale, Profile Resolution(512), curve fillet Count(8).
+  nodegroup_capped_cylinder: alternate domed/capped top (not used by dining path). knobs: Cap Flatness, Cap Relative Scale/Z Offset.
+  TableTopFactory / geometry_generate_table_top_wrapper: standalone top asset; fixed params Profile N-gon 4, Width 1.0, Aspect 1.0, Fillet 0.2, Thickness 0.1, Vertical Fillet 0.2.
+
+FILE: assets/objects/tables/legs/straight.py
+  nodegroup_generate_leg_straight: tapered/straight leg cylinder. knobs: N-gon, Fillet Ratio (0.1 from caller), Resolution(32), Leg Curve Control Points -> taper.
+
+FILE: assets/objects/tables/legs/single_stand.py
+  nodegroup_generate_single_stand: central pedestal leg. knobs: Resolution(64), Leg Curve Control Points -> pedestal flare.
+
+FILE: assets/objects/tables/legs/square.py
+  nodegroup_generate_leg_square: bent/looped square-frame leg with optional bottom connector. knobs: Fillet Radius(0.03), Count(8), Has Bottom Connector, Profile N-gon(4)/Width/Aspect(0.5)/Fillet(0.1).
+
+FILE: assets/objects/tables/strechers.py
+  nodegroup_strecher: horizontal cross-bar between legs. knobs: N-gon(32), Profile Width (Leg Diameter*0.5 from caller), Resolution(64).
+
+FILE: assets/objects/tables/table_utils.py
+  nodegroup_n_gon_profile: cross-section curve. knobs: Profile N-gon, Width, Aspect Ratio, Fillet Ratio, fillet Count(8), base Radius(0.5).
+  nodegroup_n_gon_cylinder: sweeps profile along a radius curve into leg/top mesh; outputs Mesh/Profile Curve/Caps. knobs: Profile Resolution(64), Resolution(128), Height, Fillet Ratio.
+  nodegroup_generate_radius_curve: builds taper curve from control-point list via FloatCurve.
+  nodegroup_create_anchors: places leg anchor points from n-gon (handles N-gon=1 point, =2 line, else polygon). knobs: Profile Width scale 0.3535, Profile Rotation.
+  nodegroup_create_legs_and_strechers: instances legs on anchors and generates stretchers with odd/even/index-increment selection & alignment. knobs: Leg Bottom Relative Scale/Rotation/Offset, Keep Odd/Even Strechers, Strecher Index Increment, Strecher Relative Position, Align Leg X rot.
+  nodegroup_create_cap: dome cap mesh (UV sphere, Rings=Radius*257). knobs: Radius, Resolution.
+  nodegroup_arc_top / nodegroup_align_bottom_to_floor / nodegroup_bent / nodegroup_merge_curve: helper transforms (arc curve, floor snap, bending deform, curve dedupe) — used by square leg / optional shaping.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/nodes/node_wrangler.py -> NodeWrangler + Nodes enum for building geometry-node graphs.
+  core/nodes/node_utils.py -> @to_nodegroup decorator, assign_curve helper.
+  core/nodes/node_info.py, core/nodes/utils.py, core/nodes/compatibility.py -> node metadata/version compatibility.
+  core/surface.py -> surface.add_geomod applies geometry-node modifier to mesh; NoApply.
+  core/placement/factory.py -> AssetFactory base class (create_asset/finalize_assets contract).
+  core/placement/detail.py -> LOD / detail utilities.
+  core/tagging.py, core/tags.py -> face tagging (t.Subpart.SupportSurface) and relabeling.
+  assets/composition/material_assignments.py -> weighted material pools (table_top, tableware) and wear_tear probs.
+  assets/materials/* (metal, wood, ceramic, plastic, fabric, etc.) -> shader material generators sampled for Top/Leg.
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> optional surface aging effects.
+  assets/utils/object.py, core/util/{math,random,color,blender,logging}.py -> FixedSeed, weighted_sample, uniform/normal seeding, misc utilities.
+  __init__.py, assets/__init__.py, core/__init__.py, core/nodes/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package wiring.

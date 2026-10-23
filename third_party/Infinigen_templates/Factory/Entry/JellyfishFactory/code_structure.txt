@@ -1,0 +1,91 @@
+SUMMARY: The JellyfishFactory procedurally builds a jellyfish: an icosphere "cap"/bell hollowed by a boolean cutter, deformed with twist/bend/dent, with screw-modifier "arms" and "tentacles" scattered on the underside and boundary, plus glass-like transparent/emissive shaders and pulsing/movement animation drivers. The upper-level jellyfish.py holds all geometry and material construction; driver_repeated.py supplies the animation driver expressions. To make the requested blown-glass chandelier (flat wide bell as lampshade + evenly-spaced glass-bead tentacle strands), flatten the cap, disable dents/arms/animation, regularize tentacle placement and give tentacles a beaded profile.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/jellyfish.py
+  JellyfishFactory.__init__: samples all appearance/shape/animation parameters (per factory_seed via FixedSeed).
+    knobs: base_hue(np.random.normal(0.57,0.15)) -> overall glass tint (blue-cyan); set fixed for uniform chandelier color
+    knobs: outside_material(80% transparent else dotted), inside_material(80% transparent else opaque) -> bell surface look; force make_transparent for clear blown glass
+    knobs: tentacle_material(make_transparent) -> strand glass look
+    knobs: has_arm(uniform<0.5 -> True) -> whether thick "arms" spawn under bell; set False for clean strand-only chandelier
+    knobs: arm_radius_range(base uniform(0,0.3), +uniform(0.1,0.4)) -> radial band where arms attach
+    knobs: arm_height_range(-0.4..-0.5, -0..-0.2), arm_min_distance(0.06-0.08), arm_size(0.03-0.06), arm_length(log_uniform 2-5), arm_bend_angle(0..pi/60), arm_displace_range(0..0.4, 0.4..0.8) -> arm placement/spacing/size/length/bend/vertical drop
+    knobs: tentacle_min_distance(0.04-0.06) -> spacing of tentacle strands; INCREASE + regularize for evenly-spaced strands
+    knobs: tentacle_size(0.005-0.01) -> strand thickness/bead radius
+    knobs: tentacle_length(log_uniform 1.5-2.5) -> strand hang length
+    knobs: tentacle_bend_angle(0..pi/12) -> strand curl; set 0 for straight vertical strands
+    knobs: cap_thickness(0.05-0.6) -> bell wall/hollow depth
+    knobs: cap_inner_radius(0.6-0.8) -> inner hollow radius (rim width)
+    knobs: cap_z_scale(log_uniform 0.4-1.5) -> vertical squash/stretch of bell; set <0.4 to FLATTEN into a wide lampshade
+    knobs: cap_dent(50%: uniform 0.15-0.3 else 0) -> scalloped rim dents; set 0 for smooth lampshade
+    knobs: length_scale(log_uniform 0.25-2.0) -> global arm length multiplier
+    knobs: anim_freq(1/log_uniform 25-100), move_freq(1/log_uniform 500-1000) -> pulse/drift animation speed; remove animate_* calls for static chandelier
+
+  JellyfishFactory.create_asset: assembles cap + arms + tentacles, applies TWIST/BEND deforms, joins, animates.
+    knobs: TWIST SIMPLE_DEFORM angle(uniform -pi/3..pi/3, X&Y) -> bell warping; set 0 for symmetric shade
+    knobs: BEND SIMPLE_DEFORM angle(uniform -pi/3..pi/3, X&Y) -> bell tilt/droop; set 0 for flat shade
+    knobs: selection r-band(arm_radius_range*radius), normal down, inside attr -> where arms attach
+    knobs: arm material choice(np.random.choice opaque/transparent/solid) -> arm glass variety
+
+  JellyfishFactory.build_cap: constructs hollowed icosphere bell, inside/boundary attrs, extension, scaling.
+    knobs: new_icosphere subdivisions(6) -> bell resolution
+    knobs: geo_extension input_args(log_uniform 0.2-0.4, log_uniform 0.5-1.0, "2D") -> surface bumpiness/noise on bell
+    knobs: obj.scale(uniform 0.4-0.6 x3) then scale[-1]*=cap_z_scale -> overall bell size & flatness
+
+  JellyfishFactory.apply_cap_dent: scalloped rim.
+    knobs: n_dent(randint 6-12) -> number of rim scallops; margin(uniform pi*0.02..0.05) -> scallop sharpness
+
+  JellyfishFactory.build_arm: screw-swept strand/arm mesh.
+    knobs: new_circle vertices(16) -> cross-section resolution
+    knobs: scale y(uniform 0..1) & remove_vertices random side -> asymmetric flat ribbon profile; make circular for round beads
+    knobs: SCREW angle(log_uniform 0.5-3 *pi, random sign), screw_offset(-length*length_scale*uniform 0.5-1.0), steps(256) -> coil/twist and length of strand; set angle 0 for straight strand
+    knobs: TAPER factor(uniform 0.5-1.0) -> tip narrowing
+    knobs: MARBLE DISPLACE strengths(uniform 0.01-0.02 Y; log_uniform 0.1-0.2 X), noise_scale(log_uniform 0.1-0.2; 0.1-2.0) -> wobble; for bead strands replace screw with repeated spheres / instance beads along a straight line
+    knobs: BEND angle(bend_angle*log_uniform 0.5-1.5) -> strand curl
+
+  JellyfishFactory.place_tentacles: scatters arms/tentacles via geo_base_selection Poisson sampling.
+    knobs: min_distance arg -> spacing (currently Poisson/random); replace with polygon_angles ring for EVENLY-SPACED strands
+    knobs: n cap(min(10,...)) -> number of unique arm meshes cloned
+    knobs: rotation_euler yaw(atan2 + uniform -pi/6..pi/6 + pi) -> strand facing jitter; remove jitter for regularity
+
+  JellyfishFactory.animate_movement / animate_expansion / animate_radius / animate_height / animate_arms: pulse, drift, twist, bell radius/height breathing, arm musgrave sway drivers.
+    knobs: location drivers x/y(uniform -0.2..0.2), z(-1.5..-0.5 to 0.5..1.5), rot twist_range(0..pi/60) -> drift/spin ranges
+    knobs: z_disp(1,1,uniform 0.6-0.8), r_scale(0.7-0.9,0.85-0.95,1,1.2-1.4,1) -> pulse squash amounts
+    knobs: musgrave Scale(uniform 1-2), offset(log_uniform 0.1-0.4) -> arm wave amplitude
+    (delete these calls in create_asset for a static chandelier)
+
+  JellyfishFactory.shader_jellyfish: emissive+glossy+transparent glass shader.
+    knobs: LayerWeight Blend(0.3), float_curve breakpoint(uniform 0.6-0.9) -> fresnel emission falloff
+    knobs: emission_color hsv(base_hue, sat uniform 0.4-0.6, val 1) -> inner glow color; raise for chandelier light
+    knobs: GlossyBSDF Roughness(uniform 0.8-1) -> glass polish; lower for clear blown glass
+    knobs: MixShader 0.5(glossy/transparent) -> reflect vs see-through balance
+
+  JellyfishFactory.make_transparent/make_opaque/make_solid/make_dotted: preset material variants.
+    knobs: saturation & transparency args (transparent .1-.3/.88-.92; opaque .3-.6/.75-.8; solid .5-.8/.4-.5) -> clarity per variant
+    knobs: make_dotted NoiseTexture Scale(uniform 20-50), curve alpha steps(0.92-0.96 / 0.5-0.6) -> polka-dot transparency pattern
+
+FILE: assets/objects/creatures/util/animation/driver_repeated.py
+  repeated_driver: builds a periodic smoothstep pulse driver expression string.
+    knobs: phase(uniform 0.2-0.8), u/v envelope(uniform 0.8-1.0) -> pulse shape/duty cycle; freq arg -> speed
+  bend_bones_lerp: per-bone lerped rotation drivers (unused by jellyfish; for armature creatures).
+
+FILE: assets/objects/creatures/__init__.py
+  module exports: registers JellyfishFactory (and sibling creature factories); no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> mesh helpers: read/write coords & attributes, subsurface sizing, geo_extension, remove_vertices
+  assets/utils/mesh.py -> polygon_angles and mesh utilities for even angular placement
+  assets/utils/misc.py -> assign_material and misc helpers
+  assets/utils/nodegroup.py -> geo_base_selection Poisson point sampling on surfaces
+  assets/utils/object.py -> primitive constructors: new_icosphere, new_circle, new_empty, join_objects
+  assets/utils/shapes.py -> shape primitive helpers
+  core/nodes/node_wrangler.py, node_info.py, utils.py, compatibility.py -> geometry/shader node graph API (Nodes enum, NodeWrangler)
+  core/surface.py -> add_geomod, shaderfunc_to_material, write_attr_data, eval_argument
+  core/tagging.py, core/tags.py -> tag_object semantic labeling
+  core/placement/factory.py -> AssetFactory base class & asset spawning interface
+  core/placement/detail.py -> face_size / LOD detail control
+  core/util/blender.py -> butil: modifiers, deep_clone_obj, spawn_vert, delete, apply_transform
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed, int_hash deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/logging.py -> logging utilities

@@ -1,0 +1,41 @@
+SUMMARY: The SeaweedFactory builds a single ribboning seaweed strand grown via differential growth from a polygonal base, then radially scaled, displaced with procedural noise, shaded dark-green with translucent highlights, and animated with a bending driver to sway. The upper-level seaweed.py file defines all geometry, material, and animation logic; the creatures/util files provide the repeated_driver used for the sway animation.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/underwater/seaweed.py
+  SeaweedFactory.__init__: sets per-instance palette and sway frequency (seeded)
+    knobs: base_hue(50% chance uniform(0.0,0.1) yellow-green else uniform(0.3,0.4) green) -> overall blade hue; freq(1/log_uniform(200,500), random) -> sway animation speed
+  SeaweedFactory.create_asset: builds mesh, scales, displaces, animates
+    knobs: face_size(0.01 default) -> mesh resolution; growth_vec z(uniform(3.0,6.0), random) -> vertical growth extent/strand height; inhibit_shell(uniform(0.6,0.8), random) -> growth inhibition/branch density; max_polygons(int(log_uniform(2e3,1e4)), random) -> mesh complexity/frond count; fac_noise(uniform(1.5,2.5), random) -> growth noise irregularity; repulsion_radius(log_uniform(1.0,1.5), random) -> spacing between fronds; dt(0.25 fixed) -> growth step size; scale normalize(2/max dim) then z*uniform(1.5,2)(random) -> elongation; location z(-0.02 fixed) -> vertical offset; f_scale(make_circular_interp(2,5,5) random) -> radial ribboning per angle; SMOOTH factor(uniform(-0.8,0.8), random) -> surface smoothing/roughening; texture_type(random choice STUCCI/MARBLE) -> displacement pattern; texture.noise_scale(log_uniform(0.05,0.2), random) -> displacement feature size; DISPLACE strength(uniform(0.0,0.03), random) -> surface bumpiness
+  SeaweedFactory.animate_bend: bending sway deformation
+    knobs: deform_axis("Y" fixed) -> bend direction; start_angle(uniform(-pi/4,0), random) -> initial bend; bend range(+uniform(0.2pi,0.8pi), random) -> sway amplitude
+  SeaweedFactory.differential_growth_make: initial polygon seed shape
+    knobs: n_base(randint(5,7), random) -> base polygon sides/root fan count
+  SeaweedFactory.geo_seaweed_waves: (unused node-based wave alternative) offset displacement
+    knobs: translation_scale(uniform(0.0,0.25), random); expand_scale(uniform(0.2,0.3), random); musgrave(10 fixed); angle(uniform(0,2pi), random) -> wave direction/magnitude
+  SeaweedFactory.shader_seaweed: blade material
+    knobs: h_perturb(uniform(-0.1,0.1))/s_perturb(uniform(-0.1,0.0))/v_perturb(log_uniform(1.0,2), random) -> color jitter; subsurface_ratio(0.01 fixed); roughness(0.8 fixed); mix_ratio(uniform(0.2,0.4), random) -> translucency/highlight strength; specular(0.2 fixed); color_1(base_hue, sat uniform(0.6,0.8), val 0.25) -> dark blade; color_2(base_hue-uniform(0.05,0.1), sat uniform(0.6,0.8), val 0.15) -> darker tip; color ramp stops [0,0.3,0.7,1.0] fixed; musgrave(uniform(5,10)) -> color variation scale
+
+FILE: assets/objects/creatures/util/animation/driver_repeated.py
+  repeated_driver: builds a looping smoothstep animation expression used for sway
+    knobs: phase(uniform(0.2,0.8), random) -> pulse timing; u/v scaling(uniform(0.8,1.0), random) -> ease shape; off(uniform(0,1) random default) -> phase offset
+  bend_bones_lerp: (unused here) per-bone lerped bend drivers for armatures
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  infinigen_gpl/extras/diff_growth.py -> differential growth simulation generating the frond mesh
+  assets/utils/decorate.py -> read_co/write_co/subsurface2face_size vertex ops
+  assets/utils/draw.py -> make_circular_interp for angular radial scaling
+  assets/utils/mesh.py -> polygon_angles for base polygon layout
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/object.py -> data2mesh/mesh2obj construction
+  assets/utils/shapes.py -> shape utilities
+  core/surface.py -> shaderfunc_to_material conversion
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> node graph API (musgrave, color ramp, BSDF)
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> level-of-detail meshing
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> butil modifier/transform helpers
+  core/util/color.py -> hsv2rgba conversion
+  core/util/math.py -> FixedSeed, int_hash deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/logging.py -> logging utilities

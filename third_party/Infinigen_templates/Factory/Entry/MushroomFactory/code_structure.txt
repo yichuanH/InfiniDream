@@ -1,0 +1,69 @@
+SUMMARY: MushroomFactory builds clustered/directional groups of mushrooms, each a cap + stem produced by MushroomGrowthFactory. cap.py defines the cap silhouette (chosen among 9 profile shapes), optional gills, morel texturing and 4 procedural shaders; stem.py builds the stem with optional web/veil and banding; growth.py fuses cap+stem and picks a base hue + shared body shader; generate.py places multiple mushrooms in a cluster or a row using KD-tree collision packing. To achieve a bracket/shelf fungus, replace the single-cap profiles with wide flat shelf caps and change the maker layout to stack tiers vertically with decreasing radius per tier.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mushroom/generate.py
+  MushroomFactory.__init__: selects overall layout & pose.
+    knobs: max_cluster(10, fixed) -> cluster index spacing; makers([directional_make, cluster_make], random choice) -> row vs radial arrangement; lowered(prob 0.5) -> whether caps tilt down (rot_y); tolerant_length(uniform 0-0.2) -> keypoint height cutoff for packing
+  MushroomFactory.create_asset: assembles cluster, applies global bend.
+    knobs: BEND angle(uniform ±π/8) -> group curvature; deform_axis(random X/Y) -> bend direction
+  MushroomFactory.build_mushrooms: how many mushrooms & their mesh keypoints.
+    knobs: n(randint 1-6) -> mushrooms per cluster; REMESH voxel_size(0.04) -> keypoint density for collision
+  MushroomFactory.find_closest: KD-tree collision packing along directions.
+    knobs: scales(uniform 0.3-1.2) -> per-mushroom size (tier width variation); collision search np.linspace(0,4,20)*radius -> spacing; threshold 0.008 -> min gap
+  MushroomFactory.cluster_make: radial fan layout.
+    knobs: polygon_angles(min π/10) -> angular spread; rot_y(uniform 0-π/6 if lowered); rot_z jitter(±π/8); start_locs(zeros) -> all from center
+  MushroomFactory.directional_make: linear row layout (closest to shelf tiers).
+    knobs: start_locs x spacing(linspace 0..radius*n*0.4) -> tier separation; rot_z(-π/2 ±π/8) -> horizontal shelf orientation; directions([0,1,0]) -> stacking axis — set z-axis + decreasing scale per index for bracket tiers
+
+FILE: assets/objects/mushroom/growth.py
+  MushroomGrowthFactory.__init__: pairs cap+stem, sets hue.
+    knobs: build_base_hue (prob 0.4 -> full-range hue else 0.02-0.15 brown/orange) -> mushroom color family
+  create_asset: NOTE returns only `cap` (stem built but discarded); edit to keep stem or make caps stemless shelves.
+  shader_mushroom: gill/body shader.
+    knobs: roughness(0.8, fixed); front/back_color hsv (hue±0.1, sat 0.1-0.3, val log 0.02-0.5); musgrave Scale(200), z-stretch(uniform 5-10); ramp stops([0,0.3,0.7,1])
+
+FILE: assets/objects/mushroom/cap.py
+  MushroomCapFactory.__init__: chooses cap profile, gill, shader.
+    knobs: x_scale/z_scale(uniform 0.7-1.4) -> cap width/height stretch; cap_configs weights([2,2,2,1,2,1,2,1,1]) over 9 shapes -> silhouette (use flat/depressed/infundiuliform for shelves); inner_radius(log_uniform 0.2-0.35*radius) -> central hole/stem radius; gill_configs([adnexed, decurrent, None] equal) -> underside gills; shader_funcs weights([2,1,1,1]); is_morel(prob 0.5 & shader_cap) -> pitted texture
+  cap profile properties (campanulate…umbonate): each returns x_anchors/z_anchors curves.
+    knobs: per-profile x_anchors(~0.12-0.15 radius), z_anchors(height 0.02-0.3) -> cap dome/flatness; flat/depressed give widest+flattest (best shelf base); has_gill toggles underside
+  adnexed_gill/decurrent_gill: gill spin profile.
+    knobs: z_anchors depth(uniform 0.05-0.1) -> gill projection
+  apply_cut: radial wedge boolean cuts (only if radius<0.1).
+    knobs: n_cuts(randint 0-5); width(uniform 0.15-0.2*0.4); depth(radius*0.4-0.7)
+  create_asset: meshing & deformation.
+    knobs: TWIST angle(uniform ±π/4); STUCCI/MARBLE noise_scale(log 0.01-0.05); DISPLACE strength(0.008); geo_extension arg(0.1); displace r1..r4(uniform ±0.25) -> asymmetric squish
+  geo_morel: voronoi pit pattern.
+    knobs: Scale(uniform 15-20); Randomness(0.5-1); threshold(0.05); DISPLACE strength(0.04)
+  shader_cap/noise/voronoi/speckle: cap surface materials.
+    knobs: bright/dark/subsurface/light colors (hue±0.05, sat 0.4-0.8, val log 0.01-0.2); ramp anchors([0,0.3,0.6,1] or [0,0.4,0.7,1]); musgrave Scale(500); roughness(0.2-0.5 or 0.8-1.0); specular(0.2-0.8); clearcoat(0.2-0.5 @25% else 0); voronoi Scale(2-2.5), speckle musgrave(50), noise musgrave(10)
+
+FILE: assets/objects/mushroom/stem.py
+  MushroomStemFactory.__init__: veil/band options.
+    knobs: web_builders weights([1,1,2]) over [hollow_web, solid_web, None]; has_band(prob 0.75)
+  build_solid_web/build_hollow_web: veil ring geometry.
+    knobs: outer_radius(inner*1.5-3.5 / 2-3.5); z offset(0-0.05); length(uniform 0.15-0.2 / log 0.2-0.4); SUBSURF levels(3); geo_voronoi Scale(15-20), threshold(0.06)
+  create_asset: stem shape & deform.
+    knobs: length(log_uniform 0.4-0.8); x_anchors(inner_radius scaled log 1-2, uniform 1-1.2); z_anchors mid(-length*0.3-0.7); STUCCI noise_scale(0.005-0.01); DISPLACE strength(0.008); BEND angle(-uniform 0..π/2, axis Y)
+  geo_band/geo_inverse_band: wave-textured banding.
+    knobs: Wave Scale(log 5-10), Distortion(5-10), band z-threshold(uniform 0.3-0.7*length), band scale(uniform 0.008-0.01)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> displace_vertices, geo_extension, subsurface/remesh helpers
+  assets/utils/draw.py -> spin() surface-of-revolution mesh generation from anchor curves
+  assets/utils/mesh.py -> polygon_angles and mesh helpers
+  assets/utils/object.py -> mesh2obj/data2mesh/join_objects/origin2lowest object ops
+  assets/utils/shapes.py -> shape primitive utilities
+  assets/utils/misc.py -> assign_material
+  core/nodes/node_info.py -> Nodes enum of geometry/shader node types
+  core/nodes/node_utils.py -> build_color_ramp and node helpers
+  core/nodes/node_wrangler.py -> NodeWrangler node-graph builder API
+  core/surface.py -> shaderfunc_to_material, add_geomod, set_active
+  core/placement/detail.py -> remesh_with_attrs adaptive remeshing
+  core/placement/factory.py -> AssetFactory base class
+  core/tagging.py / core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> modify_mesh, deep_clone_obj, transforms, SelectObjects
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/color.py -> hsv2rgba color conversion

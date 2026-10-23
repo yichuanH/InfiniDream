@@ -1,0 +1,81 @@
+SUMMARY: The CarnivoreFactory builds a quadruped feline creature ("tiger") by assembling a procedural genome of body/head/jaw/eyes/nose/ears/legs/feet/tail parts, joining and optionally rigging them, then applying fur (hair particles + grooming), skin materials, and optional run/idle animation or cloth-sim skin. The upper-level files define the tiger's genome (part shapes, proportions, attachment coordinates), its fur/skin parameters, and the animation/joining/rigging utilities. Editing carnivore.py alters proportions, fur look, and materials; the util files control how parts are joined, rigged, and animated.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/carnivore.py
+  tiger_hair_params(): controls fur density, length, puff, clumping, and hair material (relevant to "white tiger" look — fur roughness/appearance; note color comes from body_material, not here).
+    knobs: density(500000, fixed) -> fur strand count per area; clump_n(randint 5-70) -> hairs per guide/tuft; avoid_features_dist(0.01) -> bald margin around eyes/teeth/nose; Length MinMaxScale length(clip_gaussian ~0.022) & scale U(15,60) -> fur length; Puff MinMaxScale puff(U0.14-0.4) -> fluffiness; Combing(U0.7-1) -> comb alignment; Strand Perlin Mag(U0-0.006)/Scale(U15-45) -> strand waviness; Tuft Spread(N0.01,0.002) -> tuft width; Tuft Clumping(U0.2-0.8) -> tuft tightness; Root Radius(0.001) -> strand root thickness; Post Clump Noise Mag(0.0005*N) -> post-clump jitter; Hair Length Pct Min(U0.5-0.9) -> length variation; material Roughness(U0.4-0.7), Radial Roughness(+N), Random Roughness(0), IOR(1.55) -> fur shading.
+  tiger_skin_sim_params(): cloth-sim skin stiffness (only used if clothsim_skin=True).
+    knobs: bending_stiffness_max(450), compression_stiffness_max(80), goal_spring(0.8), pin_stiffness(1), shear_stiffness(15)/max(80), tension_stiffness_max(80), uniform_pressure_force(5), use_pressure(True) -> skin jiggle/tautness.
+  tiger_genome(): assembles the whole creature; controls proportions and attachment of every part.
+    knobs: body NurbsBody(prefix="body_feline", var=0.7, temperature=0.2) -> body shape variation; tail attach coord(0.07,1,1) & joint rest(N(0,10),180,0) -> tail placement/curl; head branch U()<0.5 chooses CarnivoreHead vs NurbsHead (50/50 random); head_length_rad1_rad2((0.36,0.20,0.18)*N) -> head size/proportions; jaw_pct((1.05/0.7,0.55,0.5)) -> jaw size; jaw joint rest pitch U(10,35) -> mouth open; MammalEye Radius(N0.027,0.009), eye_t(U0.61-0.64), splay(U90-140/180), r(U0.8-0.9) -> eye size/position (NurbsHead branch only); CatNose coord(U0.9-0.96,1,U0.5-0.7) -> nose placement; CatEar t(N0.33,0.07), splay(U100-150/180), rot([-20,-10,-23]+N) -> ear position/tilt; neck_t(0.7), shoulder_t(clip_gaussian 0.08-0.12), splay(clip_gaussian 90-130/180), shoulder_bounds(±20) -> leg placement; leg params length_rad1_rad2((1.6,0.1,0.05)*N) -> leg length/thickness; leg attach joint rest(0,90,0) -> leg splay; head-to-body attach coord(N0.97,0.01) & joint rest pitch(N20,5) -> neck/head angle.
+  CarnivoreFactory.__init__: top-level toggles and material selection.
+    knobs: hair(True) -> enable fur; animation_mode(None/"run"/"idle"/"tpose") -> motion; clothsim_skin(False) -> jiggly skin; body_material(weighted_sample from material_assignments.carnivore) -> fur/skin color+pattern (KEY for "white tiger" — swap/restrict this sampling to get white coloration); tongue_material(Tongue), teeth_material(Bone), nose_material(Nose) -> part colors.
+  CarnivoreFactory.apply_materials: maps materials to body/tongue/teeth/claws/eyeball/nose part groups (change which material applies where).
+  CarnivoreFactory.create_placeholder: spawn_cube(size=4) -> placeholder bbox size.
+  CarnivoreFactory.create_asset: orchestrates genome->creature->join/rig->hair->animation->clothsim (control flow).
+
+FILE: assets/objects/creatures/util/animation/idle.py
+  snap_iks_to_floor(): raycasts feet to floor bvh; minweight(0.7) -> hip coupling to feet.
+  idle_body_noise_drivers(): adds procedural idle sway via drivers.
+    knobs: foot_motion_chance(0.2), head_benddown(1.0), body_mag(1.0), wing_mag(1.0), per-target mag/freq multipliers (body 0.025/0.015, foot 0.07/0.04, head 0.07/0.03/0.2, tail 0.07) -> idle motion amplitude/speed; freq_scalar/mag_scalar(N(1,0.15)) random.
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  animate_run(): builds foot/knee/body gait paths.
+    knobs: stride_length(0.7*clip_gaussian*dim_x), spread(clip_gaussian 0-0.5), stride_height(U0.15-0.4), body_height(*clip_gaussian), offset(U0.5-0.7), squash_gait_pct(0.1), steps_per_sec(1), flap_height(U0.3-1) -> gait size/rhythm.
+  foot_path/body_path(): NURBS gait curve shape (length/height/upturn/down_stroke).
+  animate_wiggle_body_iks / animate_wiggle_bones / animate_running_front_leg / animate_running_back_leg: alternate limb/body sinusoidal drivers (mag_deg, freq, wavelength knobs).
+
+FILE: assets/objects/creatures/util/cloth_sim.py
+  local_pos_rigity_mask(): geo-node vertex weight for skin rigidity (musgrave scales normal(10,1)/normal(5,0.5), multipliers normal(0.07)/normal(0.12), colorramp positions ~0.23/0.6) -> which regions jiggle.
+  bake_cloth(): gravity(1), distance_min(0.015), use_self_collision(False) -> sim setup.
+
+FILE: assets/objects/creatures/util/hair.py
+  configure_hair(): re-parameterizes density -> particle count, builds grooming geonodes, converts particles to curves, applies hair-bsdf material.
+  nodegroup_hair_grooming(): geonode socket defaults for grooming (overridden by tiger_hair_params grooming dict).
+  as_hair_bsdf(): wraps body material's base color into PrincipledHairBSDF.
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature(): builds parts from genome, attaches, writes local/global attributes; raycast_surface/apply_attach_transform define attachment geometry (rotation_basis global/normal/tangent).
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts(): joins body meshes, optional bevel/smooth joins, remeshes to face_size, rigs.
+    knobs: min_remesh_size(0.01), remove_doubles thresholds(0.01/0.001), adapt_mode("remesh"), smooth_joins(True), roll("GLOBAL_POS_Y"), select_large_component thresh(0.9-0.95) -> mesh resolution/cleanliness.
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig()/create_bones/create_ik_targets/constrain_bones/pose_bones: build armature, IK targets, joint limits.
+    knobs: shoulder_auto_stiffness(0.85), trim_bounds_child_margin(0.15), connector_collapse_margin_radpct(0.5) -> rig behavior; create_ragdoll(min_col_length0.1, col_joint_margin0.2, col_radius0.07, mass5).
+
+FILE: assets/objects/creatures/util/genome.py
+  Joint/Attachment/CreatureNode/CreatureGenome dataclasses + part()/attach() helpers + interp_genome: genome graph structure and interpolation (edit to change how parts blend/attach).
+
+FILE: assets/objects/creatures/util/creature_util.py
+  offset_center(): recenters creature (x centering, z floor-align toggles); polar_skeleton/interp_dict helpers.
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree structure + traversal helpers (map/fold/zip/iter) used to build/walk the genome.
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  bevel/intersection-curve utilities for smoothing part joins (create_bevel_connection width/segments, smooth_around_line rad/iters/factor).
+
+FILE: assets/objects/creatures/parts/__init__.py
+  re-exports part modules (beak, body, eye, foot, head, head_detail, leg, tail, generic_nurbs, etc.) — parts themselves live in linked/other modules.
+
+FILE: assets/objects/creatures/__init__.py
+  re-exports CarnivoreFactory and sibling creature factories (registry only).
+
+FILE: assets/objects/creatures/util/__init__.py, util/animation/__init__.py
+  empty package markers.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides `carnivore` weighted material list sampled for body_material (fur color/pattern source).
+  assets/materials/creature/__init__.py -> Tongue/Bone/Nose (and fur) creature shaders.
+  assets/materials/* (ceramic/fabric/metal/plastic/wood/terrain/plant/fluid/art/text/dev/lamp_shaders/wear_tear) -> shared material library.
+  assets/utils/nodegroups/hair.py -> hair geonode groups (comb/clump/length/position/snap/noise) used by grooming.
+  assets/utils/geometry/lofting.py, geometry/__init__.py, assets/utils/object.py -> skeleton/tangent + mesh helpers for parts and attachment.
+  core/placement/factory.py -> AssetFactory base class.
+  core/placement/detail.py -> adapt_mesh_resolution / remesh for joining.
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py, nodes/utils.py -> geometry/shader node construction API.
+  core/surface.py -> write_attribute/write_vertex_group/add_geomod/smooth_attribute.
+  core/tags.py -> object tagging.
+  core/util/blender.py -

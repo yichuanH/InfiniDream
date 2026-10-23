@@ -1,0 +1,52 @@
+SUMMARY: TableTopFactory procedurally builds a single table-top slab: an extruded n-gon profile (default square) with filleted edges and a defined thickness, generated entirely via Blender geometry nodes. table_top.py defines the factory and the top-level nodegroups (profile generation, capped-cylinder variant), while table_utils.py supplies reusable helper nodegroups (profile shaping, cylinder extrusion, legs/stretchers, caps, bending, alignment). The factory samples fixed parameters, adds a geometry modifier to a base plane, and returns one mesh object. (Note: this is a table-top asset, unrelated to the sailing-boat scene description.)
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tables/table_top.py
+  TableTopFactory.sample_parameters: fixed dict of all shape params (not randomized — same output per call)
+    knobs: Profile N-gon(4) -> number of sides of top outline (3=triangle, 4=square/rect, high=round); Profile Width(1.0 m) -> overall size/diameter; Profile Aspect Ratio(1.0) -> X:Y stretch of outline (<1 narrows Y); Profile Fillet Ratio(0.2) -> corner rounding of outline (0=sharp, higher=rounder); Thickness(0.1 m) -> slab vertical thickness; Vertical Fillet Ratio(0.2) -> rounding of top/bottom vertical edges
+  TableTopFactory.create_asset: builds base plane (primitive_plane_add size=2) then applies geometry_generate_table_top_wrapper; returns single object
+  geometry_generate_table_top_wrapper: wires sampled params into nodegroup_generate_table_top (top-level modifier entry)
+  nodegroup_generate_table_top: core slab builder; tags top face as SupportSurface; flips/offsets faces
+    knobs: arc Radius(0.7071) & Sweep Angle(4.7124 rad) -> vertical edge profile shape; FilletCurve Count(8) -> edge-fillet segment count; n_gon_cylinder Profile Resolution(512)/Resolution(10) -> outline/extrude mesh density
+  nodegroup_capped_cylinder: alternative builder adding a dome cap on top of a table top (not used by default factory)
+    knobs: Thickness(0.5), Radius(0.2), Cap Flatness(4.0) -> dome curvature, Fillet Radius Vertical(0.4), Cap Relative Scale(1.0), Cap Relative Z Offset(0.0), Resolution(64)
+
+FILE: assets/objects/tables/table_utils.py
+  nodegroup_n_gon_profile: builds the filleted n-gon outline curve
+    knobs: CurveCircle base Radius value(0.5); rotation offset divide(pi/N-gon); FilletCurve Count(8)
+  nodegroup_n_gon_cylinder: extrudes profile along a radius curve into a capped tube; outputs Mesh/Profile Curve/Caps
+    knobs: SetCurveTilt(3.1416); default Profile Resolution(64)/Resolution(128)
+  nodegroup_generate_radius_curve: builds tapering radius curve from control points (passed in as arg)
+    knobs: curve_control_points (caller-supplied); Resolution(128)
+  nodegroup_create_anchors: emits leg/stretcher anchor points per outline
+    knobs: Profile N-gon switch cases (1=point,2=line); offset multipliers (±0.3535*Width); Profile Rotation
+  nodegroup_create_legs_and_strechers: instances leg + stretcher geometry on anchors (table-base builder)
+    knobs: Keep Legs(bool), Table Height, Leg Bottom Relative Scale/Rotation/Offset, Keep Odd/Even Strechers(bool), Strecher Index Increment, Strecher Relative Position(0.5), Align Leg X rot(bool)
+  nodegroup_create_cap: makes a spherical/dome cap, deletes lower hemisphere
+    knobs: Radius(1.0); Rings multiplier(257.0 * Radius) -> cap mesh density; Resolution(64)
+  nodegroup_arc_top: builds an arched top curve
+    knobs: Diameter(1.0); Sweep Angle(180 deg); arc Resolution(32)
+  nodegroup_align_bottom_to_floor: shifts geometry so bbox min Z = 0; outputs Offset
+  nodegroup_bent: bends geometry by rotation proportional to position
+    knobs: Amount(-0.1) -> bend strength/direction
+  nodegroup_merge_curve: curve->mesh->merge-by-distance->curve cleanup helper
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class / placeholder-driven asset instantiation
+  core/placement/detail.py -> level-of-detail / resolution handling for assets
+  core/surface.py -> surface.add_geomod applies geometry-node modifiers to objects
+  core/nodes/node_wrangler.py -> NodeWrangler + Nodes enum used to build node graphs
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve, node helpers
+  core/nodes/node_info.py -> node type metadata/socket info
+  core/nodes/compatibility.py -> cross-version Blender node compatibility shims
+  core/nodes/utils.py -> misc node graph utilities
+  core/tagging.py -> tag_nodegroup for marking semantic subparts
+  core/tags.py -> t.Subpart.SupportSurface and tag definitions
+  core/util/math.py -> FixedSeed for deterministic parameter sampling
+  core/util/random.py -> random sampling helpers
+  core/util/color.py -> color sampling utilities
+  core/util/blender.py -> Blender object/scene helper functions
+  core/util/logging.py -> logging utilities
+  assets/utils/object.py -> object creation/manipulation helpers
+  (assets/__init__.py, core/__init__.py, core/nodes/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package init/exports)

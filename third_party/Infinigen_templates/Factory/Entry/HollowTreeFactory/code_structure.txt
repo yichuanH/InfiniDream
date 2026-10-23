@@ -1,0 +1,58 @@
+SUMMARY: This factory builds a single hollow tree: a base tree trunk is generated, then carved with a procedural selection to remove a doorway-sized cavity, cloned to create an inner wall with real thickness, and bridged so the interior is a genuine cavity (not a texture patch). The upper-level files chain a generic tree generator (generate.py) → deformed-tree base (base.py, adds bark surface + ring shader) → hollow.py (does the cavity carving, wall duplication, edge bridging, and interior material assignment). To match a smooth swollen grey baobab, tune the base tree species/skinning and the hollow-selection geometry knobs.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/deformed_trees/hollow.py
+  HollowTreeFactory.create_asset: main pipeline — carves cavity, duplicates inner wall, bridges loops, assigns materials.
+    knobs: scale=uniform(0.8,1.0) (random) -> noise scale of cavity opening pattern; larger = tighter/more openings
+    knobs: threshold=uniform(0.36,0.4) (random) -> noise cutoff for cavity; lower = larger doorway opening
+    knobs: bridge_edge_loops number_cuts=10 (fixed) -> smoothness/segments of inner-wall thickness bridge
+    knobs: bridge interpolation="LINEAR" (fixed) -> shape of wall-thickness transition
+  HollowTreeFactory.selection (inner fn): defines which trunk material stays (cavity boundary).
+    knobs: r_outside power(x,2)+power(y,2) > 1 (fixed) -> trunk radius threshold for outside removal
+    knobs: z_lower = 0.1 + noise*0.4 (fixed base/scale) -> bottom cutoff height of cavity/trunk
+    knobs: z_upper = 3.5 - noise*0.4 (fixed base/scale) -> top cutoff height (trunk height limit)
+    knobs: NoiseTexture Scale=scale on normalized vector -> horizontal placement/count of openings
+  HollowTreeFactory.geo_texture: adds inward bump displacement to inner-wall (ring) material for cavity realism.
+    knobs: musgrave scale uniform(10,20) (random) -> frequency of inner-wall roughness
+    knobs: offset amount -uniform(0.03,0.06) (random) -> depth of inward displacement (wall texture)
+  HollowTreeFactory.filter_lower: keeps largest mesh island below z=0.5 (removes floating branch debris).
+    knobs: z<0.5 threshold (fixed) -> which lower trunk fragment is retained
+
+FILE: assets/objects/deformed_trees/base.py
+  BaseDeformedTreeFactory.__init__: picks tree species, bark surface, and interior ring color.
+    knobs: skinning "Scaling"=0.2 (fixed) -> trunk thickness/swell (raise for fatter baobab trunk)
+    knobs: base_hue=uniform(0.02,0.08) (random) -> warm brown/grey base tone of interior rings
+    knobs: trunk_surface=weighted_sample(material_assignments.bark) (random) -> outer bark look (change/force for smooth grey)
+  BaseDeformedTreeFactory.shader_rings: interior cavity ring material.
+    knobs: WaveTexture Scale=uniform(10,20), Distortion=uniform(4,10) (random) -> ring density/waviness on inner wall
+    knobs: wave_type="RINGS", rings_direction="Z", wave_profile="SAW" (fixed) -> ring pattern style
+    knobs: bright_color hsv(base_hue, sat uniform(0.4,0.8), val log_uniform(0.2,0.8)) (random) -> lit ring color
+    knobs: dark_color hsv(base_hue±0.02, sat uniform(0.4,0.8), val log_uniform(0.02,0.05)) (random) -> shadowed ring color
+
+FILE: assets/objects/trees/generate.py
+  GenericTreeFactory: builds base tree mesh/skeleton used as trunk source.
+    knobs: scale=0.35 (fixed) -> overall tree unit-to-meter conversion / size
+    knobs: adapt_mesh_method="remesh" (default) -> mesh resolution method affecting surface smoothness
+    knobs: decimate_placeholder_levels=0 (default) -> subsurf smoothing level of trunk
+  random_species(pine_chance=0.0): selects tree genome (baobab/palm branches are commented out here).
+    knobs: pine_chance(0.0) -> chance of pine genome; enable commented baobab_tree() for true baobab shape
+  random_season(weights): season -> foliage (largely unused for hollow tree; trunk only)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> library of bark/trunk materials sampled for surfaces
+  assets/utils/decorate.py -> read_co / read_material_index / write_material_index mesh helpers
+  assets/utils/misc.py -> assign_material and misc mesh utilities
+  assets/utils/nodegroup.py -> geo_selection node group used to delete geometry by selection
+  assets/utils/object.py -> join_objects utility for merging outer/inner shells
+  core/nodes/node_wrangler.py -> NodeWrangler API for building geometry/shader node graphs
+  core/nodes/node_info.py -> Nodes enum (WaveTexture, NoiseTexture, SetPosition, etc.)
+  core/surface.py -> add_geomod, shaderfunc_to_material, NoApply surface application
+  core/placement/factory.py -> AssetFactory base class and spawn machinery
+  core/tagging.py / core/tags.py -> tag_object semantic tagging ("hollow_tree")
+  core/util/blender.py -> deep_clone_obj, split_object, ViewportMode, apply_modifiers, delete
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic randomness
+  core/util/random.py -> weighted_sample, log_uniform sampling helpers
+  assets/objects/trees/(tree,branch,treeconfigs,tree_flower) -> tree skeleton/genome generation used as trunk base
+  assets/objects/{leaves,fruits,cloud} -> child asset factories (unused for bare hollow trunk)

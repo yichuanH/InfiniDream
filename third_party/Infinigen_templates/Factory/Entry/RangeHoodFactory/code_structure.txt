@@ -1,0 +1,48 @@
+SUMMARY: RangeHoodFactory builds a single tapered wall-mounted range hood (kitchen exhaust canopy) from a lofted n-gon profile plus a slanted grille/filter grid, then assigns a metal material with optional scratch/edge-wear layers. The entry file `range_hood.py` samples dimensions and heights, runs a geometry-nodes tree to loft the profile into the hood body, and finalizes with materials. The two `utils.py`/`table_utils.py` files supply reusable geometry-node groups (n-gon profile, lofting) that the hood geometry depends on.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/wall_decorations/range_hood.py
+  RangeHoodFactory.__init__: entry factory; `dimensions` tuple param (default None -> sampled).
+  RangeHoodFactory.sample_parameters: samples the hood's size/shape parameters.
+    knobs: default dimensions x=0.55(depth), y=0.75(width), z=1.0(total height) [fixed] -> overall hood footprint/height; Height_1 uniform(0.05,0.07) -> height of straight lower rim band; Height_2 uniform(0.1,0.3) -> height where the canopy narrows to the neck; Scale_2 uniform(0.25,0.4) -> shrink factor of the top neck cross-section (smaller = more tapered chimney)
+  RangeHoodFactory.initialize_materials: picks surface + wear materials.
+    knobs: surface_gen weighted_sample(material_assignments.metals) -> metal look (random); scratch_prob/edge_wear_prob from material_assignments.wear_tear_prob -> chance scratch/edge-wear applied (random gate via uniform())
+  RangeHoodFactory.create_asset: builds mesh & modifiers.
+    knobs: SOLIDIFY thickness=0.002 -> wall/shell thickness; SUBSURF levels=1 -> smoothing/roundness
+  geometry_generate_hood: wires params into node tree.
+    knobs: Resolution=64 -> mesh density of profile/loft (higher = smoother, heavier)
+  geometry_range_hood: main hood geometry node group.
+    knobs: Profile Fillet Ratio default 0.0100 -> corner rounding of the rectangular cross-section; Width multiplier 1.4140 -> profile width scaling vs Width param; grille grid Size X=Width, Size Y=Depth with Vertices X/Y=Resolution -> filter grid extent/density; grille transforms rotation (-0.0698 rad) & scale (0.98,0.98,1.0), second grille rotation (0.1047 rad) & scale (0.95,0.97,1.0) -> tilt/inset of the two stacked slanted filter panels; final Rotation (0,0,-pi/2) -> mounting orientation
+
+FILE: assets/objects/table_decorations/utils.py
+  nodegroup_lofting_poly / nodegroup_lofting: loft profile curves into a swept surface (used to build hood body).
+    knobs: U/V Resolution inputs (driven by Resolution) -> surface tessellation; Use Nurb(False) -> smooth NURBS vs poly spline sweep
+  nodegroup_cylinder_side / nodegroup_flip_index / nodegroup_star_profile / nodegroup_shifted_circle / nodegroup_warp_around_curve: helper node groups (mostly unused by hood except lofting deps).
+
+FILE: assets/objects/tables/table_utils.py
+  nodegroup_n_gon_profile: builds the rounded rectangular cross-section curve of the hood.
+    knobs: Profile N-gon(default 4) -> number of sides (4 = rectangular hood); Profile Width, Aspect Ratio, Fillet Ratio -> cross-section size/shape/corner rounding (driven by hood params)
+  nodegroup_n_gon_cylinder / generate_radius_curve / create_anchors / create_legs_and_strechers / create_cap / arc_top / align_bottom_to_floor / bent / merge_curve: table helper node groups (not used by hood; available if extending).
+
+FILE: assets/objects/wall_decorations/__init__.py
+  Registers RangeHoodFactory (and sibling wall-decor factories); edit to expose/rename.
+
+FILE: assets/objects/tables/__init__.py, assets/objects/table_decorations/__init__.py
+  Package exports only; no hood-specific tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> metal material pool + wear_tear probabilities/generators
+  assets/materials/metal/__init__.py -> metal shader implementations for hood surface
+  assets/materials/wear_tear/scratches.py -> scratch material overlay
+  assets/materials/wear_tear/edge_wear.py -> edge-wear material overlay
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry-node graph construction API
+  core/surface.py -> add_geomod / assign_material helpers
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> mesh detail/subdivision utilities
+  core/util/blender.py -> modify_mesh (SOLIDIFY/SUBSURF) and object helpers
+  core/util/random.py -> weighted_sample for material choice
+  core/util/math.py -> FixedSeed for deterministic sampling
+  core/util/color.py, logging.py, tags.py -> color utils, logging, semantic tagging
+  assets/utils/object.py -> object creation/manipulation utilities
+  assets/materials/* (art, ceramic, fabric, wood, plastic, etc.) -> alternate material libraries (not used by hood by default)

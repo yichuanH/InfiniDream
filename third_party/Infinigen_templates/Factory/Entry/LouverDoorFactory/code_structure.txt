@@ -1,0 +1,56 @@
+SUMMARY: This factory builds louvered interior/exterior doors — a panel door body with angled slat (louver) cutouts, optional solid panels, a frame, optional handle/knob/lever/pull/bar, and joints for opening. The upper-level files form an inheritance chain: BaseDoorFactory (base.py) builds the door body, frame, handle geometry and joins everything via geometry nodes; PanelDoorFactory (panel.py) subdivides the door into recessed panels; LouverDoorFactory (louver.py) replaces panels with cut-through angled louver slats. The __init__ files register the door factories and provide a random chooser. NOTE: the selecting request describes a robin bird, which is unrelated to this door factory — no bird geometry exists here.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/elements/doors/louver.py
+  LouverDoorFactory.__init__: sets louver slat geometry parameters (sampled randomly per seed)
+    knobs: x_subdivisions(fixed 1) -> horizontal panel columns; y_subdivisions(binomial(5,0.4) clip>=1) -> number of stacked louver sections; has_panel(prob 0.7) -> keep a solid panel vs louver at bottom; has_upper_panel(prob 0.5) -> include upper louver section; louver_width(uniform 0.002-0.004) -> slat thickness; louver_margin(uniform 0.02-0.03) -> gap between slats and panel edge; louver_size(log_uniform 0.05-0.1) -> vertical spacing/pitch between slats; louver_angle(uniform pi/4.5-pi/3.5 ≈40-51°) -> slat tilt angle; has_louver(fixed True) -> enable louver material selection
+  LouverDoorFactory.louver: geometry op that boolean-cuts a hole and fills it with an array of angled slat planes (slat count = ceil((y_max-y_min)/louver_size))
+  LouverDoorFactory.make_panels: decides which panels become louvers vs solid based on has_panel/has_upper_panel and panel count
+
+FILE: assets/objects/elements/doors/panel.py
+  PanelDoorFactory.__init__: panel subdivision counts (sampled)
+    knobs: x_subdivisions(1 or 2, prob 0.5) -> panel columns; y_subdivisions(binomial(5,0.45) clip>=1) -> panel rows
+  PanelDoorFactory.bevel: recesses/insets each panel via boolean cutter
+    knobs: shrink_width & bevel_width (from base) -> inset depth/width of recessed panel; area threshold 0.01 -> which faces get inset
+  PanelDoorFactory.make_panels: computes panel rectangle grid
+    knobs: x_cuts(randint 1-4 per col) & y_cuts(randint 2-5 per row, sorted desc) -> relative panel size distribution
+  GlassPanelDoorFactory.__init__: glass-panel variant
+    knobs: x_subdivisions(fixed 2); y_subdivisions(binomial(5,0.5) clip>=2); merge_glass(y_subdivisions<4) -> merge glass panes into one; has_glass(True)
+
+FILE: assets/objects/elements/doors/base.py
+  BaseDoorFactory.__init__: master door dimensions, materials, handle/frame selection (mostly sampled)
+    knobs: width/height (from RoomConstants door_width/door_size, fixed); depth(wall_thickness*log_uniform 0.25-0.5) -> door thickness; panel_margin(log_uniform 0.08-0.12) -> border around panels; bevel_width(uniform 0.005-0.01); out_bevel(prob 0.7); shrink_width(log_uniform 0.005-0.06); side_bevel(log_uniform 0.005-0.015); auto_bevel.amount(0.001)
+    material knobs: surface/louver_surface (weighted_sample hard_materials); glass_surface (glasses); handle_surface (metal_neutral); panel_surface (frame); has_glass(prob 0.5); metal_color_hsv (colors.metal_hsv)
+    handle knobs: handle_type(choice knob/lever/pull/bar/none) -> handle style & joint; handle_offset(=panel_margin*0.5); handle_height(height*uniform 0.45-0.5)
+    frame knobs: door_frame_style(choice single_column/full_frame_square/full_frame_dome/full_frame_double_door) -> frame shape & double-door; door_frame_width(uniform 0.02-0.06); door_orientation(choice left/right); door_arc_surface(choice door/glass for dome top)
+    bar-handle dict knobs: bar_length(0.7-0.9*width); bar_thickness(0.025-0.045*height); bar_aspect_ratio(0.4-0.6); bar_height_ratio(0.7-0.9); bar_length_ratio(0.5-0.8); bar_end_length_ratio(0.1-0.15); bar_end_height_ratio(1.8-3.0); bar_overall_z_offset(-0..0.1*height)
+    knob knobs: knob_radius(0.03-0.04); knob_radius_mid(base_radius 1.1-1.2, mid 0.4-0.5 profile); knob_depth(0.08-0.1); knob_depth_mid(profile with several uniforms)
+    lever knobs: lever_radius(0.03-0.04); lever_mid_radius(0.01-0.02); lever_depth(0.05-0.08); lever_mid_depth(0.15-0.25); lever_length(log_uniform 0.15-0.2); level_type(choice wave/cylinder/bent)
+    pull knobs: pull_size(log_uniform 0.1-0.4); pull_depth(0.05-0.08); pull_width(log_uniform 0.08-0.15); pull_extension(0.05-0.15); to_pull_bevel(prob 0.5); pull_bevel_width(0.02-0.04); pull_radius(0.01-0.02); pull_type(choice u/tee/zed); is_pull_circular(prob 0.5 or zed)
+  BaseDoorFactory.create_asset/_create_asset: builds door cube, applies panels, frame, arc, materials, assembles via geometry_node_join
+  BaseDoorFactory.make_knobs/make_levers/make_pulls/make_handles: build handle meshes from above knobs
+  geometry_node_join (function): joins door body, handle, frame, arc; sets hinge/slide/rigid joints, mirrors for left/right, double-door second hinge; joint Min/Max ranges (door hinge Max=2.0, handle Max=1.0) -> open swing amount
+
+FILE: assets/objects/elements/doors/__init__.py
+  random_door_factory: picks a door type
+    knobs: door_probs([Panel4, GlassPanel2, Louver3, Lite3]) -> relative selection frequency
+  DoorFactory: wrapper that instantiates a random base door factory per seed
+
+FILE: assets/objects/elements/__init__.py
+  module re-exports: aggregates door/pillar/rug/staircase/warehouse factories (no tunables)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  __init__.py -> package init
+  assets/__init__.py -> assets package init (colors, composition/material_assignments)
+  assets/utils/__init__.py -> asset utils package init
+  assets/utils/decorate.py -> read_co/write_co/write_attribute/read_area/select_faces mesh attribute helpers
+  assets/utils/mesh.py -> prepare_for_boolean and mesh cleanup utilities
+  assets/utils/object.py -> new_cube/new_plane/new_line/mesh2obj/data2mesh/join_objects primitives
+  core/nodes/node_info.py -> Nodes enum / node type registry
+  core/nodes/node_wrangler.py -> NodeWrangler for building geometry-node graphs
+  core/surface.py -> add_geomod, read_attr_data/write_attr_data, material application
+  core/util/blender.py -> butil (transforms, modifiers, viewport modes, collections, delete)
+  core/util/logging.py -> logging setup
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform, weighted_sample sampling helpers

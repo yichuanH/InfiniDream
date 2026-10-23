@@ -1,0 +1,45 @@
+SUMMARY: BathroomSinkFactory builds a single freestanding bathroom sink/vanity assembly (basin + countertop-style bowl, optional back extrusion, optional plinth/pedestal stand, drain hole, and a faucet/tap). It subclasses BathtubFactory, reusing that class's contour/bowl/base/cutter/hole geometry machinery but overriding dimensions, contour type, sink variant logic, and materials. StandingSinkFactory is a preset variant forcing a freestanding pedestal sink. The upper-level files control every dimension, variant probability, and material choice for the sink.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/bathroom/bathroom_sink.py
+  BathroomSinkFactory.__init__: sets sink dimensions, variant type, tap/stand config, materials (all sampled with FixedSeed(factory_seed)).
+    knobs: width(uniform 0.6-0.9) -> overall left-right basin size; size(width*log_uniform 0.55-0.8) -> front-back depth of basin; depth(width*log_uniform 0.2-0.4) -> basin vertical height; sink_types(random choice "undermount"/"drop-in"/"vessel") -> selects bathtub_type/has_extrude/has_stand behavior; has_extrude(undermount:prob 0.7, drop-in:True, vessel:prob 0.7) -> adds raised back for faucet mounting; has_stand(True only for vessel) -> adds pedestal base; alcove_levels(0 with prob 0.5 else randint 2-4) -> subsurf smoothing of basin corners; thickness(0.01 if has_base else uniform 0.01-0.03) -> wall thickness; size_extrude(uniform 0.2-0.35) -> depth of back extrusion; tap_offset(uniform 0.0-0.05) -> faucet horizontal placement; stand_radius(width/2*log_uniform 0.15-0.2) -> pedestal top radius; stand_bottom(width*log_uniform 0.2-0.3 with prob 0.6 else stand_radius) -> pedestal flared base radius; stand_height(uniform 0.7-0.9 - depth) -> pedestal height; is_stand_circular(prob 0.5) -> round vs square pedestal; is_hole_centered(True) -> drain centered in basin; surface_material_gen(weighted_sample from material_assignments.bathroom_touchsurface) -> basin/countertop material (stone/etc).
+  BathroomSinkFactory.create_placeholder: bbox extent -> reserved space including back extrude and stand height.
+  BathroomSinkFactory.create_asset: assembly order (bowl/base -> solidify -> scale to width/size/depth -> extrude_back -> add_stand -> add_hole -> tap join -> material assign).
+    knobs: obj.scale(=[width,size,depth]/dimensions) -> final proportions; tap placement offsets ((-1-size_extrude+tap_offset)*size, width/2, depth) -> faucet position; rotation_euler[-1]=pi/2 fixed.
+  BathroomSinkFactory.extrude_back: selects rear faces (y>size/2, normal_y>0.1) and extrudes by size_extrude*size.
+  BathroomSinkFactory.add_stand: builds pedestal (cylinder16 or cube), scales by stand_radius/stand_height, subdivides randint(3-6) edge rings, tapers bottom to stand_bottom, subsurf x2.
+  BathroomSinkFactory.finalize_assets: applies scratch/edge_wear if present (inherited wear from BathtubFactory).
+  StandingSinkFactory.__init__: preset override -> forces bathtub_type="freestanding", has_extrude=True, has_stand=True (always pedestal sink with faucet).
+
+FILE: assets/objects/bathroom/bathtub.py (inherited base — edit affects sink geometry engine)
+  BathtubFactory.__init__: base dims/materials mostly overridden by sink subclass; still supplies has_curve(prob 0.5), levels(5)/side_levels(2) subsurf resolution, disp_x/disp_y contour displacements, hole_radius(uniform 0.015-0.02), and material generators for hole (metal_neutral, brushed-nickel-like) and wear/tear.
+    knobs: levels(5) -> overall bowl mesh smoothness; side_levels(2) -> wall smoothing; has_curve(prob 0.5) -> tapered vs straight bowl walls; hole_radius(0.015-0.02) -> drain size; taper_factor/stretch_factor(uniform -0.1..0.1 / -0.2..0.2) -> bowl profile deformation (freestanding only); hole_surface_material_gen(metal_neutral) -> faucet/drain metal.
+  make_box_contour/make_corner_contour: 2D basin footprint polygon (sink uses box).
+  make_base/make_bowl/make_cutter: cylinder-from-contour geometry for basin solid and hollow interior.
+  add_hole: drain cylinder placement (sink forces centered).
+  make_freestanding/make_legs/add_base: bathtub-only paths, unused for extruded sink but present.
+
+FILE: assets/objects/bathroom/__init__.py
+  module exports: registers BathroomSinkFactory, StandingSinkFactory (+ Bathtub/Hardware/Toilet). Edit to expose/rename factories.
+
+FILE: assets/objects/table_decorations/__init__.py
+  module exports: provides TapFactory used for the faucet. Swap import to change faucet source.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> curated material pools (bathroom_touchsurface, ceramics, metal_neutral, wear_tear) and probabilities.
+  assets/objects/table_decorations/sink.py (TapFactory) -> generates the brushed-nickel faucet mesh.
+  assets/materials/metal/__init__.py -> metal shaders (faucet/drain).
+  assets/materials/ceramic/__init__.py, wood/__init__.py -> surface material node groups.
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> procedural wear overlays.
+  assets/utils/autobevel.py (BevelSharp) -> sharp-edge beveling helper.
+  assets/utils/decorate.py -> mesh helpers (read_co/normal/center, subsurf, subdivide_edge_ring, write_co/attribute).
+  assets/utils/nodegroup.py (geo_radius) -> converts leg curves to tubes.
+  assets/utils/object.py -> primitive/bbox constructors (new_cube, new_cylinder, new_bbox, new_base_cylinder, join_objects, new_line).
+  core/placement/factory.py -> AssetFactory base class (create_asset/placeholder lifecycle).
+  core/surface.py -> assign_material / add_geomod plumbing.
+  core/util/blender.py -> Blender op wrappers (modify_mesh, ViewportMode, apply_transform, delete, deep_clone_obj).
+  core/util/math.py (FixedSeed) -> deterministic per-seed sampling.
+  core/util/random.py -> log_uniform, weighted_sample samplers.
+  core/nodes/*, core/tags.py, core/util/logging.py -> node graph, tagging, logging infra.

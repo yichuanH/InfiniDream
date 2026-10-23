@@ -1,0 +1,35 @@
+SUMMARY: BoulderFactory procedurally generates boulder/slab rocks from a random convex hull that is extruded, beveled, remeshed (SHARP mode), and displaced with Voronoi textures to give a faceted rocky surface. The single upper-level file boulder.py defines the whole placeholder shape pipeline, geometry-node extrusion logic, material assignment, and mesh finalization/detail adaptation. To achieve a basalt-column look (tightly packed vertical hexagonal columns, flat-sheared top, sharp joints), tune the Voronoi displacement, remesh sharpness, bevel width, and extrusion configs here.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/rocks/boulder.py
+  BoulderFactory.__init__: sets up random material, boulder-vs-slab config, remesh depth, and displacement toggle.
+    knobs: octree_depth(3, fixed) -> REMESH resolution/sharpness of facets (higher = finer, sharper edges); do_voronoi(True) -> enables Voronoi surface displacement (turn off for cleaner column faces); weights([0.8 boulder, 0.2 slab]) -> probability of slab vs boulder shape (sampled); configs(["boulder","slab"]) -> selectable shape types; rock_surface(weighted_sample(material_assignments.rock)) -> randomly chosen rock material.
+  BoulderFactory.config_mappings: maps config name -> (has_horizontal_cut, is_slab) booleans controlling flat-top cut and slab flattening.
+    knobs: "boulder"([True,False]) -> horizontal cut on, not slab; "slab"([False,True]) -> flat thin slab form.
+  BoulderFactory.create_placeholder: builds base convex hull, applies extrusion/subsurf/bevel/remesh/Voronoi displacement; primary shape control.
+    knobs: vertices count(32, uniform(-1,1,(32,3))) -> base hull complexity; boulder_scale(1, gin-configurable) -> overall size multiplier; SUBSURF levels/render_levels(2/2, SIMPLE) -> smoothing (lower for sharper columns); slab scale(log_uniform(0.5,2.0) xy, log_uniform(0.1,0.15) z) -> slab flatness (sampled); boulder scale(log_uniform(0.4,1.2) xy, log_uniform(0.4,0.8) z) -> boulder proportions (sampled); rotation_euler[0](uniform(-pi/24,pi/24)) -> slight tilt; rotation_euler[-1](uniform(0,2pi)) -> random yaw; BEVEL width_pct(10, VGROUP "top" inverted) -> edge rounding (lower for sharp column joints); REMESH mode("SHARP", octree_depth) -> preserves sharp faceted edges; Voronoi #1 noise_scale(log_uniform(0.2,0.5)), distance_metric("DISTANCE"), strength(0.01) -> coarse cell displacement (raise strength + tune scale for column-cell pattern); Voronoi #2 noise_scale(log_uniform(0.05,0.1)), strength(0.01) -> fine surface detail; location Z offset(dimensions[-1]*0.2) -> vertical placement/ground clipping.
+  BoulderFactory.geo_extrusion: geometry-node modifier that extrudes upward-facing large faces to form raised lumps and tags top faces.
+    knobs: extrude_configs([(uniform(0.2,0.3),0.8,0.4),(0.6,0.2,0.6)]) -> per-pass (probability, extrude height, top-scale) shaping bumps; extrude_scale(1) -> global extrusion multiplier; top_facing threshold(np.pi*2/3 from (0,0,1)) -> which faces count as "top"; extrude amount(nw.uniform(extrude*0.5, extrude)) -> per-face random height; scale(nw.uniform(scale*0.5, scale)) -> extruded-face taper.
+  BoulderFactory.finalize_placeholders: applies chosen rock material as is_rock surface.
+    knobs: rock_surface.apply(is_rock=True) -> final material/shading of rock.
+  BoulderFactory.create_asset: adapts mesh resolution (camera-aware or remesh) and tags object.
+    knobs: face_size(0.01) -> target mesh density/detail; adapt_mesh_method("remesh") -> resampling method; cam_meshing_max_dist(1e7) -> distance threshold for in-view meshing; vis_margin(0.15) -> camera visibility crop margin.
+FILE: assets/objects/rocks/__init__.py
+  module exports: registers BoulderFactory (and Blender/Glowing rock factories); no tunable values.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides material_assignments.rock pool for surface selection.
+  assets/utils/decorate.py -> geo_extension geometry modifier used to extend/shape the base mesh.
+  assets/utils/object.py -> trimesh2obj converts trimesh convex hull into a Blender object.
+  core/surface.py -> add_geomod attaches geometry-node modifiers; surface material framework.
+  core/nodes/node_wrangler.py -> NodeWrangler/Nodes API for building geometry-node graphs.
+  core/placement/factory.py -> AssetFactory base class (seeding, spawn interface).
+  core/placement/detail.py -> adapt_mesh_resolution and target_face_size for LOD meshing.
+  core/placement/split_in_view.py -> split_inview for camera-frustum-aware mesh generation.
+  core/placement/camera.py, core/util/camera.py -> camera utilities for in-view meshing.
+  core/tagging.py, core/tags.py -> tag_object semantic tagging of the boulder mesh.
+  core/util/blender.py -> butil helpers (modifiers, transforms, cloning, selection).
+  core/util/math.py -> FixedSeed deterministic seeding.
+  core/util/random.py -> log_uniform, weighted_sample sampling helpers.
+  assets/materials/** -> concrete material shader implementations referenced by rock assignments.
+  core/nodes/nodegroups/transfer_attributes.py, core/nodes/utils.py, core/nodes/node_info.py, core/nodes/compatibility.py -> node graph support infrastructure.

@@ -1,0 +1,51 @@
+SUMMARY: FallenTreeFactory generates a single fallen/broken tree: it builds a full procedural tree trunk, cuts it into an upper and lower half along a randomized break plane, deforms the cut faces with a noise-based "snap" profile, then repositions/rotates the upper half so it lies fallen against the stump. base.py supplies shared setup (base tree factory, bark material, and a wave-ring shader for the exposed cut wood) inherited by all deformed-tree variants. generate.py is the underlying GenericTreeFactory that produces the trunk mesh and skinning that fallen.py deforms.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/deformed_trees/base.py
+  BaseDeformedTreeFactory.__init__: sets up base tree, bark surface, and cut-wood ring shader.
+    knobs: skinning "Scaling"(fixed 0.2) -> trunk thickness/skin scale; trunk_surface(weighted_sample of material_assignments.bark) -> bark material on trunk sides; base_hue(uniform 0.02-0.08) -> reddish-brown hue of cut wood rings
+  BaseDeformedTreeFactory.shader_rings: procedural concentric-ring cut-face wood shader.
+    knobs: WaveTexture Scale(uniform 10-20) -> ring density; Distortion(uniform 4-10) -> ring waviness; wave_type="RINGS"/rings_direction="Z"/wave_profile="SAW"(fixed) -> ring pattern; bright_color = hsv2rgba(base_hue, sat uniform 0.4-0.8, val log_uniform 0.2-0.8) -> light ring color; dark_color = hue+uniform(-0.02,0.02), sat uniform 0.4-0.8, val log_uniform 0.02-0.05 -> dark ring color
+  BaseDeformedTreeFactory.geo_xyz: stores world xyz as named attributes (used by shader); no user knobs.
+  build_tree: spawns trunk via base_factory; no direct knobs.
+
+FILE: assets/objects/deformed_trees/fallen.py
+  FallenTreeFactory.geo_cutter: deforms the break-plane region into a snapped/splintered profile.
+    knobs: selection radius(fixed x²+y²<1) -> deformed disc region; Clamp noise range(0.3,0.7 fixed) -> offset noise floor/ceiling; NoiseTexture Scale(=noise_scale param) -> break-face bumpiness; radius float-curve x:[(-radius,1),(radius,0)] -> lateral falloff of break; anchors((-1,0),(-0.5,0),(0,-1),(0.5,0),(1,0) fixed) -> along-normal break profile shape (dip toward center)
+  FallenTreeFactory.build_half: cuts one half of the trunk along plane, fills cut, applies cut shader + geo_cutter.
+    knobs: inherits noise_strength, noise_scale, radius from create_asset; remove_doubles threshold(1e-2 fixed) -> weld tolerance on cut edge
+  FallenTreeFactory.create_asset: orchestrates the whole fallen tree (single logical object).
+    knobs: cut_center z(uniform 0.6-1.2) -> break height above ground; cut_normal(=[uniform 0.1-0.2, 0, 1]) -> break-plane tilt; noise_strength(uniform 0.3-0.5) -> break-face displacement magnitude; noise_scale(uniform 10-15) -> break-face detail frequency; highest offset(-uniform 0.05-0.15 x&z) -> contact point jitter between halves; rotation arcsin term (highest_z - uniform 0-0.2) -> fallen-half lean angle; remove_vertices z<-0.5(fixed) -> trims buried geometry; tag "fallen_tree"
+
+FILE: assets/objects/deformed_trees/__init__.py
+  module exports: registers FallenTree/Deformed/Hollow/Rotten/Truncated factories; no knobs.
+
+FILE: assets/objects/trees/generate.py
+  GenericTreeFactory: builds the underlying trunk mesh (skeleton + skinning) that fallen.py cuts.
+    knobs: scale(fixed 0.35, tree units->meters) -> overall trunk size; adapt_mesh_method("remesh" default)/decimate_placeholder_levels(0) -> mesh resolution of trunk; SUBSURF levels(decimate_levels+1) -> smoothing
+  random_species: selects tree species genome used for the trunk.
+    knobs: pine_chance(0.0) -> chance of pine trunk; species code(np.random.rand(32)) -> random trunk shape
+  random_season: season weighting (autumn/summer/spring/winter p=0.25/0.3/0.4/0.1) -> affects species/leaf but leaves unused for fallen trunk
+  TreeFactory / BushFactory: full living-tree/bush variants (leaves, twigs, fruit) — NOT used by fallen factory; edit only if reusing.
+    knobs: n_leaf, n_twig, fruit_chance, leaf_type/fruit_type probability arrays.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides weighted bark material set (self.trunk_surface source)
+  assets/utils/draw.py -> cut_plane(): slices mesh by a plane into two parts
+  assets/utils/decorate.py -> remove_vertices(): deletes verts by predicate
+  assets/utils/object.py -> join_objects/separate_loose: mesh merge/split helpers
+  assets/utils/misc.py -> assign_material() and weighted sampling helpers
+  assets/utils/mesh.py -> low-level mesh operations
+  core/nodes/node_wrangler.py, node_info.py, utils.py, compatibility.py -> geometry/shader node graph construction (WaveTexture, NoiseTexture, SetPosition, etc.)
+  core/surface.py -> add_geomod/shaderfunc_to_material/eval_argument: attach geo & shader node graphs
+  core/placement/factory.py -> AssetFactory base class + spawn_asset lifecycle
+  core/placement/detail.py -> target_face_size/adapt_mesh_resolution: LOD-based meshing
+  core/placement/split_in_view.py (via generate) -> camera-based mesh splitting (unused for fallen)
+  core/tagging.py, tags.py -> tag_object semantic labeling ("fallen_tree","tree")
+  core/util/blender.py -> deep_clone_obj, apply_modifiers/transform, ViewportMode, Suppress, mesh ops wrappers
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> weighted_sample, log_uniform sampling
+  core/util/logging.py -> logging setup
+  assets/objects/trees/{branch,tree,treeconfigs,tree_flower}, leaves/*, fruits/*, cloud -> trunk skeleton/skinning genomes and (unused-here) child assets

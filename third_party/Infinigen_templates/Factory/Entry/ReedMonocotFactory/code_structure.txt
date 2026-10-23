@@ -1,0 +1,49 @@
+SUMMARY: This factory builds a single cattail reed: a tall subdivided stem carrying long strap leaves that sheath its base and, at the top, a thick brown flower spike (the "branch") with a thin bare male-flower spike continuing above it. `growth.py` provides the shared MonocotGrowthFactory engine (stem, leaf instancing along the stem via geometry nodes, materials, and post-decoration), while `grasses.py` subclasses it to define reed-specific proportions, sub-factories (ReedEar, ReedBranch), and the brown-spike shader. The reed assembly joins the leafy stem, the branch spike, and its ear, assigning two materials by the "ear" face attribute.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/grasses.py
+  ReedMonocotFactory: assembles the full cattail (stem+leaves + brown branch spike + male-flower ear); topmost editable class.
+    knobs: stem_offset(uniform 3.0-4.0) -> overall stem height; scale_curve([(0,1.2),(1,0.8)]) -> leaf size taper base->tip; branch.location[-1]=stem_offset-0.02 (fixed) -> spike sits at stem top; WELD merge_threshold(1e-3) -> vertex merge tolerance.
+    knobs (shader_ear = brown spike material): color hue(uniform 0.06-0.1), sat(uniform 0.2-0.5), value(log_uniform 0.2-0.5) -> brown flower-spike color (sampled); specular(uniform 0.0-0.2); clearcoat(0 with 80% prob else uniform 0.2-0.5); NoiseTexture Scale(50); roughness curve([(0,0.5),(1,0.8)]); Subsurface Weight(0.01), Radius(0.01).
+    build_base_hue: returns uniform(0.08-0.12) -> yellow-green leaf/stem hue.
+
+  ReedBranchMonocotFactory: the thick brown spike body that holds the ears.
+    knobs: max_branches(6, fixed); stem_offset(uniform 0.6-0.8) -> spike length; scale_curve((0,1),(0.5,0.6),(1,0.1)) -> spike taper (sausage->thin tip); min_y_angle(uniform -pi/10..-pi/8), max_y_angle(uniform -pi/6..-pi/8) -> ear tilt on spike; angle(0, fixed) -> no radial spiral; radius(0.005) -> spike core thickness; make_collection count(2 ear variants).
+
+  ReedEarMonocotFactory: individual small male-flower ear tufts placed densely on the branch.
+    knobs: stem_offset(uniform 0.3-0.4) -> ear length; min_y_angle(uniform pi/4..pi/3), max_y_angle(min+pi/12) -> ear splay; count(int log_uniform 48-96) -> ear density; radius(0.002) -> ear stalk thickness; build_leaf x_anchors/y_anchors(uniform small) -> tiny floret shape; writes "ear" FACE attr=1 (drives brown material assignment).
+
+  GrassesMonocotFactory (base for reed): defines strap-leaf shape and general grass proportions.
+    knobs: stem_offset(uniform 1.5-2.0, overridden by reed); angle(uniform pi/6..pi/3) -> leaf radial spacing; z_drag(uniform 0.0-0.2) -> droop; min_y_angle(uniform 0.35pi-0.45pi), max_y_angle(uniform 0.45pi-0.5pi) -> leaf pitch base->tip; count(int log_uniform 16-64) -> leaf number; scale_curve([(0,1),(1,0.2)]); bend_angle(pi/2).
+    build_base_hue: 60% uniform(0.08-0.12) yellow-green else uniform(0.2-0.25) green (random branch).
+    build_leaf: x_anchors/y_anchors(uniform) -> long thin strap leaf profile; cut_prob(0.4) with random x_cutoff(0.5-1.0)/angle(±pi/3) -> chance of clipped leaf tips.
+
+  WheatEarMonocotFactory / WheatMonocotFactory / MaizeMonocotFactory: sibling plant variants (not used by reed but share the file; edit only if changing those species).
+
+FILE: assets/objects/monocot/growth.py
+  MonocotGrowthFactory: shared engine — builds stem, instances leaves along it via geo_flower, applies materials and decoration.
+    knobs (defaults, mostly overridden by subclasses): count(128); perturb(0.05) -> per-instance rotation/scale jitter; angle(pi/6); min_y_angle(0.0)/max_y_angle(pi/2) -> leaf pitch range; leaf_prob(uniform 0.8-0.9) -> fraction of stem points bearing leaves; leaf_range(0,1) -> band of stem with leaves; stem_offset(0.2); scale_curve; radius(0.01) -> stem thickness; bend_angle(pi/4); twist_angle(pi/6); z_drag(0.0); z_scale(uniform 1.0-1.2); align_factor(0)/align_direction((1,0,0)).
+    color: bright_color hsv(base_hue, sat uniform 0.6-0.8, val log_uniform 0.05-0.1); dark_color hsv(base_hue±0.03, sat 0.8-1.0, val log_uniform 0.05-0.2) -> leaf/stem base gradient.
+    build_stem: SUBSURF levels(9), geo_radius(radius,16 segments), DISPLACE strength(0.01) noise_scale(0.1) -> stem surface bumps.
+    decorate_leaf: y_ratio(4), y_bend_angle(pi/6), z_bend_angle(pi/6), noise_scale(0.1), strength(0.02) -> leaf curl/bend and surface noise.
+    decorate_monocot: z_drag droop, geo_extension(0.4), TWIST(±twist_angle), BEND(0..bend_angle), scale(uniform 0.8-1.2 xy, z_scale), random Z rotation -> overall posture/shape.
+    shader_monocot: specular(uniform 0.0-0.2); clearcoat(0 @80% else 0.2-0.5); musgrave(10) color ramp stops [0,0.3,0.7,1.0]; NoiseTexture Scale(50); roughness curve([(0,0.5),(1,0.8)]); Subsurface Weight(0.01)/Radius(0.01) -> leaf/stem surface look.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> vertex displacement, attribute writing, geo_extension, remove_vertices helpers.
+  assets/utils/draw.py -> leaf(), bezier_curve(), spin() curve/mesh primitive builders.
+  assets/utils/mesh.py -> polygon_angles and mesh utilities.
+  assets/utils/misc.py -> assign_material helper.
+  assets/utils/nodegroup.py -> geo_radius nodegroup (gives curve/mesh a radius profile).
+  assets/utils/object.py -> data2mesh/mesh2obj, join_objects, origin2leftmost.
+  assets/utils/shapes.py -> shape construction utilities.
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py, nodegroups/* -> geometry/shader node graph API (build_float_curve, color ramps, InstanceOnPoints, etc.).
+  core/surface.py -> add_geomod, shaderfunc_to_material, read/eval attribute utilities.
+  core/placement/factory.py -> AssetFactory base, make_asset_collection.
+  core/placement/detail.py -> adapt_mesh_resolution, remesh_with_attrs.
+  core/tagging.py, core/tags.py -> tag_object semantic labeling.
+  core/util/blender.py -> butil modifier/mesh/transform wrappers.
+  core/util/color.py -> hsv2rgba color conversion.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> log_uniform sampling.

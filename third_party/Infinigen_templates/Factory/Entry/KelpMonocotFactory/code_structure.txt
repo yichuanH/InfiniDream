@@ -1,0 +1,57 @@
+SUMMARY: This factory builds a kelp plant as a monocot-style growth: a long flexible stem with leaf/blade instances distributed along it, colored with an underwater kelp shader and animated to sway in a current. KelpMonocotFactory (kelp.py) subclasses MonocotGrowthFactory (growth.py), overriding the leaf geometry (a strap-blade + bud), the color hue, stem length, and adding current-driven animation drivers. growth.py provides the generic stem-building, leaf-distribution geometry-node network, deformation, and shader used by all monocots. To realize the "chain of interlocked elliptical rings" request, replace build_instance's leaf/bud geometry with closed torus/ellipse rings and thread them into a chain.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/kelp.py
+  KelpMonocotFactory: kelp-specific overrides for shape, color, and current animation.
+    knobs: max_leaf_length(1.2) -> max blade length; align_angle(uniform(pi/24,pi/12), overwritten to uniform(pi/30,pi/15)) -> flow alignment tilt; stem_offset(10.0) -> total kelp height/length; angle(uniform(pi/6,pi/4)) -> spiral spacing of blades around stem; z_drag(uniform(0,0.2)) -> downward droop of blades by radius; min_y_angle/max_y_angle(uniform(0,0.1pi), equal) -> blade pitch angle; bend_angle(uniform(0,pi/6)) -> overall stem bend; twist_angle(uniform(0,pi/6)) -> stem twist; count(512) -> number of point slots (blade density) along stem; leaf_prob(uniform(0.6,0.7)) -> fraction of slots that get a blade; radius(0.02) -> stem thickness; align_direction(flow_angle uniform(0,2pi), z uniform(-0.2,0.2)) -> current flow direction; anim_freq(1/log_uniform(100,200)) -> sway speed; anim_offset(uniform(0,1)) -> sway phase; anim_seed(randint) -> sway randomization.
+    make_align_factor: driver blending strength toward current; knobs: nw.uniform(0.7,0.95), bernoulli(0.9) prob, repeated_driver(0.7,0.85,...) -> sway magnitude/randomness.
+    make_align_direction: animates z-component of flow direction; knobs: repeated_driver(-0.5,-0.1,...) -> vertical sway range.
+    build_base_hue (static): uniform(0.05,0.25) -> kelp brown/green base hue.
+    build_instance: builds one blade = tapered leaf + convex-hull bud. **Edit here for chain-ring request.** knobs: bud x_anchors([0,-0.02,-0.04]), y_anchors(uniform(0.01,0.02)), 6 radial curves(np.linspace(0,2pi,6)) -> bud shape; bud location[0]+=0.02; leaf x_anchors(0,uniform(0.35,0.65),uniform(0.8,1.2)) -> blade length; leaf y_anchors(0,uniform(0.06,0.08),0) -> blade width; decorate_leaf args(y_ratio uniform(-2,2), y_bend uniform(-pi/4,pi/4), z_bend uniform(-pi/4,pi/4)) -> blade curl/bend.
+    create_asset: assembles raw growth + decoration + material (no distinct knobs).
+
+FILE: assets/objects/monocot/growth.py
+  MonocotGrowthFactory: base class — stem, leaf distribution geo-nodes, deformation, shader.
+    knobs: count(128) -> point slots on stem; perturb(0.05) -> random rotation/scale jitter of instances; angle(pi/6) -> accumulated z-rotation spacing; min_y_angle(0)/max_y_angle(pi/2) -> leaf pitch curve endpoints; leaf_prob(uniform(0.8,0.9)) -> leaf placement probability; leaf_range((0,1)) -> spline-param window allowing leaves; stem_offset(0.2) -> stem length; scale_curve([(0,1),(1,1)]) -> instance size along stem; radius(0.01) -> stem radius; bend_angle(pi/4) -> stem bend; twist_angle(pi/6) -> stem twist; z_drag(0.0) -> droop; z_scale(uniform(1.0,1.2)) -> vertical stretch; align_factor(0)/align_direction((1,0,0)) -> instance alignment.
+    build_base_hue (static): uniform(0.15,0.35) -> default monocot hue (overridden in kelp).
+    build_leaf: abstract (kelp uses build_instance instead).
+    decorate_leaf (static): per-leaf bend/displace; knobs: y_ratio(4), y_bend_angle(pi/6), z_bend_angle(pi/6), noise_scale(0.1), strength(0.02) -> leaf curvature and surface noise; per-axis displace strength(uniform(0.01,0.02)*width).
+    make_geo_flower/geo_flower: geometry-node network distributing leaves on resampled stem line; knobs mirror class fields (count, angle, min/max_y_angle, scale_curve, perturb, leaf_prob, leaf_range, align).
+    build_stem: SUBSURF levels(9), stem displace noise_scale(0.1)/strength(0.01), geo_radius segments(16).
+    decorate_monocot: final twist(±twist_angle), bend(0..bend_angle), scale(uniform(0.8,1.2) xy, z_scale), random z-rotation.
+    shader_monocot (static): kelp/monocot material; knobs: specular(uniform(0,0.2)), clearcoat(0.8 prob none else uniform(0.2,0.5)), musgrave scale(10) & color ramp stops([0,0.3,0.7,1]) -> color banding, noise scale(50), roughness curve((0,0.5)->(1,0.8)), Subsurface Weight(0.01)/Radius(0.01) -> translucency.
+    Colors: bright_color(hsv: base_hue, sat uniform(0.6,0.8), val log_uniform(0.05,0.1)); dark_color(hue base_hue±0.03, sat uniform(0.8,1.0), val log_uniform(0.05,0.2)).
+
+FILE: assets/objects/creatures/util/animation/driver_repeated.py
+  repeated_driver: builds a looping smoothstep animation expression driving kelp sway.
+    knobs: phase(uniform(0.2,0.8)), u/v (uniform(0.8,1.0) fractions) -> sway waveform sharpness/asymmetry; start/end/freq/off/seed passed in.
+  bend_bones_lerp: armature bone sway helper (unused by kelp path); knobs: ratio(uniform(1,2)) distribution, random axis swaps.
+
+FILE: assets/objects/monocot/__init__.py
+  Registry exporting KelpMonocotFactory and sibling monocot factories (no tunables).
+
+FILE: assets/objects/creatures/__init__.py, creatures/util/*/__init__.py
+  Package re-exports / empty init files (no tunables).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/draw.py -> bezier_curve, leaf primitives used to build blade/bud shapes.
+  assets/utils/decorate.py -> displace_vertices, geo_extension mesh deformation helpers.
+  assets/utils/object.py -> mesh2obj/data2mesh, join_objects, origin2leftmost object utilities.
+  assets/utils/nodegroup.py -> geo_radius node group for stem thickness.
+  assets/utils/misc.py -> assign_material and misc helpers.
+  assets/utils/mesh.py -> mesh construction utilities.
+  core/nodes/node_wrangler.py -> NodeWrangler API for building geometry/shader node graphs.
+  core/nodes/node_info.py -> Nodes enum of Blender node types.
+  core/nodes/node_utils.py -> build_color_ramp and node helpers.
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer node groups.
+  core/nodes/compatibility.py, utils.py -> node version/compat shims.
+  core/surface.py -> add_geomod, shaderfunc_to_material, eval_argument surface plumbing.
+  core/placement/factory.py -> AssetFactory base, make_asset_collection.
+  core/placement/detail.py -> adapt_mesh_resolution, remesh_with_attrs.
+  core/tagging.py -> tag_object semantic tagging.
+  core/util/blender.py -> butil mesh/modifier/viewport utilities.
+  core/util/math.py -> FixedSeed, int_hash deterministic seeding.
+  core/util/random.py -> log_uniform sampling.
+  core/util/color.py -> hsv2rgba color conversion.
+  core/util/logging.py -> logging utilities.

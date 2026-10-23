@@ -1,0 +1,46 @@
+SUMMARY: BottleFactory procedurally generates a single drink bottle assembly (body + wrapped label + cap) as one joined object per create_asset() call. The upper-level bottle.py defines five bottle silhouette profiles (beer, bordeaux, champagne, coke, vintage) via spun anchor curves, then applies plastic/text/metal materials to body, label wrap, and cap. All parameters are sampled once at init under a fixed seed for reproducible resampling.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/tableware/bottle.py
+  BottleFactory.__init__: samples the bottle geometry, type, and materials
+    knobs: z_neck_offset(0.05, class const) -> label top margin below neck; z_waist_offset(0.15, class const) -> label bottom margin above waist
+    knobs: z_length(uniform 0.15–0.25) -> overall bottle height
+    knobs: x_length(z_length * uniform 0.15–0.25) -> body radius/width
+    knobs: x_cap(uniform 0.3–0.35) -> relative cap/neck-top radius
+    knobs: bottle_type(np.random.choice of beer/bordeaux/champagne/coke/vintage) -> silhouette shape family
+    knobs: bottle_width(uniform 0.002–0.005) -> shell solidify thickness (0 = no solidify)
+    knobs: z_neck(per-type uniform; e.g. beer 0.5–0.6, bordeaux 0.6–0.7, champagne 0.4–0.5, coke z_waist+0.2–0.25, vintage 0.7–0.75) -> neck start height
+    knobs: z_cap(per-type uniform, e.g. 0.05–0.15) -> cap section height fraction
+    knobs: z_waist(0 except coke uniform 0.4–0.5, vintage 0.1–0.15) -> waist/bulge position
+    knobs: neck_size(per-type uniform, beer 0.06–0.1, bordeaux 0.1–0.15) -> neck taper length
+    knobs: x_anchors/z_anchors/is_vector(per-type lists) -> exact profile control points and sharp/smooth flags
+    knobs: surface(weighted_sample material_assignments.plastics) -> body material (random, transparent plastics)
+    knobs: wrap_surface(text.Text(); falls back to Text(False)) -> label graphic/text material
+    knobs: cap_surface(weighted_sample material_assignments.metals) -> cap material
+    knobs: texture_shared(uniform<0.2, ~20% prob) -> whether front/back label share texture
+    knobs: cap_subsurf(uniform<0.5, ~50% prob) -> smooth vs faceted cap
+  create_asset: builds and joins bottle + wrap + cap into one object (no per-call randomness beyond wrap z-margins)
+  make_bottle: spins profile, subsurf level 1, optional SOLIDIFY, assigns body material
+    knobs: subsurf(1, fixed) -> body smoothness
+  make_wrap: creates cylindrical label sleeve around body
+    knobs: z_max margin(uniform 0.02–z_neck_offset) -> label top edge; z_min margin(uniform 0.02–z_waist_offset) -> label bottom edge; radius offset(+2e-3) -> label standoff from body; cylinder vertices(128) -> label roundness; subdivide_edge_ring(16) -> vertical segments
+  make_cap: creates cylindrical cap
+    knobs: cap radius((x_cap+0.1)*x_length) -> cap width; cap height((z_cap+0.01)*z_length) -> cap thickness; cylinder vertices(128) -> roundness
+  finalize_assets: currently no-op (scratch/edge_wear commented out — re-enable for wear effects)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material pools (plastics, metals) for body/cap
+  assets/materials/text.py -> Text label/graphic material for the wrap
+  assets/materials/plastic/__init__.py -> plastic (transparent) body shaders
+  assets/materials/metal/__init__.py -> metal cap shaders
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> optional wear materials (disabled)
+  assets/utils/draw.py -> spin() to build revolved profile mesh
+  assets/utils/decorate.py -> read_co, subdivide_edge_ring, subsurf mesh operations
+  assets/utils/object.py -> join_objects, new_cylinder primitives
+  assets/utils/uv.py -> wrap_front_back label UV mapping
+  core/surface.py -> assign_material application
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle
+  core/util/math.py -> FixedSeed for reproducible sampling
+  core/util/random.py -> weighted_sample material selection
+  core/util/blender.py -> ViewportMode, modify_mesh, apply_transform helpers
+  core/nodes/* , core/tags.py, core/placement/detail.py -> node graph, tagging, detail infrastructure

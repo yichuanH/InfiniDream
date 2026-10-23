@@ -1,0 +1,61 @@
+SUMMARY: The MolluskFactory procedurally builds seashells and snail shells (scallop, clam, mussel, conch, auger, volute, nautilus) — NOT an octopus; the requested octopus (bulbous mantle, eyes, eight suckered arms, mottled red-brown skin) is not represented by any code here. generate.py picks a base sub-factory (shell.py or snail.py), builds the mesh geometry, then applies a solidify/displace decoration and a wave-texture "mollusk" shader whose hue is biased toward red-brown/orange tones. shell.py builds bivalve shells from displaced ellipses; snail.py builds spiral shells via cross-section extrusion arrays.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mollusk/base.py
+  BaseMolluskFactory: shared defaults for all mollusk sub-factories
+    knobs: max_expected_radius(0.5) -> overall bounding size; noise_strength(0.02) -> surface displacement roughness magnitude; ratio(1) -> blend between the two wave-texture color patterns in shader; x_scale(2) -> horizontal band frequency of shader; z_scale(1) -> vertical band frequency of shader; distortion(1) -> shader wave distortion
+
+FILE: assets/objects/mollusk/generate.py
+  MolluskFactory: top-level entry; picks base factory, builds material, decorates
+    knobs: factory_methods([SnailBaseFactory, ShellBaseFactory]) -> which shell family is chosen; weights(equal) -> selection probability per family; factory_method(None=random) -> force a specific family
+  MolluskFactory.decorate_mollusk: post-mesh surface treatment
+    knobs: face_size(0.01) -> subdivision/detail density; SOLIDIFY thickness(0.005) -> shell wall thickness; texture type(random STUCCI|MARBLE) -> displacement pattern; texture.noise_scale(log_uniform 0.1-0.2, random) -> displacement feature size; DISPLACE strength(=noise_strength) -> bump depth
+  MolluskFactory.build_base_hue: base color hue (relevant to "red-brown" request)
+    knobs: 0.4 prob -> hue uniform(0,0.2) [red-orange-yellow]; else -> hue uniform(0.05,0.12) [orange-brown]; adjust these ranges/prob to enforce red-brown mottled skin
+  MolluskFactory.shader_mollusk: procedural mottled color shader
+    knobs: roughness(uniform 0.2-0.8, random); specular(0.3 fixed); value_scale(log_uniform 1-20, random) -> brightness; saturation_scale(log_uniform 0.4-1, random) -> color saturation; dark_color value(0.005*value_scale**1.5); light_color value(0.05*value_scale); hue jitter(uniform -0.06,0.06); dark_prob(0.4) -> fraction of dark mottling; n(randint 3-5) -> number of color-ramp bands; WaveTexture wave_profile("SAW"), bands_direction("X"/"Z"); MixRGB ratio(=ratio) -> pattern blend
+  ScallopFactory/ClamFactory/MusselFactory/ConchFactory/AugerFactory/VoluteFactory/NautilusFactory: subclasses forcing one specific shell type
+
+FILE: assets/objects/mollusk/shell.py
+  ShellBaseFactory: bivalve shell builder (scallop/clam/mussel)
+    knobs: makers([scallop,clam,mussel]) & maker(random choice); z_scale(log_uniform 2-10, random)
+  build_ellipse: base shell dome
+    knobs: vertices(1024); viewpoint((0,0,1)); softness(0.3) -> dome curvature
+  scallop_make: knobs: scale(1,1.2,1); boundary(0.42); outer(uniform 0.28-0.32); inner(uniform 0.18-0.22); s(uniform 0.6-0.7) -> fan flare profile
+  clam_make: knobs: softness(0.5); scale(1,1.2,1); angle ranges(uniform); s(uniform 0.6-0.7)
+  mussel_make: knobs: softness(0.5); scale(1,3,1) -> elongation; angle ranges; s(uniform 0.6-0.8)
+  add_radial_groove: knobs: frequency(45) -> number of radial ribs; scale(0.02) -> rib depth
+  add_hinge: knobs: length(0.4); width(0.1); x(uniform 0.8-1.0); DISPLACE strength(0.2) STUCCI
+  create_asset: two-valve assembly; knobs: base gap angle(uniform 0-pi/4); upper opening(uniform pi/6-pi/3); solidify offset(0.005)
+
+FILE: assets/objects/mollusk/snail.py
+  SnailBaseFactory: spiral shell builder (volute/nautilus/snail/conch/auger)
+    knobs: freq(256) -> spiral angular resolution; makers list & maker(random choice); ratio(uniform 0-0.3 or 0.7-1.0, random) -> shader mix; z_scale(log_uniform 0.2-1); distortion(log_uniform 2-20)
+  build_cross_section: shell tube profile
+    knobs: n(64) verts; affine(1) -> ellipticity; spike(0.0) -> random bump protrusions; concave(2.2) -> squareness of section; rotation(uniform 0-pi/12)
+  snail_make: spiral extrusion via ARRAY
+    knobs: lateral(0.15) -> spiral vertical pitch; longitudinal(0.04) -> axis offset; freq(28); scale(0.99) -> per-step shrink; loop(8) -> number of whorls; affine; spike
+  conch_make/auger_make/volute_make/nautilus_make: per-type solved scale/lateral/longitude ranges & loop counts controlling spiral tightness and shape
+  create_asset: knobs: random rotation(uniform 0-2pi 3); geo_affine offset(uniform -0.1,0.1) -> global shear distortion
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> subsurface2face_size, displace_vertices mesh detail/displacement helpers
+  assets/utils/draw.py -> shape_by_angles profile-shaping utility for shell fans
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/object.py -> mesh creation (new_circle, mesh2obj, data2mesh, join_objects, center, new_empty)
+  core/nodes/node_wrangler.py -> NodeWrangler node-graph construction API
+  core/nodes/node_info.py -> Nodes enum of shader/geometry node types
+  core/nodes/node_utils.py -> build_color_ramp helper
+  core/surface.py -> shaderfunc_to_material, add_geomod material/geometry-mod binding
+  core/tagging.py / core/tags.py -> tag_object semantic tagging
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> level-of-detail / face-size resolution
+  core/util/blender.py -> Blender mesh ops (modify_mesh, apply_transform, ViewportMode, deep_clone_obj, delete)
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/color.py -> color utilities
+  core/nodes/compatibility.py, core/nodes/utils.py -> node version-compat and node helpers
+  core/util/logging.py -> logging
+
+NOTE: To satisfy the octopus request, none of this geometry applies — new geometry (mantle sphere, eyes, eight tapering suckered arms) would need to be authored; only build_base_hue/shader_mollusk (red-brown tuning) and noise displacement are reusable for "mottled skin".

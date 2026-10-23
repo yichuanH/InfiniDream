@@ -1,0 +1,53 @@
+SUMMARY: This factory (FruitFactoryApple) procedurally builds a single apple mesh via a modular geometry-node pipeline: a 2D cross-section is swept along a quadratic profile curve, an apple surface shader/dent modifier is applied, and a stem is attached. The upper-level files define per-fruit parameter samplers (apple.py), the reusable node-group libraries for cross-sections, shapes, stems, and surfaces, and the generic assembler (general_fruit.py) that wires these dictionaries into one geometry-node graph. Despite the display-wall request, the code only generates fruit assets; you tune shape, color, and stem here.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/fruits/apple.py
+  FruitFactoryApple.sample_cross_section_params: chooses the circular cross-section profile of the fruit body.
+    knobs: cross_section_name("circle_cross_section", swap to "star_cross_section"/"coconut_cross_section" for other silhouettes); radius(normal(1.5,0.05), random) -> fruit girth; random seed(uniform(-100,100), random) -> noise offset; Resolution(256) -> mesh smoothness.
+  FruitFactoryApple.sample_shape_params: defines the vertical profile (apple bulge/waist).
+    knobs: radius_control_points([(0,0),(0.1227,0.4281),(0.4705,0.6625),(0.8886,0.4156),(1,0)], fixed curve) -> body outline; noise amount tilt(0.0) -> axis wobble; noise scale pos(0.5)/noise amount pos(0.1) -> surface displacement; Start(uniform x,y in ±0.1, z in -0.9..-1.1, random)/End((0,0,1)) -> lean/length; Resolution(256).
+  FruitFactoryApple.sample_surface_params: sets skin color and shader hookup.
+    knobs: base_color HSV = (hue uniform(-0.05,0.1), sat 0.999+N(0,0.05), val 0.799+N(0,0.05)) -> red/green apple tint (random); alt_color = base hue+N(0.05,0.02) -> secondary blush color (random); random_seed(uniform(-100,100)); surface_resolution(64); scale_multiplier(1.0) -> overall size.
+  FruitFactoryApple.sample_stem_params: the stem geometry and color.
+    knobs: stem_color HSV=(0.10,0.96,0.13)+small noise (random) -> brown/green stem; quad_mid(z uniform 0.15-0.2)/quad_end(xy ±0.2, z 0.3-0.4, random) -> stem curl; quad_res(32); cross_radius(uniform 0.025-0.035) -> stem thickness; cross_res(32); Translation((0,0,0.6)) -> attach height.
+
+FILE: assets/objects/fruits/apple_surface? -> see surfaces/apple_surface.py
+
+FILE: assets/objects/fruits/surfaces/apple_surface.py
+  shader_apple_shader: procedural skin texture blending color1/color2.
+    knobs: musgrave_texture_2(Scale 10, Detail 10, Dimension 0.3, Lacunarity 3) -> fine speckle; musgrave_texture(Scale 0.6, Lacunarity 1) -> large blotch mix; Z multiply(0.2) -> vertical streaking; HueSaturation Hue(0.55) -> highlight tint; base colors from color1/color2 passed in.
+  nodegroup_apple_surface: applies two dents (top/bottom) then material.
+    knobs: dent_control_points(default 5-point curve) -> dimple shape; top adddent intensity(1.5)/max radius(1.5); bottom adddent intensity(-1.0)/max radius(1.5) -> stem-well & calyx depth.
+
+FILE: assets/objects/fruits/cross_section_lib.py
+  nodegroup_circle_cross_section (used by apple): round profile with noise.
+    knobs: noise scale(0.5)/noise amount(0.1) -> lumpiness; radius, Resolution(256).
+  nodegroup_star_cross_section / nodegroup_cylax_cross_section / nodegroup_coconut_cross_section: alternate profiles (star N=5, cylax fork number=10, coconut N=3) with own float-curve control points; swap in via cross_section_name.
+
+FILE: assets/objects/fruits/fruit_utils.py
+  Shared node-group toolbox used across the pipeline.
+    knobs: nodegroup_shape_quadratic(radius_control_points) -> body profile builder; nodegroup_add_dent(dent_control_points) -> concavities; nodegroup_surface_bump(Displacement 0.02, Scale 50) -> micro bumps; nodegroup_add_crater(Strength 1.5, distance map 0.08/-0.04) -> pits; nodegroup_random_rotation_scale(rot/scale mean&std) -> instance jitter; nodegroup_hair(Radius 0.01, Start/Middle/End) -> hairs; nodegroup_align_top_to_horizon -> seating.
+
+FILE: assets/objects/fruits/stem_lib.py
+  Stem/calyx/leaf node groups + their shaders (apple uses nodegroup_basic_stem).
+    knobs: nodegroup_basic_stem(stem_color default (0.179,0.836,0.318,1), cross_radius 0.08, Scale (1,1,2)); shader_basic_stem_shader(NoiseTexture Scale 0.8/Detail 10/Roughness 0.7, Specular 0.1205, Roughness 0.5068); calyx/coconut/pineapple groups (leaf count 75, scale/rot ranges) only used by other fruits.
+
+FILE: assets/objects/fruits/general_fruit.py
+  FruitFactoryGeneralFruit / general_fruit_geometry_nodes: generic assembler; parses the four param dicts, wires cross_section->shape->surface->stem, joins, realizes, aligns.
+    knobs: crosssectionlib/shapelib/surfacelib/stemlib registries (add/rename node groups); final obj.scale *= normal(1,0.1)*scale*scale_multiplier (random size jitter). Edit sample_* in apple.py rather than here for a single fruit.
+
+FILE: assets/objects/fruits/__init__.py
+  Registers all fruit factories; import list only (no tunables).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/__init__.py -> asset package init/exports.
+  core/__init__.py -> core package init.
+  core/nodes/node_wrangler.py -> NodeWrangler/Nodes API for building geometry & shader node graphs.
+  core/placement/factory.py -> AssetFactory base class (seeding, spawn interface).
+  core/surface.py -> add_geomod / shaderfunc_to_material bridging Python to Blender nodes.
+  core/tagging.py -> tag_object semantic labeling.
+  core/util/blender.py -> mesh convert/apply-transform/purge helpers.
+  core/util/color.py -> hsv2rgba color conversion used by samplers.
+  core/util/math.py -> FixedSeed deterministic RNG context.
+  core/util/__init__.py -> util package init.

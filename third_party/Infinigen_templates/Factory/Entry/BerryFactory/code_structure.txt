@@ -1,0 +1,43 @@
+SUMMARY: Despite the "BerryFactory"/crystal-cluster request, this factory's actual entry point is `LeafFactory` in `leaf.py`, which procedurally builds a single flat leaf mesh from a circle primitive by reshaping vertices along a sine/cosine curve, optionally adding a Wave modifier, and scaling. The upper-level files are the leaf generator plus generic tree/mesh helper utilities (selection, extrusion, particle sampling, camera/world-coord math) that support mesh construction. To match the crystal request you would need to heavily rewrite `create_asset` (the commented-out `BerryFactory` sphere stub and `init_berries` color code at the bottom hint at alternative shapes/materials).
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/leaves/leaf.py
+  LeafFactory: builds one leaf-shaped mesh; the sole active generator here.
+    knobs: scale(0.3, class attr) -> overall leaf size multiplier applied at end
+    knobs: genome["leaf_width"](0.5) -> half-width of leaf silhouette (sin amplitude)
+    knobs: genome["alpha"](0.3) -> phase shift of the cos curve -> leaf tip curvature/asymmetry
+    knobs: genome["use_wave"](True) -> toggles Wave modifier for rippled surface
+    knobs: genome["x_offset"](0) -> lateral shift of profile, breaks symmetry
+    knobs: genome["flip_leaf"](False) -> reverses vertex order -> mirrors tip/base
+    knobs: genome["z_scaling"](0) -> out-of-plane lift proportional to x^2 -> cupped/3D leaf
+    knobs: genome["width_rand"](0.33) -> stddev of RANDOM width jitter (np.random.randn per asset)
+    knobs: min_radius(0.02, unused local); n = verts//2 controls profile resolution
+    knobs: Wave modifier height(np.random.randn()*0.3, RANDOM), width(0.75+randn*0.1, RANDOM), speed(np.random.rand(), RANDOM)
+  BerryFactory (commented-out stub): alternative UV-sphere-based asset — enable/rewrite for round/crystal forms.
+  init_berries (commented-out): sets leaf material colors; src_hue = uniform*0.6+0.01 (RANDOM), base bark color (.1,.4,.1) -> palette reference if reviving materials.
+
+FILE: assets/objects/leaves/__init__.py
+  module exports: chooses which leaf variant classes are importable (LeafFactory, Broadleaf, Ginko, Maple, Pine, V2, Wrapped) — swap the active factory here.
+
+FILE: assets/objects/trees/__init__.py
+  module exports: Bush/Tree/TreeFlower factories and random_leaf_collection/random_season helpers.
+
+FILE: assets/objects/trees/utils/mesh.py
+  mesh helpers used by create_asset: select_vtx_by_idx (origin subdivide), finalize_obj (convert to mesh); plus extrude_path, sample_vtxs, get_pts_from_shape, world/camera coord math. Editing changes how meshes are selected/sampled/finalized.
+
+FILE: assets/objects/trees/utils/helper.py
+  scene/collection utilities: set_active_obj, create_collection, reset_scene (camera_height=3, camera_pitch=pi*0.5 fixed), config_rendering (resolution(480,640), render_samples=64), rodrigues_rot/get_T_mat transforms. Mostly infra-like; tweak camera/render defaults if standalone-rendering.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/__init__.py -> asset package init/registration
+  assets/utils/object.py -> object creation/tagging helpers
+  core/__init__.py -> core package init
+  core/nodes/node_info.py -> shader/geometry node metadata
+  core/placement/__init__.py -> placement package init
+  core/placement/detail.py -> level-of-detail / remeshing control
+  core/placement/factory.py -> AssetFactory base class (seeding, spawn_asset interface)
+  core/util/__init__.py -> util package init
+  core/util/blender.py -> butil: apply_transform, select_none, object management
+  core/util/logging.py -> Suppress context manager for muting Blender ops
+  core/util/math.py -> numeric/rotation math utilities

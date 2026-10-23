@@ -1,0 +1,25 @@
+SUMMARY: JarFactory builds a single procedural glass specimen jar as one coherent assembly: a faceted/subsurfed hollow body with a neck and a separate cylindrical metal cap. Each create_asset() call produces exactly one jar; per-instance geometry (dimensions, base facet count, neck/cap proportions) and materials (glass/plastic body, metal cap, optional scratch and edge-wear) are resampled at construction time via FixedSeed. The upper-level file jar.py defines all geometry and material assignment; __init__.py just exports the factory.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/tableware/jar.py
+  JarFactory.__init__: samples all per-jar geometry and material choices (FixedSeed on factory_seed).
+    knobs: z_length(uniform 0.15-0.2) -> jar height; x_length(uniform 0.03-0.06) -> jar radius/width; thickness(uniform 0.002-0.004) -> glass wall/solidify thickness; n_base(choice[4,6,64]) -> base cross-section shape (square/hex/round); x_cap(uniform 0.6-0.9 * cos(pi/n_base)) -> cap/opening radius relative to body; z_cap(uniform 0.05-0.08) -> cap height fraction; z_neck(uniform 0.15-0.2) -> neck length fraction; surface(weighted_sample(material_assignments.jar)) -> body material (glass/plastic tint & staining); cap_surface(weighted_sample(material_assignments.appliance_handle)) -> metal lid material; scratch(None or scratch(), prob material_assignments.wear_tear_prob[0]) -> scratch overlay; edge_wear(None or edge_wear(), prob wear_tear_prob[1]) -> worn-edge overlay; cap_subsurf(uniform<0.5) -> whether cap edge is smoothed.
+  JarFactory.create_asset: constructs the mesh — cylinder body, deletes top face, subsurf, bridges to a top circle (neck), extrudes cap opening, solidifies, adds separate cap cylinder tagged "cap".
+    knobs: new_cylinder(vertices=self.n_base) -> body facets; subsurf(obj,2,...) levels -> body smoothness; bridge_edge_loops(number_cuts=5, profile_shape_factor=uniform(0,0.1)) -> neck profile shape/curvature (random); extrude value z_cap*z_length -> cap-opening rim height; new_cylinder(vertices=64) for cap -> cap roundness; cap radius offset (+1e-3) -> cap fit clearance; cap.location z (1+z_neck+z_cap*uniform(0.5,0.8)) -> cap vertical placement (random).
+  JarFactory.finalize_assets: assigns body & cap materials plus wear.
+    knobs: clear=uniform()<0.5 (only for Plastic/PlasticTranslucent bodies) -> transparent vs frosted/cloudy plastic (random); selection="cap" -> restricts metal material to lid faces; scratch.apply / edge_wear.apply -> applies dirt/wear if sampled.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material pools (jar, appliance_handle, wear_tear) and probabilities.
+  assets/materials/plastic/__init__.py -> Plastic/PlasticTranslucent shaders used for body clear/cloudy option.
+  assets/materials/metal/__init__.py -> metal shaders for the cap.
+  assets/materials/wear_tear/scratches.py, edge_wear.py -> scratch and edge-wear overlay materials.
+  assets/materials/glass/ceramic/fluid/etc. -> additional material families available via material pools.
+  assets/utils/decorate.py -> subsurf, write_attribute helpers.
+  assets/utils/object.py -> new_cylinder, new_circle, join_objects mesh builders.
+  core/surface.py -> assign_material application to assets.
+  core/placement/factory.py -> AssetFactory base class / create_asset lifecycle.
+  core/util/blender.py -> ViewportMode, apply_transform, modify_mesh, select_none helpers.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> weighted_sample material selection.
+  core/nodes/* , core/tags.py -> node graph / tagging infrastructure used by materials.

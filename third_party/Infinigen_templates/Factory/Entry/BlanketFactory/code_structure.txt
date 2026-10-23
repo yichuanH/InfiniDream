@@ -1,0 +1,34 @@
+SUMMARY: The BlanketFactory builds a single flat rectangular cloth mesh (a blanket/duvet) as a subdivided grid, UV-unwraps it, and assigns a randomly sampled fabric material. Subclasses (ComforterFactory, BoxComforterFactory) thicken it via solidify and carve quilted box-panel seams. The upper-level file controls the blanket's dimensions, mesh resolution, material choice, and optional fold/quilt geometry.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/clothes/__init__.py
+  module exports: exposes BlanketFactory (and Pants/Shirt/Towel) — edit to add/remove exported factories.
+
+FILE: assets/objects/clothes/blanket.py
+  BlanketFactory.__init__: samples overall size and material.
+    knobs: width = log_uniform(0.9, 1.2) (random) -> blanket X extent; size = width * log_uniform(0.4, 0.7) (random) -> blanket Y extent (aspect); thickness = log_uniform(0.004, 0.008) (random) -> stored thickness (unused in base create_asset); surface_gen_class = weighted_sample(material_assignments.blanket) (random) -> which fabric shader is applied (set to ArtFabric enables patterned fabric seeded by factory_seed).
+  BlanketFactory.create_asset: builds the base grid mesh.
+    knobs: x_subdivisions=64 (fixed) -> mesh resolution in X / fold smoothness; y_subdivisions=int(size/width*64) (derived) -> mesh resolution in Y; obj.scale = (width/2, size/2, 1) -> final rectangle dimensions.
+  BlanketFactory.fold: optionally folds the blanket in half with a random tilt (called externally, not in create_asset).
+    knobs: theta = uniform(-pi/6, pi/6) (random) -> fold rotation angle; y_margin uses uniform(0.1, 0.3) (random) -> fold position along Y; 0.05 offset in z-flip -> fold thickness/gap between layers.
+  ComforterFactory.create_asset: adds volume to the blanket.
+    knobs: SOLIDIFY thickness=0.01 (fixed) -> comforter puffiness/thickness.
+  BoxComforterFactory.__init__ / create_asset: adds quilted box-panel seams.
+    knobs: margin = uniform(0.3, 0.4) (random) -> spacing of quilt grid lines; seam-band width = width/64/2 (derived) -> thickness of collapsed seam region; remove_doubles threshold=0.02 -> how strongly seam verts pinch (quilt indentation depth).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted list of blanket fabric material generators.
+  assets/materials/art.py -> ArtFabric procedural patterned/printed fabric shader (seeded).
+  assets/materials/fabric/*.py -> knit/leather/rug/sofa fabric shaders selectable as surface.
+  assets/materials/wear_tear/*.py -> edge wear and scratch overlays for material realism.
+  assets/utils/object.py -> new_grid() creates the base subdivided plane mesh.
+  assets/utils/uv.py -> unwrap_faces() UV-unwraps the mesh for texturing.
+  assets/utils/decorate.py -> read_co/write_co/select_vertices for per-vertex geometry edits.
+  core/surface.py -> assign_material() applies the sampled shader.
+  core/placement/factory.py -> AssetFactory base class / spawn interface.
+  core/placement/detail.py -> mesh detailing/resolution utilities.
+  core/util/blender.py -> apply_transform, ViewportMode, modify_mesh (SOLIDIFY) helpers.
+  core/util/random.py -> log_uniform / weighted_sample random samplers.
+  core/nodes/*.py -> shader node graph construction backend for materials.
+  core/tags.py, core/util/math.py, core/util/logging.py -> tagging, math, logging support.

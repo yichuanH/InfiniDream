@@ -1,0 +1,36 @@
+SUMMARY: This factory builds a single generic leaf mesh by placing a circle primitive, reshaping its vertices with parametric sine/cosine curves to form a leaf silhouette, and optionally applying a Wave modifier for a rippled edge. The upper-level `leaf_general.py` file holds all shape logic and tunable genome parameters; the `trees/utils` helper/mesh modules provide low-level Blender mesh-editing utilities it relies on. For the requested lotus pad, you would tune the genome toward a rounder, flatter, wider leaf with upturned wavy edges and add radial veins/material (not currently present).
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/small_plants/leaf_general.py
+  LeafFactory.scale: overall size multiplier applied at end.
+    knobs: scale(0.3, fixed) -> larger value = bigger leaf (raise for large lotus pad)
+  LeafFactory.__init__ (self.genome dict): default leaf shape parameters, overridable via `genome` arg.
+    knobs: leaf_width(0.5) -> half-width of blade via sin(a) amplitude; bigger = wider/rounder
+    knobs: alpha(0.3) -> phase shift in y=-cos(0.9*(a-alpha)); controls curl/asymmetry of tip vs base
+    knobs: use_wave(True) -> toggles Wave modifier for rippled/wavy edge
+    knobs: x_offset(0) -> lateral shift of blade centerline
+    knobs: flip_leaf(False) -> reverses angle array a; mirrors leaf orientation
+    knobs: z_scaling(0) -> z = x^2 * z_scaling; >0 curves blade upward into a cupped/upturned pad
+    knobs: width_rand(0.33) -> random width jitter (np.random.randn()*width_rand added to leaf_width, SAMPLED RANDOM)
+  LeafFactory.create_asset: builds the mesh.
+    knobs: primitive_circle_add vertex count (default ~32, engine default) -> mesh resolution/smoothness; n = verts//2
+    knobs: min_radius(0.02, defined but unused) -> vestigial
+    knobs: y = -cos(0.9*(a-alpha)) frequency factor 0.9(fixed) -> blade length/curvature along a
+    knobs: Wave modifier.height(np.random.randn()*0.3, RANDOM) -> ripple amplitude of edge
+    knobs: Wave modifier.width(0.75 + randn()*0.1, RANDOM) -> ripple wavelength
+    knobs: Wave modifier.speed(np.random.rand(), RANDOM) -> phase (animation only)
+    note: origin set to last vertex (stem attach point); no radial veins or material assigned — add a vein deform/material for the lotus request
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/trees/utils/mesh.py -> low-level mesh build/edit helpers (select_vtx_by_idx, finalize_obj, vertex I/O) used by create_asset
+  assets/objects/trees/utils/helper.py -> Blender scene/collection/transform utilities (set_active_obj, rendering config)
+  core/placement/factory.py -> AssetFactory base class (seeding, asset spawn interface)
+  core/placement/detail.py -> level-of-detail / mesh detail management
+  core/tagging.py, core/tags.py -> tag_object semantic labeling ("leaf")
+  core/util/blender.py -> butil.apply_transform and general Blender helpers
+  core/util/math.py -> math utilities
+  core/nodes/node_wrangler.py, core/nodes/node_info.py -> shader/geometry node graph construction (available for materials)
+  core/surface.py -> material/surface application framework
+  assets/utils/object.py -> object creation utilities
+  core/util/logging.py -> Suppress and logging helpers
+  assets/__init__.py, core/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package init/exports

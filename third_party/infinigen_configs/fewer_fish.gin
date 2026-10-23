@@ -1,0 +1,18 @@
+# Thin out fish schools.
+#
+# Two independent multipliers decide how many fish end up on screen:
+#
+#   1. compose_nature.max_fish_schools -- how many SCHOOLS get placed
+#      (generate_nature.py:443, default 3).
+#   2. per-school population -- boid_swarm.py computes
+#      count = volume / (avg_size**3 * child_vol), where fish.py hardcodes
+#      volume = ("uniform", 3, 10) and particle_size = U(0.3, 1).
+#      The coral_reef seed 0 run produced schools of 400 / 52 / 37 -- 489 fish
+#      total, which reads as far too crowded.
+#
+# NOTE: FishSchoolFactory itself is NOT @gin.configurable (only its
+# fish_school_params method is), and `volume` is passed positionally to
+# BoidSwarmFactory.__init__, so it cannot be overridden from gin. Only the
+# school COUNT is reachable here; per-school population is reduced at render
+# time by render_video.py --fish-fraction.
+compose_nature.max_fish_schools = 2

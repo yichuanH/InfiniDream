@@ -1,0 +1,84 @@
+SUMMARY: HerbivoreFactory procedurally generates a quadrupedal herbivore creature (sheep/llama/giraffe-like) from a genome of NURBS body/head parts, hoofed legs, eyes, ears, jaw, optional nose/horns, plus fur hair grooming and body materials. The upper-level files define the genome layout (herbivore_genome), fur parameters (herbivore_hair), the AssetFactory wrapper, and the shared creature-building infrastructure (part attachment, joining/rigging, animation cycles, cloth sim, hair grooming). Editing the genome/hair functions and factory constants changes the animal's proportions, appendages, fur look, and animation behavior.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/herbivore.py
+  herbivore_hair(): defines the fur particle+groom parameters (all randomly sampled per-call)
+    knobs: density(fixed 500000) -> hair count; clump_n(randint 10-300) -> tufts per guide hair; avoid_features_dist(0.06) -> bald radius near eyes/teeth; length(clip_gaussian 0.035,0.03,0.01-0.1) -> fur length; Length scale mult(U 1.5-4) & spread(U 15-60) -> length variation; puff(U 0.14-0.4) -> hair puffiness; Combing(U 0.5-1) -> comb strength; Strand Random Mag(U 0-0.003, 50% zero) -> frizz; Strand Perlin Mag(U 0-0.006)/Scale(U 15-45) -> wave; Tuft Spread(N 0.06,0.025) -> tuft width; Tuft Clumping(U 0.7-0.95) -> tuft tightness; Root Radius(0.0025) -> strand thickness; Hair Length Pct Min(U 0.5-0.9) -> length shortening min; material Roughness(U 0.5-0.9), IOR(1.55 fixed) -> shine
+  herbivore_genome(): builds the creature part tree (body, legs, head, eyes, jaw, nose, ears, horns)
+    knobs: body temp_dict (giraffe 0.02, llama 0.1, default 0.2) -> body-shape variant probabilities; NurbsBody var(1) -> body shape variation; neck_t(0.67) -> front-leg attach position; splay(clip_gaussian 130,7,90-130 /180) -> leg outward angle; shoulder_t(clip_gaussian 0.1,0.05,0.05-0.2) -> shoulder placement; leg length_rad1_rad2 (1.8,0.1,0.05)*N -> leg length/thickness; 15% chance leg lengthen (U 1.0-1.3) -> tall legs; foot/leg rest angles (leg_rest 0,90,0; foot_rest 0,-90,0) -> stance; head NurbsHead var(0.5), temp giraffe 0.02 -> head shape; MammalEye Radius(N 0.035,0.01) -> eye size; eye_t(U 0.34-0.45), splay(U 80-140/180), r(U 0.7-0.9) -> eye placement; jaw length(0.6*head length), Canine Length(0) -> muzzle; 70% chance CatNose; ear length mult(N 1.2,0.1), rot(0,-10,-23) -> ear size/angle; ear t(U 0.15..), splay(N 125,15/180) -> ear placement; 70% chance Horn with length*U(0.1-2), rad1/rad2*U(0.07-1.5), rot(U -40-0, 0, N 120,10) -> horn size/curve; head attach coord(0.97,0,0.2) rest(0,20,0) -> head pose
+  HerbivoreFactory: AssetFactory wrapper controlling assembly, materials, animation
+    knobs: max_distance(40) -> render cull distance; hair(True) -> enable fur; animation_mode(None/"run"/"idle") -> gait vs idle noise (mutually exclusive with hair); clothsim_skin(False) -> cloth skin sim; body_material (weighted_sample from material_assignments.herbivore) -> coat shader; tongue/teeth/nose materials fixed to creature.Tongue/Bone/Nose; placeholder spawn_cube size(4)
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  animate_run(): quadruped walking gait via IK-target follow-paths
+    knobs: steps_per_sec(1) -> stride speed; stride_length(0.7*clip_gaussian 0.4,0.3,0.3-0.6 *dim.x) -> step length; spread(clip_gaussian 0.15,0.1,0-0.5) -> leg phase spread; stride_height(U 0.15-0.4) -> foot lift; body_height(stride_height*clip_gaussian 0.6,0.4,0.3-1.2) -> body bob; base_offset(U 0-1)/offset(U 0.5-0.7) -> gait phase; flap_height(U 0.3-1) -> (wing, unused here); squash_gait_pct(0.1) -> body-to-foot z coupling
+  foot_path/body_path(): NURBS gait path shapes (length,height,upturn,down_stroke)
+  animate_wiggle_bones/animate_running_front_leg/animate_running_back_leg: alternate bone-driver gaits; knobs mag_deg, freq, wavelength
+
+FILE: assets/objects/creatures/util/animation/idle.py
+  snap_iks_to_floor(): raycasts feet to floor_bvh; knob minweight(0.7) -> hip follow of lower foot
+  idle_body_noise_drivers(): procedural idle motion via noise/sin drivers
+    knobs: foot_motion_chance(0.2) -> foot fidget prob; head_benddown(1.0) -> head lower; body_mag/wing_mag(1.0) -> motion scale; per-target mag/freq (body 0.025/0.25, head 0.07/0.2 freq 0.4, tail 0.07) -> idle amplitude/speed; freq_scalar/mag_scalar(N 1,0.15) -> global randomization
+
+FILE: assets/objects/creatures/util/hair.py
+  configure_hair(): converts params into particle system + geonode grooming + hair BSDF material
+    knobs: density/clump_n re-parameterization (surface_area * density); avoid types (Eyeball, Teeth, Tongue) -> bald zones
+  nodegroup_hair_grooming/nodegroup_decode_noise: geonode groom graph (driven by herbivore_hair grooming dict)
+  as_hair_bsdf(): swaps surface shader base color into PrincipledHairBSDF
+
+FILE: assets/objects/creatures/util/cloth_sim.py
+  local_pos_rigity_mask(): geonode vertex-group generating skin rigidity mask
+    knobs: clamp Min/Max(0.03/0.49), musgrave scales(N 10,1; N 5,0.5), multiply weights(N 0.07; N 0.12; N 0.1), colorramp positions(N 0.23; N 0.6) -> rigidity distribution
+  bake_cloth(): runs Blender cloth sim; knobs gravity(1), distance_min(0.015), use_self_collision(False)
+
+FILE: assets/objects/creatures/util/genome.py
+  Joint/Attachment/IKParams/CreatureNode/CreatureGenome dataclasses -> part linkage structure (rest angles, bounds, coord, side, rotation_basis)
+  part()/attach()/interp_genome(): genome-tree construction and interpolation between two genomes (temperature blending)
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature(): materializes part factories, attaches, writes local/global attributes
+  raycast_surface/apply_attach_transform/attach: surface-based part placement math
+  PartFactory base class + Part dataclass -> per-part mesh + skeleton contract
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts(): merges parts, remeshes, applies smoothing/rig/materials
+    knobs: face_size / min_remesh_size(0.01) -> mesh resolution; adapt_mode("remesh"), smooth_joins(True), smooth_attrs(False), rigging(bool), rig_before_subdiv(False), roll("GLOBAL_POS_Y"); remove_doubles thresholds(0.01/0.001)
+  get_parts(): filter meshes by name (used by apply_materials)
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig()/create_bones/create_ik_targets/constrain_bones/pose_bones: builds armature, IK targets, joint limits from genome joints
+    knobs: shoulder_auto_stiffness(0.85), roll type; create_ragdoll physics (min_col_length 0.1, col_joint_margin 0.2, col_radius 0.07, mass 5)
+
+FILE: assets/objects/creatures/util/creature_util.py
+  offset_center(): centers/floors creature; interp_dict/polar_skeleton/euler helpers used by genome interpolation
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  compute_intersection_curve/create_bevel_connection/smooth_around_line: geometric part-join bridges (driven by att.bridge_rad/smooth_rad, default 0)
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree dataclass + traversal utilities (map, tzip, iter_parent_child) -> genome/part tree operations
+
+FILE: assets/objects/creatures/parts/__init__.py
+  re-exports part factories (body, head, hoof, horn, leg, eye, head_detail, etc.) used by herbivore_genome; swap/add imports to change available appendages
+
+FILE: assets/objects/creatures/__init__.py
+  package exports of all creature factories (no tunables)
+
+FILE: assets/objects/creatures/util/__init__.py, util/animation/__init__.py
+  empty package markers
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> herbivore material candidate list + weights sampled by factory
+  assets/materials/creature/__init__.py -> Tongue/Bone/Nose creature shaders
+  assets/materials/ (ceramic, fabric, metal, plastic, wood, plant, fluid, terrain, dev, art, text, wear_tear, lamp_shaders) -> shader library for body/coat materials
+  assets/utils/nodegroups/hair.py -> hair geonode building blocks (comb, clump, snap-to-surface, strand noise)
+  assets/utils/geometry/lofting.py, geometry/__init__.py -> skeleton-to-surface lofting used in raycast_surface
+  assets/utils/object.py -> object spawn/manipulation helpers
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> adapt_mesh_resolution / remeshing
+  core/surface.py -> write_attribute, add_geomod, vertex-group utilities
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py, utils.py -> geometry/shader node graph API (Nodes, NodeWrangler, to_nodegroup)
+  core/tags.py -> object tagging
+  core/util/blender.py -> Blender object/modifier/mesh helpers (butil)
+  core/util/math.py -> lerp, clip_gaussian

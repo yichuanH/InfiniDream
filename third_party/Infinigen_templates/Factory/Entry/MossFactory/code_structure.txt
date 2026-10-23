@@ -1,0 +1,27 @@
+SUMMARY: This factory builds a single procedural moss strand (a curved bezier tube meshed from a curve circle) with a green translucent shader. Despite the fox-themed request, the code only generates moss geometry — moss.py defines both the mesh geometry and the material shader. Editing this file changes moss color, shape, and density.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/particles/moss.py
+  MossFactory.__init__: sets global limits and base color hue
+    knobs: max_polygon(1e4, fixed) -> mesh complexity cap; base_hue(U(0.2,0.24), random) -> green-yellow base color of moss
+  MossFactory.shader_moss: builds the moss material (color ramp + principled + translucent mix)
+    knobs: h_perturb(U(-0.02,0.02), random) -> hue jitter; s_perturb(U(-0.1,0.0), random) -> saturation reduction; v_perturb(U(1.0,1.5), random) -> brightness divisor (higher = darker); subsurface_ratio(0.05, fixed) -> subsurface scattering strength; roughness(1.0, fixed) -> surface roughness; mix_ratio(0.2, fixed) -> blend of principled vs translucent BSDF; NoiseTexture Scale(5.0, fixed) -> tip-to-base color variation frequency; color ramp stops([0,0.5,1] at HSV (base_hue,0.8,0.1),(base_hue-0.05,0.8,0.1),(black)) -> gradient darkening toward tips; Subsurface Radius((0.01,0.01,0.01), fixed) -> SSS spread; background value (base_hue,0.8,0.02, fixed) -> dark base color
+  MossFactory.create_asset: creates cube, applies geometry mod + material
+    knobs: face_size(0.01, param default) -> mesh resolution/detail; shader hue offset(U(-0.02,0.02)%1, random) -> per-asset hue variation
+  MossFactory.geo_moss_instance: builds the curved strand geometry
+    knobs: radius(0.008, fixed) -> strand thickness; start((0,0,0), fixed); start_handle((-0.03,0,0.02), fixed) -> base curvature; end((-0.04,0,U(0.04,0.05)), random) -> strand height/tilt; end_handle(x+U(-0.03,-0.02), z+U(-0.01,0.0), random) -> tip curvature; bezier Resolution(10*ceil(0.01/face_size)) -> curve smoothness; CurveCircle Resolution(4, fixed) -> cross-section sides (square profile); CurveCircle Radius(=radius) -> tube radius
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/object.py -> new_cube base-object creation
+  assets/utils/decorate.py -> mesh decoration utilities
+  core/surface.py -> add_geomod / shaderfunc_to_material geometry+shader application
+  core/nodes/node_wrangler.py -> NodeWrangler + Nodes enum for building node graphs
+  core/nodes/node_utils.py -> build_color_ramp and node helpers
+  core/nodes/node_info.py, compatibility.py, utils.py -> node metadata/compat
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> level-of-detail control
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/random.py, math.py -> sampling/math helpers
+  core/util/blender.py, logging.py -> Blender/runtime utilities

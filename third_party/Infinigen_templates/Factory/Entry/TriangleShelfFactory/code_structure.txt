@@ -1,0 +1,61 @@
+SUMMARY: This factory builds a triangular corner display shelf: a three-tier (bottom/mid/top) shelving assembly with curved corner boards, three straight legs, screw-head details, and side boards, all rotated/mirrored into a triangular corner footprint. The upper-level file defines the geometry-node groups that assemble the shape and the AssetFactory subclasses that sample dimensions, heights, and materials. Note: the generated mesh is an open triangular shelf unit (legs + shelves + screws + side boards); it does not include glazed glass doors, an enclosed lower cupboard, small display objects, or a moulded cornice — those parts of the requested cabinet would need to be added.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/shelves/triangle_shelf.py
+
+  nodegroup_table_profile(nw): leg cross-section profile curve.
+    knobs: Profile N-gon(4) -> number of sides of leg cross-section; Profile Width(1.0) -> profile size; Profile Aspect Ratio(1.0) -> width/depth ratio; Profile Fillet Ratio(0.2) -> corner rounding; internal Value(0.7071)=radius base.
+
+  nodegroup_curve_to_board(nw): sweeps a shape curve along a profile curve to form a thin board.
+    knobs: Height(0.5) -> board thickness/extrusion; ResampleCurve Count(128 fixed) -> board tessellation.
+
+  nodegroup_leg_straight(nw): straight tapered leg built from table_profile.
+    knobs: Height, N-gon, Profile Width, Aspect Ratio, Fillet Ratio, Resolution(128 default) -> leg shape/segments (all driven from callers).
+
+  nodegroup_curve_board(nw): the L-shaped/curved corner shelf board (two perpendicular arms + rounded corner).
+    knobs: Thickness -> board thickness; Fillet Radius Vertical(0.0) -> edge rounding; width -> arm width; extrude_length -> arm length; arc Resolution(4), Radius(0.7071), Sweep Angle(4.7124 fixed) -> corner arc shape; fillet Count(8 fixed).
+
+  nodegroup_side_leg(nw): a leg with a rounded end cap (arc-filleted), used for shelf legs.
+    knobs: Thickness, N-gon, Profile Width, Aspect Ratio, Fillet Ratio, Fillet Radius Vertical (passed in); arc Resolution(4)/Sweep(4.7124)/fillet Count(8) fixed.
+
+  nodegroup_side_boards(nw): two flat cube side/back boards positioned at bottom & top heights.
+    knobs: Y(=leg_depth), Z(=side_board_height thickness), x1(side_board_height), x2(bottom z), x3(leg_gap offset), x4(top z), x5(board_width); Cube Vertices X/Y/Z(5 fixed).
+
+  nodegroup_shelf_boards(nw): places three curved corner boards at bottom/mid/top z.
+    knobs: Thickness, Bottom_z, Mid_z, Top_z, Board_width, Leg_gap, extrude_length; Fillet Radius Vertical(0.01 fixed); each board rotated -1.5708.
+
+  nodegroup_screw_head(nw): three small cylinder screw heads per shelf level.
+    knobs: cylinder Radius(0.004 fixed), Depth(0.003 fixed); positions derived from leg_width, board_thickness, board_height, leg_gap, board_width, leg_depth.
+
+  nodegroup_shelf_legs(nw): assembles three legs into triangular corner arrangement.
+    knobs: leg_gap, leg_curve_ratio, leg_width, leg_length, board_width, leg_depth -> leg spacing/size; three legs joined (transform positions fixed by geometry math).
+
+  geometry_nodes(nw, **kwargs): top-level assembly — joins legs, screws (metal), shelf boards, side boards; mirrors (Scale -1,1,1), triangulates, rotates -90°.
+    knobs (all from kwargs): leg_board_gap, leg_curvature_ratio, leg_width, leg_length, leg_depth, board_width, board_thickness, board_extrude_length, bottom_layer_height, mid_layer_height, top_layer_height, side_board_height; materials leg_material/board_material; screws hard-coded to get_shelf_material("metal").
+
+  TriangleShelfBaseFactory.get_asset_params(i): default random sampling of all dimensions/materials.
+    knobs (random ranges): leg_board_gap(U 0.002–0.005) -> gap between legs/boards; leg_width(U 0.01–0.03); leg_depth(U 0.01–0.02); leg_length(clip(N(0.6,0.05),0.45,0.75)) -> overall height; leg_curvature_ratio(U 0.0–0.02) -> leg edge curve; board_thickness(U 0.01–0.025); board_width(clip(N(0.3,0.03),0.2,0.4)) -> shelf footprint; board_extrude_length(U 0.03–0.07) -> board arm length; side_board_height(U 0.02–0.04) -> side board thickness; bottom_layer_height(U 0.05–0.1); top_layer_height(=leg_length - U 0.02–0.07); mid_layer_height(computed avg of top&bottom); board_material & leg_material (choice ["black_wood","wood","white"] p=[0.2,0.6,0.2]).
+
+  TriangleShelfBaseFactory.get_material_func: maps material name strings to shelf materials (leg uses z_axis_texture=True).
+
+  TriangleShelfBaseFactory.create_asset: creates plane, applies geometry_nodes, tags object. One object per call.
+
+  TriangleShelfFactory.sample_params (the entry factory): overrides base sampling.
+    knobs: Dimensions = (U 0.25–0.35 width, U 0.25–0.35 depth, U 0.5–0.7 height); leg_length=Dimensions[2]; board_width=Dimensions[0] -> sets overall unit footprint & height.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/wood/plywood.py -> get_shelf_material(): wood/plywood/metal/white/black_wood shelf material shaders.
+  assets/materials/wood/wood.py -> procedural wood grain material used by plywood.
+  assets/materials/metal/* -> metal shader variants for screw heads/legs.
+  assets/materials/ceramic/glass.py -> glass material (available if glazed parts added).
+  assets/materials/plastic/plastic_rough.py -> plastic shader option.
+  assets/materials/utils/common.py -> shared material builder utilities.
+  core/nodes/node_wrangler.py -> NodeWrangler/Nodes API for building geometry node graphs.
+  core/nodes/node_utils.py -> @to_nodegroup decorator wrapping functions into reusable node groups.
+  core/nodes/node_info.py, compatibility.py, utils.py -> node type registry & version compatibility.
+  core/surface.py -> surface.add_geomod applies geometry_nodes modifier to the object.
+  core/placement/factory.py -> AssetFactory base class (seeding, create_asset contract).
+  core/placement/detail.py -> level-of-detail/subdivision handling.
+  core/tagging.py, core/tags.py -> tag_system.relabel_obj semantic part tagging.
+  assets/utils/object.py -> Blender object creation/manipulation helpers.
+  core/util/blender.py, math.py, random.py, color.py, logging.py -> generic Blender/math/RNG/color/logging utilities.

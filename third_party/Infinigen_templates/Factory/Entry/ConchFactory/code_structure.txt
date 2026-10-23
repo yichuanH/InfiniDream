@@ -1,0 +1,58 @@
+SUMMARY: ConchFactory builds a single procedurally-generated conch shell: a spiraling snail-type mollusk mesh created by sweeping a cross-section along a coiling array, then solidified, displaced with noise, and shaded with a ridged pearly wave-texture material. The upper-level files define the base factory interface (base.py), the snail/spiral shell generators (snail.py — where conch lives), the flat bivalve shell generators (shell.py), and the top-level MolluskFactory/ConchFactory that assembles geometry + material (generate.py). NOTE: the current code produces ONE coiling shell; the requested "three horns branching from a shared base" is NOT implemented — you would need to generate multiple conch_make() instances and join them at a shared base (see create_asset in snail.py).
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mollusk/generate.py
+  MolluskFactory: top-level assembler; chooses base factory, builds material, decorates mesh.
+    knobs: factory_methods([SnailBaseFactory, ShellBaseFactory]) -> which mollusk family; weights(equal) -> family selection probability (ConchFactory forces ConchBaseFactory so unused).
+  MolluskFactory.create_asset:
+    knobs: face_size(0.01) -> mesh resolution/subdivision detail.
+  MolluskFactory.decorate_mollusk: surface finish.
+    knobs: SOLIDIFY thickness(0.005) -> shell wall thickness; texture type(random STUCCI/MARBLE) -> ridge noise style; noise_scale(log_uniform 0.1-0.2, random) -> ridge frequency; DISPLACE strength(=factory.noise_strength=0.02) -> ridge depth.
+  MolluskFactory.build_base_hue: base color hue (random).
+    knobs: 0.4 prob branch -> hue uniform(0,0.2); else hue uniform(0.05,0.12) (orange/tan pearly tones).
+  MolluskFactory.shader_mollusk: pearly ridged surface shader.
+    knobs: roughness(uniform 0.2-0.8, random); specular(0.3 fixed); value_scale(log_uniform 1-20) -> brightness spread; saturation_scale(log_uniform 0.4-1) -> color vividness; dark_color/light_color value multipliers(0.005*v^1.5 / 0.05*v) -> band brightness; color_fn dark_prob(0.4) -> ratio of dark bands; n(randint 3-5) -> number of color-ramp stops (banding count); WaveTexture Scale=x_scale(2), z_scale(from factory), Distortion(from factory) -> ridge stripe scale/wobble along X and Z; MixRGB ratio(from factory) -> blend of X vs Z banding.
+  ConchFactory: subclass locking base to ConchBaseFactory (no knobs).
+
+FILE: assets/objects/mollusk/snail.py
+  SnailBaseFactory: spiral shell family; sets material-shaping params.
+    knobs: freq(256) -> spiral angular resolution (smoothness of coil); ratio(uniform 0-0.3 or 0.7-1.0, random) -> X/Z band mix in shader; z_scale(log_uniform 0.2-1, random) -> shader Z stripe scale; distortion(log_uniform 2-20, random) -> shader wave distortion.
+  SnailBaseFactory.build_cross_section: shape of the tube's cross-section swept along the coil.
+    knobs: n(64) -> cross-section vertex count; affine(1) -> ellipse aspect of tube; spike(0.0) -> random radial spikes magnitude; concave(2.2, overridden by conch to uniform 1.9-2.1) -> squareness/roundness of section; perturb(1/(5n)) -> per-vertex jitter; initial rotation(uniform 0-pi/12, random).
+  SnailBaseFactory.snail_make: sweeps cross-section into a coil via ARRAY modifier.
+    knobs: lateral -> vertical rise per step (coil pitch); longitudinal -> lateral center offset; freq -> steps per loop; scale(0.99) -> per-step shrink (taper); loop -> number of coils; affine, spike passthrough; resolution(=loop*freq) -> total array count.
+  SnailBaseFactory.conch_make: THE conch preset (this is what ConchFactory calls).
+    knobs: shrink(uniform 0.7-0.8) -> overall taper via solve_scale; lateral ratio(uniform 0.3-0.4) -> coil width/pitch; longitude ratio(uniform 0.7-0.8) -> spiral tightness; loop(randint 8-10) -> number of whorls; affine(uniform 0.8-0.9) -> tube ellipse; spike(0.1) -> ridged bumps. [Duplicate & join here to make the requested 3-horn cluster.]
+  SnailBaseFactory.auger_make / volute_make / nautilus_make: sibling presets (alternate shell shapes, same knob structure).
+  SnailBaseFactory.solve_scale/solve_lateral/solve_longitude: math converting intuitive ratios into ARRAY offsets (edit to change coil geometry model).
+  SnailBaseFactory.geo_shader_vector: computes per-vertex "vector" attribute driving shader stripes (angle + height mapping).
+  SnailBaseFactory.geo_affine: random small shear/affine warp of final mesh.
+    knobs: uniform(-0.1,0.1,3) -> asymmetric distortion strength.
+  SnailBaseFactory.create_asset: normalizes scale, random full rotation(uniform 0-2pi,3), recenters, lifts by 0.4*height. [Modify to place multiple horns on a shared base.]
+  ConchBaseFactory: locks maker to conch_make (no knobs).
+
+FILE: assets/objects/mollusk/shell.py
+  ShellBaseFactory + Scallop/Clam/MusselBaseFactory: flat bivalve shell generators (NOT used by conch). Knobs: z_scale(log_uniform 2-10); scallop groove frequency(45)/scale(0.02); hinge length(0.4)/width(0.1); shape_by_angles angle/scale arrays per maker; open-angle base(uniform 0-pi/4) + upper offset(pi/6-pi/3). Edit only if repurposing conch as a bivalve.
+
+FILE: assets/objects/mollusk/base.py
+  BaseMolluskFactory: shared defaults inherited by all mollusks.
+    knobs: max_expected_radius(0.5); noise_strength(0.02) -> displacement depth; ratio(1); x_scale(2); z_scale(1); distortion(1) (most overridden by subclasses).
+
+FILE: assets/objects/mollusk/__init__.py
+  Re-exports factory classes; no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> subsurface2face_size, displace_vertices (mesh subdivision & per-vertex displacement helpers).
+  assets/utils/draw.py -> shape_by_angles (bivalve angular profile shaping).
+  assets/utils/misc.py -> assign_material.
+  assets/utils/object.py -> mesh/object creation helpers (data2mesh, mesh2obj, new_circle, new_empty, join_objects, center).
+  core/surface.py -> shaderfunc_to_material, add_geomod (attach shaders & geometry-node mods).
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py, utils.py, compatibility.py -> node graph construction (Nodes enum, NodeWrangler, build_color_ramp).
+  core/placement/factory.py -> AssetFactory base class.
+  core/placement/detail.py -> LOD/detail utilities.
+  core/tagging.py, tags.py -> tag_object semantic labeling.
+  core/util/blender.py -> butil (modifiers, transforms, cloning, viewport-mode edits).
+  core/util/math.py -> FixedSeed (deterministic per-seed randomness).
+  core/util/random.py -> log_uniform sampling.
+  core/util/color.py, logging.py -> color/logging utilities.

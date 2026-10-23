@@ -1,0 +1,55 @@
+SUMMARY: This factory builds a Taro (elephant-ear) monocot plant: a set of large heart-shaped leaves each mounted on a tall thick fleshy stalk (bezier branch) that joins the leaf underside inside the margin. TaroMonocotFactory subclasses BananaMonocotFactory (which subclasses MonocotGrowthFactory), overriding leaf shape, vein displacement, stalk generation, and growth angles. growth.py provides the shared engine: instancing leaves along a stem, deforming/coloring them, and the leaf shader.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/banana.py
+  TaroMonocotFactory.__init__: overrides that make the Taro variant (giant downward leaves, thick short stalk).
+    knobs: stem_offset(uniform 0.05-0.1) -> length of central stem points spread (short, so leaves clustered); radius(uniform 0.02-0.04) -> central stem thickness; z_drag(uniform 0.2-0.3) -> downward droop of whole plant (higher = tips point down more); bud_angle(uniform 0.6π-0.7π) -> where stalk meets blade / leaf base curvature (large = joins inside margin, heart notch); freq(log_uniform 10-20) -> radial vein frequency (lower = fewer, bolder quilted veins); count(int log_uniform 12-16) -> number of stem points sampled for leaf placement; n_cuts(randint 1-2 w/ 50% else 0) -> number of marginal notch cuts (few, keeps leaf whole/heart-shaped); min_y_angle(uniform -0.25π to -0.05π) & max_y_angle(uniform -0.05π to 0) -> leaf pitch along stem (negative = leaves tilt/point downward).
+  TaroMonocotFactory.build_leaf: assembles one leaf + stalk.
+    knobs: x_anchors[2](uniform 0.4-1.0), x_anchors[3](uniform 0.8-1.0) -> leaf length/tip profile; y_anchors[2](uniform 0.25-0.3) -> leaf max width (broad heart shape); decorate_leaf(y_ratio=2, leftmost=False) -> along-vein cupping/quilt curvature (higher y_ratio = more bowl-like); join with build_branch -> attaches stalk to blade.
+  TaroMonocotFactory.displace_veins: pale raised radial veins emanating from stalk attachment.
+    knobs: uniform(0,2π) phase (random); offset y (uniform 0.1-0.2), x (uniform 0.1-0.4) -> vein origin point on blade; threshold uniform(0.98,0.99) -> vein density (higher = thinner/fewer raised veins); leaf edge width uniform(0.002-0.008) -> midrib width; DISPLACE strength(-uniform 5e-3 to 8e-3) -> vein raise depth (negative = grooves between raised areas).
+  TaroMonocotFactory.build_branch: the tall thick fleshy stalk (bezier).
+    knobs: offset(uniform 0.2-0.3) -> horizontal insertion offset (where stalk meets blade underside, inside margin); length(uniform 1-2) -> stalk height/length; geo_radius arg(uniform 0.02-0.03, 32) -> stalk thickness and cross-section resolution.
+  BananaMonocotFactory.__init__: base defaults inherited then overridden by Taro; still governs unoverridden fields.
+    knobs: angle(uniform π/4-π/3) -> phyllotaxy rotation between leaves; z_scale(uniform 1-1.5) -> vertical stretch; leaf_range((uniform 0.5-0.7),1) -> fraction of stem carrying leaves; scale_curve([(0,uniform0.4-1),(1,uniform0.6-1)]) -> leaf size along stem; cut_angle(bud_angle+uniform π/20-π/12) -> orientation of margin cuts/veins.
+  BananaMonocotFactory.build_base_hue: leaf hue.
+    knobs: uniform(0.15,0.35) -> green/yellow-green base hue (random).
+  BananaMonocotFactory.cut_leaf: carves marginal notches/serrations.
+    knobs: y-band |y|<0.08 & >0.01 -> cut placement band; ratio(uniform -2.0-0.4), exponent(uniform 1.2-1.6) -> cut depth/shape; edge-delete length>0.02 -> mesh cleanup threshold.
+
+FILE: assets/objects/monocot/growth.py
+  MonocotGrowthFactory.__init__: shared plant defaults (most overridden by Taro).
+    knobs: count(128), perturb(0.05) -> per-instance rotation/scale jitter; leaf_prob(uniform 0.8-0.9) -> chance a stem point gets a leaf; twist_angle(π/6), bend_angle(π/4) -> whole-plant twist/bend; z_scale(uniform 1-1.2); bright_color/dark_color (hsv2rgba from base_hue, sat 0.6-1.0, value log_uniform 0.05-0.2) -> leaf two-tone coloring (random).
+  MonocotGrowthFactory.decorate_leaf: per-leaf bending, quilting, surface noise.
+    knobs: y_bend_angle(π/6)*uniform(0.5,1), z_bend_angle(π/6)*uniform(-1,1) -> leaf droop/twist; y_ratio -> along-length cupping (Taro passes 2); noise_scale(0.1), strength(0.02) -> surface bumpiness; per-axis displace uniform(0.01,0.02)*width -> edge waviness.
+  MonocotGrowthFactory.make_geo_flower: instances leaves along the stem curve (geometry nodes).
+    knobs: y_rotation curve (min/max_y_angle), z_rotation accumulate (angle), scale_curve, leaf_prob/leaf_range -> distribution & orientation of leaves.
+  MonocotGrowthFactory.build_stem: central stem mesh.
+    knobs: SUBSURF levels(9), geo_radius(self.radius,16), DISPLACE strength(0.01) noise_scale(0.1) -> stem smoothness/thickness/texture.
+  MonocotGrowthFactory.decorate_monocot: final plant-level transform.
+    knobs: z_drag droop, geo_extension(0.4), TWIST/BEND angles, scale(uniform 0.8-1.2 xy, z_scale) -> overall plant posture and size.
+  MonocotGrowthFactory.shader_monocot: leaf material.
+    knobs: specular(uniform 0-0.2); clearcoat(0 80% / uniform 0.2-0.5); musgrave scale(10) color ramp stops [0,0.3,0.7,1.0] mixing bright/dark; roughness curve (0.5-0.8); Subsurface Weight(0.01), Radius(0.01) -> leaf sheen/translucency/mottling.
+
+FILE: assets/objects/monocot/__init__.py
+  module exports: registers factory classes; edit to expose new variants.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> vertex read/displace helpers (read_co, displace_vertices, geo_extension)
+  assets/utils/draw.py -> leaf mesh from anchors and bezier_curve generation
+  assets/utils/nodegroup.py -> geo_radius node group for tube/stalk thickness
+  assets/utils/object.py -> join_objects, origin2lowest/leftmost, mesh helpers
+  assets/utils/shapes.py -> point_normal_up orientation helper
+  assets/utils/misc.py -> assign_material and misc utilities
+  assets/utils/mesh.py -> mesh construction utilities
+  core/surface.py -> add_geomod, shaderfunc_to_material, geometry/shader binding
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py, utils.py -> geometry/shader node graph API and color ramp
+  core/placement/factory.py -> AssetFactory base, make_asset_collection
+  core/placement/detail.py -> adapt_mesh_resolution
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> modify_mesh, ViewportMode, apply_transform, collection ops
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/logging.py, core/__init__.py, __init__.py, assets/__init__.py, core/nodes/__init__.py, core/util/__init__.py -> package init/logging plumbing

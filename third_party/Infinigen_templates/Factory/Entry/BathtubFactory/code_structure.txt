@@ -1,0 +1,42 @@
+SUMMARY: The BathtubFactory procedurally generates bathtubs in two variants ("alcove" built-in and "freestanding"), each with an oval/box basin, thick rolled rims, optional curved back profile, optional sculptural legs, a drain hole, and ceramic/metal materials with optional wear. The single upper-level file (bathtub.py) defines all geometry construction (contour → bowl/base → cutter → legs → hole) and randomly samples dimensions, feature toggles, and material choices in __init__. Note: the current code produces plain cylindrical legs and no plumbing pipes — the requested clawfoot feet and exposed pipes/faucet would require new modeling code in make_legs and a new plumbing routine.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/bathroom/bathtub.py
+  BathtubFactory.__init__: samples all dimensions, feature flags, and materials (FixedSeed on factory_seed).
+    knobs: width(uniform 1.5-2) -> basin length; size(uniform 0.8-1) -> basin width; depth(uniform 0.55-0.7) -> basin height; bathtub_type(choice ["alcove","freestanding"] p=[0.5,0.5]; "corner" disabled) -> built-in vs standalone; has_curve(uniform<0.5) -> curved-back tapered profile on/off; has_legs(uniform<0.5) -> legs vs solid base (freestanding only); thickness(uniform 0.04-0.08 if base else 0.02-0.04) -> rim/wall thickness; disp_x(uniform 0-0.2, 2 vals) -> per-side inward taper of contour; disp_y(uniform 0-0.1) -> front/back inward taper; leg_height(uniform 0.2-0.3 * depth) -> foot height; leg_side(uniform 0.05-0.1) -> foot horizontal offset/splay; leg_radius(uniform 0.02-0.03) -> leg thickness; leg_y_scale(uniform 0-1) -> lateral leg spread; leg_subsurf_level(randint 0-2) -> leg smoothness; taper_factor(uniform -0.1-0.1) -> body taper deform; stretch_factor(uniform -0.2-0.2) -> body stretch (sampled but note STRETCH modifier actually uses taper_factor); alcove_levels(randint 1-2 if base else 1) -> lower-body subdiv; levels(fixed 5) -> total bowl subdivision; side_levels(fixed 2) -> rim subdivision; is_hole_centered(fixed False) -> force drain to center; hole_radius(uniform 0.015-0.02) -> drain size.
+    material knobs: surface_material_gen (weighted_sample material_assignments.ceramics) -> basin material; leg_surface_material_gen (weighted_sample metal_neutral) -> leg metal; hole_surface_material_gen (weighted_sample metal_neutral) -> drain metal; scratch/edge_wear (probabilistic from material_assignments.wear_tear_prob/wear_tear) -> surface aging; beveler = BevelSharp(mult=5, segments=5) -> sharp-edge bevel (alcove only).
+  BathtubFactory.create_placeholder: bbox from -size/0/0 to width/0/depth -> collision/placement bounds.
+  BathtubFactory.create_asset: assembly order; freestanding uses SOLIDIFY(thickness) + subsurf(side_levels) + SUBSURF levels=1; alcove uses BOOLEAN cutter + beveler; final rotation pi/2.
+    knobs: rotation_euler[-1]=pi/2 (fixed) -> orientation; SUBSURF levels=1 (freestanding smoothing).
+  BathtubFactory.make_freestanding: bowl → remove_top → extrude rolled rim (resize by thickness ratios) → TAPER/STRETCH deform → vertical seat via uniform(0.5,0.7).
+    knobs: taper_factor (both deform angles); uniform(0.5,0.7) -> how deep the tub sits/z-offset.
+  BathtubFactory.remove_top: cuts faces above self.depth -> open top height threshold.
+  BathtubFactory.make_legs: builds 4 legs at basin corners as 3-point lines + geo_radius tube + bevel; **plain cylindrical legs — replace here to add clawfoot/animal-claw-on-ball geometry**.
+    knobs: leg_height, leg_side, leg_radius, leg_y_scale, leg_subsurf_level; new_line(2), geo_radius(leg_radius,32), BEVEL width=leg_radius*uniform(0.3,0.7); leg z-offset = leg_radius; loops over u,v in [1,-1] -> 4 corner placement.
+  BathtubFactory.add_base: builds solid pedestal base for freestanding when no legs (INTERSECT cube at leg_height, extrude down by depth, SOLIDIFY thickness, subsurf 2).
+  BathtubFactory.make_box_contour / make_corner_contour: 2D basin footprint from width/size/disp_x/disp_y offsets.
+  BathtubFactory.make_bowl: builds bowl cylinder from contour, upper/lower differ when has_curve; subsurf uses alcove_levels then levels-alcove_levels-side_levels.
+  BathtubFactory.make_base / make_cutter: alcove inner/outer walls; cutter inset by thickness.
+  BathtubFactory.find_hole / add_hole: places drain (small cylinder, scale hole_radius x hole_radius x 0.005); freestanding drain x at uniform(0.35,0.4)*width.
+    knobs: hole_radius; hole x-position sample; hole thickness 0.005 (fixed).
+  BathtubFactory.finalize_assets: applies surface, leg metal ("bw+natural"), hole metal ("bw+natural"), then scratch/edge_wear.
+    knobs: metal_color="bw+natural" -> leg/drain metal tint.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material pools (ceramics, metal_neutral) and wear_tear probabilities.
+  assets/materials/ceramic/__init__.py -> ceramic basin shaders.
+  assets/materials/metal/__init__.py -> metal leg/drain shaders.
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> surface aging materials.
+  assets/utils/autobevel.py -> BevelSharp sharp-edge auto-bevel operator.
+  assets/utils/decorate.py -> read_co/read_center/read_normal/write_co/write_attribute/subsurf mesh helpers.
+  assets/utils/nodegroup.py -> geo_radius geometry-node tube-from-curve.
+  assets/utils/object.py -> join_objects/new_bbox/new_cube/new_cylinder/new_line primitive builders.
+  core/surface.py -> add_geomod and material application API.
+  core/placement/factory.py -> AssetFactory base class and placeholder/asset lifecycle.
+  core/placement/detail.py -> LOD/subdivision detail management.
+  core/nodes/* -> node graph construction utilities used by geo_radius.
+  core/util/blender.py -> butil mesh ops (modify_mesh, ViewportMode, apply_transform, deep_clone_obj, delete).
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> weighted_sample for material selection.
+  core/tags.py -> semantic face/part tagging.

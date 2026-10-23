@@ -1,0 +1,44 @@
+SUMMARY: UrchinFactory builds a procedural sea urchin: an icosphere base whose faces are extruded into a girdle ring and outward spikes, then subdivided, displaced, materialized, and animated with a gentle stretch. The upper-level urchin.py defines all geometry-node graphs (extrusion, material indexing), the three shaders (spikes/girdle/base), and randomized color/animation. To satisfy the "faceted hexagonal crystal prism spines" request, edit the geo_extrude spike/beveling logic and shader_spikes to produce prismatic, non-scaled, hex-cross-section spikes of varying length. The driver_repeated helper (from creatures/util) supplies the oscillating stretch animation expression.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/underwater/urchin.py
+  UrchinFactory.__init__: sets base color hue, builds 3 materials, animation frequency
+    knobs: base_hue(uniform(-0.25,0.15)%1, random) -> overall urchin color family; freq(1/log_uniform(100,200), random) -> speed of stretch animation
+  UrchinFactory.create_asset: builds/meshes the urchin body
+    knobs: subdivisions(4, fixed icosphere detail) -> base sphere resolution; obj.scale[-1](uniform(0.8,1.0)) -> vertical squash of body; BEVEL width_pct(25, fixed) -> face facet size feeding spike bases (raise for larger flat facets = more crystal-like); SUBSURF levels(1) -> smoothing of spikes (LOWER/0 to keep sharp faceted prisms); final z scale(log_uniform(0.6,1.2)) -> body elongation; face_size(0.01) -> mesh density; DISPLACE strength(0.005, STUCCI texture) -> surface noise (lower/remove for clean crystal facets)
+  UrchinFactory.animate_stretch: SIMPLE_DEFORM stretch driver
+    knobs: repeated_driver range(-0.1,0.1) -> stretch amplitude; deform_axis("Z") -> stretch direction
+  UrchinFactory.geo_extrude: geometry-node graph creating girdle + spikes (KEY for crystal prisms)
+    knobs: face_prob(0.98) -> fraction of eligible faces that grow spikes; girdle_height(0.1) -> thickness of ring band at spike base; extrude_height(log_uniform(1.0,5.0), random) -> spike length variation (already varies length); perturb(0.1) -> random tilt of spikes; girdle_size(uniform(0.6,1)) -> spike base narrowing; FaceNeighbors>=5 selection -> which polygon faces spike (change to control hex faces); ScaleElements top 0.2(fixed) -> tip taper (set to ~1.0 for flat-topped prisms instead of pointed spikes); to make hex prisms: remove tip scale, add extra even-length extrudes along normal, keep flat cap faces
+  UrchinFactory.shader_spikes: spike (crystal) material
+    knobs: transmission(uniform(0.95,0.99)) -> glassiness (high = quartz-like); subsurface(uniform(0.1,0.2)); roughness(uniform(0.5,0.8), LOWER for shiny crystal); color(hsv2rgba(base_hue, sat uniform(0.5,1.0), val log_uniform(0.05,1.0)))
+  UrchinFactory.shader_girdle: girdle ring material
+    knobs: roughness(uniform(0.5,0.8)); color sat(uniform(0.4,0.5)), val(log_uniform(0.02,0.1))
+  UrchinFactory.shader_base: body/base material
+    knobs: roughness(uniform(0.5,0.8)); color sat(uniform(0.8,1.0)), val(log_uniform(0.01,0.02)) -> dark body
+  UrchinFactory.geo_material_index: assigns material slots (2=base,0=spike,1=girdle) via Spike/Girdle attributes
+    knobs: material index mapping (fixed) -> which shader lands on which region
+
+FILE: assets/objects/creatures/util/animation/driver_repeated.py
+  repeated_driver: builds an oscillating keyframe-free driver expression string
+    knobs: phase(uniform(0.2,0.8)); u/v(uniform(0.8,1.0) factors) -> smoothstep pulse shape; off(uniform(0,1)) -> phase offset
+  bend_bones_lerp: distributes rotation drivers across armature bones (unused by urchin)
+    knobs: ratio(uniform(1,2)); rot offsets; symmetric(bool)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> geo_extension geo-node op and mesh decorators
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/object.py -> new_icosphere, separate_loose mesh builders
+  core/surface.py -> shaderfunc_to_material, add_geomod material/geo-node application
+  core/nodes/node_info.py -> Nodes enum of Blender geometry/shader node types
+  core/nodes/node_wrangler.py -> NodeWrangler graph-building API (compare, boolean_math, bernoulli, uniform, scale, add)
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer node groups
+  core/placement/detail.py -> adapt_mesh_resolution (subdiv_by_area)
+  core/placement/factory.py -> AssetFactory base class + seeding
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> butil modify_mesh, apply_transform, mesh utilities
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed, int_hash deterministic RNG
+  core/util/random.py -> log_uniform sampling
+  assets/objects/creatures/__init__.py, underwater/__init__.py -> factory registration/exports

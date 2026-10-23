@@ -1,0 +1,1523 @@
+# Expand_Factory —— 擴充資產庫現有內容
+#
+# ★這份是 index.json 產生的唯讀視圖，手改會被 reindex 覆蓋★
+# 更新於 2026-09-16T16:33:02+00:00
+# 共 263 個變體，分屬 89 個 Factory
+
+## AgaveMonocotFactory
+  blue_agave_plant_agavemonocot
+      request : A blue agave: a large ground-level rosette of thick rigid sword-shaped leaves in powdery silver-blue, each leaf tapering to a sharp dark terminal spine with small teeth along the margins, radiating symmetrically from a tight centre.
+      keywords: agave, blue, desert, leaf, rosette, silver, spine, succulent
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  century_agave_spike
+      request : A single century agave: a broad ground-level rosette of thick blue-grey succulent leaves with sharp terminal spines and toothed margins, and one enormous straight flowering stalk rising far above the rosette, bearing short horizontal side branches with clustered yellow flowers near the top.
+      keywords: above, agave, agavemonocot, bearing, blue, branches, broad, century
+      score   : 72   generator: ProceduralGenerator   base: infinigen
+
+## AugerFactory
+  auger_turret_snail
+      request : A single auger snail shell: an extremely long slender tapering spire drawn out to a needle-sharp point, built from many tightly stacked shallow whorls each marked by a fine spiral groove, glossy tan with darker axial flecks, and a small narrow aperture at the wide end.
+      keywords: aperture, auger, axial, built, darker, drawn, each, end
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## BalloonFactory
+  colorful_parachute
+      request : A colorful parachute canopy with suspension lines, a harness, and billowing fabric cells.
+      keywords: balloon, billowing, canopy, cells, colorful, fabric, harness, lines
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## BedFactory
+  girl_pastel_bed_frame
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A pastel bedroom bed frame with soft rounded headboard, low side rails, white mattress, delicate trim, and small gold feet.
+      keywords: assembly, asset, bed, bedroom, but, call, coherent, component
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## BeetleFactory
+  firefly
+      request : A firefly: small elongated beetle with a dark segmented body, a red-orange thorax shield, folded wing cases, six thin legs, and a glowing yellow-green luminous abdomen tip.
+      keywords: abdomen, beetle, body, cases, dark, elongated, firefly, folded
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## BeverageFridgeFactory
+  gaming_mini_fridge
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A compact gaming-room mini fridge with a glass front door, small shelves of canned drinks, black casing, blue interior light, handle recess, and tiny top vent.
+      keywords: assembly, asset, beveragefridge, black, blue, but, call, canned
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+
+## BirdFactory
+  blue_footed_booby
+      request : A blue-footed booby standing with a streamlined white-and-brown seabird body, long pointed grey-blue beak, pale yellow eyes, folded dark wings, and two spectacular oversized turquoise-blue webbed feet.
+      keywords: beak, bird, blue, body, booby, brown, dark, eyes
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  egret
+      request : A great white egret standing in shallow water: an all-white slender body, a very long S-curved neck, a long straight pointed yellow beak, and very long thin dark legs.
+      keywords: all, beak, bird, body, curved, dark, egret, great
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  flamingo
+      request : A flamingo standing on one leg: tall pink body, a very long S-curved neck, a thick downward-bent beak that is pink with a black tip, and very long thin pink legs with one leg folded up against the body.
+      keywords: against, beak, bent, bird, black, body, curved, downward
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  mallard_drake
+      request : A male mallard duck standing with a glossy emerald-green head, narrow white neck ring, chestnut-brown breast, finely vermiculated silver-grey body, blue speculum patches on folded wings, a yellow bill, orange webbed feet, and two curled black tail feathers.
+      keywords: bill, bird, black, blue, body, breast, brown, chestnut
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  peacock
+      request : A peacock with its train fanned out: iridescent blue neck and breast, a crest of thin feathers on the head, and a huge semicircular fan of long tail feathers behind it, each ending in a blue-and-green eye spot.
+      keywords: bird, colorful, peacock, tail display
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  penguin
+      request : An emperor penguin standing upright: rounded black back and head, white belly, a yellow-orange patch on each side of the neck, short flipper-like wings held against the body, a long straight beak, and webbed feet.
+      keywords: against, back, beak, belly, bird, black, body, each
+      score   : 48   generator: ProceduralGenerator   base: infinigen [cross_file]
+  penguins
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (5) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+Upright standing penguins: black back and head, white belly, short flipper-like wings held at the sides, short orange beak, standing erect on two webbed feet.
+      keywords: all, appearance, arrangement, asset, back, beak, belly, bird
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  rainbow_toucan
+      request : A toucan perched upright with black body, bright yellow throat, blue eye ring, red undertail, and an enormous lightweight curved bill patterned in lime green, orange, yellow, turquoise and a black tip.
+      keywords: bill, bird, black, blue, body, bright, curved, enormous
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  swan
+      request : A white swan floating: plump white body, a very long curved S-shaped neck, an orange beak with a black base knob, and folded wings raised slightly over the back.
+      keywords: back, base, beak, bird, black, body, curved, floating
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  white_domestic_duck
+      request : A plump white domestic duck standing with a long oval body, dense clean white layered feathers, a gently curved neck, broad bright-orange bill, orange webbed feet, compact folded wings, and a short upturned tail.
+      keywords: bill, bird, body, bright, broad, clean, compact, curved
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  yellow_duckling
+      request : A single fluffy yellow duckling standing with a tiny round body, oversized round head, soft downy feather texture, two very small budding wings, a short broad orange bill, large dark eyes, short orange legs, and clearly webbed feet.
+      keywords: bill, bird, body, broad, budding, clearly, dark, downy
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## BlanketFactory
+  camp_sleeping_bag
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A rolled sleeping bag with quilted padded fabric, cylindrical roll shape, compression straps, buckle clips, and a small stuff-sack tag.
+      keywords: assembly, asset, bag, blanket, buckle, but, call, clips
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  girl_lace_duvet_bedspread
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A fluffy pastel duvet bedspread with soft folds, scalloped lace-like edge detail, quilted panels, and a light pink satin sheen.
+      keywords: assembly, asset, bedspread, blanket, but, call, coherent, component
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## BottleFactory
+  egypt_offering_bottle
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A narrow-necked offering bottle with warm clay glaze, small handle ridges, weathered neck, and desert grit.
+      keywords: assembly, asset, bottle, but, call, clay, coherent, component
+      score   : 72   generator: ProceduralGenerator   base: infinigen
+  kayak_seed_palette_bottle
+      request : A sea kayak whose deck colour is driven by the factory seed: a very long slender closed-deck boat, pointed at both ends, a smooth closed deck with one small oval cockpit opening at the middle, white lower hull split from the deck by a crisp horizontal line, thin black bungee cords stretched across the deck. Every factory_seed gives a different bright deck colour (yellow, orange, magenta, pink, lime, green, blue, cyan); hull stays white. Scatter many and no two are the same colour.
+      keywords: boat, cockpit, colourful, deck, hue, kayak, multicolour, paddle
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+  submarine
+      request : A small submarine with a rounded hull, conning tower, periscope, portholes, and rear propeller.
+      keywords: bottle, conning, hull, periscope, portholes, propeller, rear, rounded
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## BoulderFactory
+  cave_luminous_boulder
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A heavy cave boulder with glowing mineral seams, rough stone texture, and a damp crystal sheen.
+      keywords: assembly, asset, boulder, but, call, cave, coherent, component
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  egypt_sand_altar_boulder
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A sun-bleached sandstone boulder used as a desert altar, partly buried in sand, with chipped edges and worn ritual marks.
+      keywords: altar, assembly, asset, bleached, boulder, buried, but, call
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  igloo_2
+      request : An igloo made of stacked snow blocks, a rounded dome, and a short arched entrance tunnel.
+      keywords: arched, blocks, boulder, dome, entrance, igloo, made, rounded
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  pink_mossy_boulder
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A mossy forest boulder with pink lichen, chipped edges, damp surface patches, and roots curling around its base.
+      keywords: around, assembly, asset, base, boulder, but, call, chipped
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## BoxFactory
+  bookshelf_speaker
+      request : bookshelf_speaker
+      keywords: bookshelf, box, speaker
+      score   : 55   generator: BlenderGenerator   base: infinigen [cross_file]
+  sailboat
+      request : A sailboat with a tall mast, billowing sails, rigging, hull, keel, and deck fittings.
+      keywords: billowing, box, deck, fittings, hull, keel, mast, rigging
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## BrainCoralFactory
+  coral_brain
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A domed brain coral with tight maze-like ridges, wet sheen, and a blue-violet dusk palette.
+      keywords: assembly, asset, blue, brain, braincoral, but, call, coherent
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## BrassMechanicalOrreryFactory
+  orrery_floor
+      request : orrery_floor
+      keywords: brassmechanicalorrery, floor, orrery
+      score   : 55   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## BushCoralFactory
+  coral_blossom_bush
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A branching coral bush with rounded arms, soft pink and blue highlights, and dense surface polyps.
+      keywords: arms, assembly, asset, blue, branching, bush, bushcoral, but
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## BushFactory
+  blue_hydrangea_bush_bush
+      request : A hydrangea shrub: a rounded bush of large coarsely toothed bright green leaves carrying several huge dome-shaped flower heads, each a tight cluster of many small four-petalled sky-blue and violet florets.
+      keywords: blue, bush, cluster, dome, flower, flowering, garden, hydrangea
+      score   : 52   generator: ProceduralGenerator   base: infinigen [cross_file]
+  bougainvillea_bush_bush
+      request : A bougainvillea shrub: a sprawling thorny woody bush with small oval green leaves, smothered in masses of papery three-lobed bracts so the whole bush reads as one solid colour cloud. Bougainvillea come in magenta, purple, orange, red, pink and white. IMPORTANT: model ONLY the single shrub - no wall, no ground, no pot.
+      keywords: bougainvillea, bract, bush, climber, colourful, magenta, pink, purple
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  boxwood_topiary_sphere_bush
+      request : A boxwood topiary clipped into a perfect dense sphere: a tight ball of tiny dark green glossy leaves with a flat sheared outline and no stray branches, sitting on a short bare woody stem.
+      keywords: ball, boxwood, bush, clipped, formal, garden, green, hedge
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+  candy_colored_shrub_bush
+      request : a rounded candy-colored shrub, dense small leaves in pink, mint green and purple patches, bushy compact silhouette, sweet pastel storybook plant
+      keywords: bush, bushy, candy, colored, compact, dense, green, leaves
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  garden_rose_bush_bush
+      request : A garden rose shrub in full bloom: an open woody bush with thorny arching canes and glossy toothed compound leaves, carrying many large roses with tightly whorled layered petals at the shoot tips. Garden roses come in every colour - red, pink, yellow, white, orange, apricot - and each bush is one colour. IMPORTANT: model ONLY the single shrub - no soil, no pot, no ground.
+      keywords: bloom, bush, colourful, flower, garden, orange, pink, red
+      score   : 32   generator: ProceduralGenerator   base: infinigen [cross_file]
+  hanging_vines
+      request : A hanging curtain of cave vines: many long thin stems trailing straight downward from a common attachment, small oval leaves spaced along each stem, a few stems curling near their tips.
+      keywords: along, attachment, bush, cave, common, curling, curtain, downward
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pink_azalea_bush_bush
+      request : An azalea shrub in full bloom: a rounded dense bush of small dark green oval leaves almost completely covered by masses of bright pink five-petalled trumpet flowers over its whole surface.
+      keywords: azalea, blossom, bush, flower, flowering, garden, pink, rhododendron
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pink_lantern_bush
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A low dreamlike bush with fluffy pink foliage, tiny glowing buds, curved twigs, moss at the base, and a rounded silhouette.
+      keywords: assembly, asset, base, buds, bush, but, call, coherent
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  snowberry_tree_bush
+      request : A large mature snowberry shrub with many slender arching woody stems, small oval blue-green leaves, and an abundant display of round porcelain-white berries along the branches. The white berries should occur in small natural groups with visible stems and breathing room, not fuse into solid masses. Preserve an airy rounded shrub silhouette and visible branching.
+      keywords: abundant, airy, along, arching, berries, blue, branches, branching
+      score   : 42   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## CactusFactory
+  cactus_flower
+      request : A small barrel cactus in bloom: a short ribbed spiny body topped by two or three large open flowers with many glossy pointed petals in vivid yellow and orange.
+      keywords: barrel, bloom, body, cactus, flowers, glossy, large, many
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  egypt_sand_cactus
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A squat desert cactus with warm sand-colored skin, ribs, sparse spines, and a sunbaked base.
+      keywords: assembly, asset, base, but, cactus, call, coherent, colored
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  potted_cactus
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A tiny globular cactus in a small pot, short and rounded.
+      keywords: all, appearance, arrangement, asset, build, but, cactus, call
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## CarnivoreFactory
+  brown_bear
+      request : A brown bear standing on all fours: a massive heavy body with a pronounced shoulder hump, thick shaggy brown fur, a broad dished face with small rounded ears, and short powerful legs with long claws.
+      keywords: all, bear, body, broad, brown, carnivore, claws, dished
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  koala
+      request : A koala clinging upright to a tree trunk: a stocky round-bodied marsupial with thick grey woolly fur and a cream chest, a large round head with a big black leathery nose, very large round fluffy ears at the sides of the head, small dark eyes, and strong limbs with long curved claws gripping the trunk. No visible tail.
+      keywords: big, black, bodied, carnivore, chest, claws, clinging, cream
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  polar_bear_shanda
+      request : a polar bear: a massive heavy-set quadruped bear covered in dense creamy-white fur, with a long low-slung head, small rounded ears set far back, a black nose and black eyes, thick columnar legs and broad flat paws
+      keywords: arctic, bear, carnivore, fur, polar bear, white bear
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  red_fox_v2
+      request : A red fox: a slender dog-like animal with orange-red fur, a white throat and belly, black lower legs, a pointed muzzle, large upright triangular ears, and a very large bushy tail with a white tip.
+      keywords: animal, belly, black, bushy, carnivore, dog, ears, fox
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  seal_group
+      request : A harbour seal hauled out on ice: smooth torpedo-shaped body with a thick neck, short front flippers close to the chest, hind flippers trailing behind, a rounded head with large dark eyes and whiskers, mottled grey fur.
+      keywords: behind, body, carnivore, chest, close, dark, eyes, flippers
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  snow_leopard
+      request : A snow leopard: a powerful spotted cat with thick pale smoky-grey fur covered in dark rosettes, a broad head with small rounded ears, short sturdy legs with wide paws, and a very long thick tail.
+      keywords: broad, carnivore, cat, covered, dark, ears, fur, grey
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  yeti
+      request : A yeti: a large bipedal ape-like creature standing upright, covered in long shaggy off-white fur, with very broad shoulders, long muscular arms hanging past the knees, a flat dark face with a heavy brow, and large flat feet.
+      keywords: ape, arms, bipedal, broad, brow, carnivore, covered, creature
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## CeilingClassicLampFactory
+  crystal_chandelier
+      request : An elaborate hanging crystal chandelier with a ceiling chain, a decorative central stem, two stacked tiers of many gracefully curved radial arms, candle-shaped lamp holders, strings of faceted crystal beads draped between arms, and numerous teardrop crystal pendants. The multi-arm hierarchy, bead chains, and hanging prisms must be generated as geometry.
+      keywords: ceiling, crystal, crystal chandelier, lamp
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## CellShelfFactory
+  amusement_prize_display_wall
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A single prize display wall: a grid of cubby shelves packed with colorful plush prizes, toy boxes, and small dangling ribbons, with each compartment clearly separated.
+      keywords: assembly, asset, boxes, but, call, cellshelf, clearly, coherent
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  girl_wall_shelves
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A set of pastel wall shelves as one coherent shelf unit, with rounded cubbies, small books, decorative boxes, and tiny display ornaments.
+      keywords: assembly, asset, books, boxes, but, call, cellshelf, coherent
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## ChairFactory
+  amusement_park_bench
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A single slatted park bench with a long wooden seat, matching slatted back, black metal side supports, curved arm rests, and visible bolts along the planks.
+      keywords: along, arm, assembly, asset, back, bench, black, bolts
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  camp_folding_chair
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A folding camping chair with crossed tubular legs, sagging fabric seat, cup holder in one arm, fabric backrest, and visible hinge joints.
+      keywords: arm, assembly, asset, backrest, but, call, camping, chair
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  silver_square_chair_yellow_cushion_glass_back
+      request : A silver square chair with a yellow seat cushion, a transparent glass backboard, straight metal legs, and crisp hard-surface geometry.
+      keywords: backboard, chair, crisp, cushion, geometry, glass, hard, legs
+      score   : 68   generator: ProceduralGenerator   base: infinigen
+  wall_chairs
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (2) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+Two identical narrow side chairs with backrests, standard four-leg proportions, arranged in a neat row.
+      keywords: all, appearance, arranged, arrangement, asset, backrests, build, but
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## ChameleonFactory
+  chameleon_rainbow
+      request : A chameleon in rainbow colours: bands of red orange yellow green blue shifting along the body, a tightly coiled prehensile tail, a tall casque crest on the head, bulging cone-shaped eyes that turn independently, and gripping split feet.
+      keywords: chameleon, colorful, lizard, rainbow
+      score   : 42   generator: ProceduralGenerator   base: infinigen
+
+## ClamFactory
+  giant_pearl_oyster
+      request : A giant pearl oyster opened: two thick ridged shell halves hinged at the back, the outer surface rough and grey, the inner surface smooth iridescent nacre, and a single large round white pearl resting inside.
+      keywords: back, clam, giant, grey, halves, hinged, inner, inside
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## CoconutTreeFactory
+  bottle_palm_trunk
+      request : A single bottle palm with a short smooth grey trunk that swells into a pronounced rounded bottle-shaped belly near the ground and narrows sharply into a slim green crownshaft above, topped by only a few stiff arching pinnate fronds.
+      keywords: above, arching, belly, bottle, coconuttree, crownshaft, few, fronds
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## ColorfulParaglidersFactory
+  colorful_paragliders
+      request : colorful_paragliders
+      keywords: colorful, colorfulparagliders, paragliders
+      score   : 62   generator: BlenderGenerator   base: infinigen [cross_file]
+  colorful_paragliders_2
+      request : colorful_paragliders
+      keywords: colorful, colorfulparagliders, paragliders
+      score   : 62   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## ColumnarCactusFactory
+  alien_black_thorn_cactus
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A tall alien column cactus with dark purple-black ribbed columns, dense silver thorn clusters, bulbous side shoots, and faintly glowing violet cracks along the ribs.
+      keywords: alien, along, assembly, asset, black, bulbous, but, cactus
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  egypt_columnar_cactus
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A tall columnar cactus with segmented arms, long vertical ribs, dry dust coatings, and tiny thorn clusters.
+      keywords: arms, assembly, asset, but, cactus, call, clusters, coatings
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## CopperDivingHelmetFactory
+  diving_helmet_floor
+      request : diving_helmet_floor
+      keywords: copperdivinghelmet, diving, floor, helmet
+      score   : 55   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## CoralFactory
+  alien_purple_coral_bush
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A dry-land alien coral bush with branching lavender antler forms, porous holes, bright pink growth tips, rough matte texture, and a spreading low base.
+      keywords: alien, antler, assembly, asset, base, branching, bright, bush
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  orange_sea_anemone
+      request : An orange sea anemone: a short thick column attached to rock, topped by a dense crown of many soft finger-like tentacles in bright orange that wave outward from a central mouth.
+      keywords: anemone, attached, bright, central, column, coral, crown, dense
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## CrabFactory
+  king_crab
+      request : A red king crab: a broad spiny carapace, three pairs of very long jointed walking legs spreading wide, one pair of large asymmetric pincer claws held forward, and two stalked eyes. Deep red-orange spiny shell.
+      keywords: crab, king_crab, orange, red, red_king_crab, seabed, spiny, underwater
+      score   : 40   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## DandelionFactory
+  dandelion
+      request : A dandelion seed head: a perfect white sphere of fine radiating pappus filaments on a single smooth hollow stem, each filament tipped with a tiny seed, with a few filaments detaching.
+      keywords: dandelion, detaching, each, few, filament, filaments, fine, head
+      score   : 58   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## DeskLampFactory
+  girl_small_table_lamp
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A small bedside table lamp with a pastel ceramic base, short neck, fabric drum shade, pull chain, and warm glowing bulb inside.
+      keywords: assembly, asset, base, bedside, bulb, but, call, ceramic
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## DragonflyFactory
+  add_bees
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (8) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A bee: small flying insect with a plump fuzzy body banded yellow and black, two pairs of transparent wings, and short legs. Shorten and thicken the dragonfly body into a compact rounded bee form with yellow-black stripes.
+      keywords: all, appearance, arrangement, asset, banded, bee, black, body
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  bee
+      request : A honey bee: a fuzzy oval body banded in yellow and black, a darker furry thorax, two pairs of small translucent veined wings held out to the sides, six thin legs, and short antennae.
+      keywords: antennae, banded, bee, black, body, darker, dragonfly, furry
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  blue_morpho_butterfly
+      request : A blue morpho butterfly with enormous rounded wings held open, brilliant metallic cobalt-to-cyan iridescence across the upper surfaces, a wide velvety black border with tiny white edge spots, subtle radiating veins, a dark furry body, and clubbed antennae.
+      keywords: across, antennae, black, blue, body, border, brilliant, butterfly
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  giant_dragonfly
+      request : A large dragonfly: a very long slender segmented abdomen in iridescent blue-green, a thick thorax, two pairs of long narrow transparent wings with a dense vein lattice held out flat to the sides, and a large head with huge compound eyes.
+      keywords: abdomen, blue, compound, dense, dragonfly, eyes, flat, green
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  glowing_blue_butterfly
+      request : A butterfly with four broad rounded wings held open, each wing a glowing luminous blue with darker vein patterns and a pale edge, a slender furry body, and thin clubbed antennae. Wings must be true broad butterfly silhouettes, not narrow dragonfly wings.
+      keywords: antennae, blue, body, broad, butterfly, clubbed, darker, dragonfly
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  luna_moth_r3
+      request : A luna moth with four broad pale-green leaf-shaped wings held open, a circular eyespot on each wing, extremely long tapering tails extending from both hindwings, a soft thick body, and large feathery antennae. Replace the dragonfly-like narrow wings with true moth wing silhouettes and model the hindwing tails and branched antennae.
+      keywords: green, luna moth, moth, wings
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  mecha_dragonfly
+      request : a mechanical clockwork dragonfly: the wings are thin metal frames with transparent membrane panels, and the body is a segmented brass geared tube
+      keywords: dragonfly, mecha dragonfly, mechanical, robot
+      score   : 20   generator: ProceduralGenerator   base: infinigen [cross_file]
+  violet_peacock_butterfly
+      request : A violet peacock-pattern butterfly with four scalloped purple wings held open, one large concentric eyespot on each wing in black, turquoise, gold and white, magenta bands, pale dotted margins, visible dark veins, a furry violet-black body, and clubbed antennae.
+      keywords: antennae, bands, black, body, butterfly, clubbed, concentric, dark
+      score   : 48   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## FanCoralFactory
+  coral_moon_fan
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A moonlit sea fan with wide branching lace-like fronds, pale violet tips, and a delicate silhouette.
+      keywords: assembly, asset, branching, but, call, coherent, component, contract
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  rainbow_sea_fan
+      request : A large sea-fan coral forming one broad branching lace-like plane, with dense interconnected thin branches grading from deep violet at the base through magenta and orange to bright yellow tips, and tiny visible polyps.
+      keywords: base, branches, branching, bright, broad, coral, deep, dense
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## FernFactory
+  magic_giant_spiral_fern
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A giant fantasy fern with curled spiral fiddleheads, oversized fronds, luminous green vein lines, layered leaflets, and a short mossy crown at the base.
+      keywords: assembly, asset, base, but, call, coherent, component, contract
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## FishFactory
+  blue_tang
+      request : A blue tang: a flat disc-shaped body in vivid royal blue with a bold black curved marking along the upper body, a bright yellow tail, a small pointed snout, and thin translucent dorsal and anal fins running along the body.
+      keywords: along, anal, black, blue, body, bold, bright, curved
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  blue_tang_2
+      request : A blue tang: a flat disc-shaped body in vivid royal blue with a bold black curved marking along the upper body, a bright yellow tail, a small pointed snout, and thin translucent dorsal and anal fins running along the body.
+      keywords: along, anal, black, blue, body, bold, bright, curved
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  clownfish_striped_shanda
+      request : a clownfish: a small round-bodied bright orange fish with three bold white vertical bands across the body (one behind the eye, one at mid-body, one near the tail), every white band outlined by a crisp thin black edge, and black tips on all fins
+      keywords: clownfish, fish, nemo, orange, striped, stripes, white bands
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  hammerhead_shark
+      request : A hammerhead shark with a wide laterally extended hammer-shaped cephalofoil, one eye at each far end of the hammer, a streamlined muscular shark body, a tall triangular dorsal fin, two pectoral fins, visible gill slits, and a strong crescent tail. The hammer head must be a true silhouette-changing mesh structure rather than a texture.
+      keywords: fish, hammerhead shark, shark
+      score   : 30   generator: ProceduralGenerator   base: infinigen
+  hammerhead_shark_v2
+      request : A hammerhead shark: a wide flattened T-shaped cephalofoil head with one eye at each far end, a streamlined muscular grey body, a tall triangular dorsal fin, long pectoral fins, visible gill slits, and a crescent tail. The hammer must be true geometry, not a texture.
+      keywords: body, cephalofoil, crescent, dorsal, each, end, eye, far
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  koi_fish
+      request : A koi carp: elongated oval body with large overlapping scales, bold irregular orange-red and black patches on a white body, long flowing pectoral and tail fins, and a pair of short barbels at the mouth.
+      keywords: barbels, black, body, bold, carp, elongated, fins, fish
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  koi_fish_2
+      request : A koi carp: elongated oval body with large overlapping scales, bold irregular orange-red and black patches on a white body, long flowing pectoral and tail fins, and a pair of short barbels at the mouth.
+      keywords: barbels, black, body, bold, carp, elongated, fins, fish
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  orca
+      request : An orca: a large torpedo-shaped body with glossy black upper surfaces and a sharply separated white belly, a white oval patch behind each eye, a tall triangular dorsal fin, broad rounded pectoral flippers, and a wide horizontal tail fluke.
+      keywords: behind, belly, black, body, broad, dorsal, each, eye
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pufferfish
+      request : A pufferfish fully inflated into a sphere: taut round body covered all over in short outward-pointing spines, small fins, big round eyes, and a small beak-like mouth.
+      keywords: fish, inflated, pufferfish, spiky
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  red_lionfish
+      request : A red lionfish with a striped red, rust and cream body, a broad fan of many extremely long separated venomous dorsal spines, wing-like striped pectoral fins spreading sideways, feathery facial tentacles above the eyes and mouth, and a compact banded tail.
+      keywords: above, banded, body, broad, compact, cream, dorsal, extremely
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  seahorse
+      request : A seahorse in its characteristic upright posture: an S-curved segmented torso, a horse-like head with a long tubular snout, a small spiky coronet, ridged bony plates, a tiny dorsal fin, and a long prehensile tail curled into a tight spiral. Rebuild the body profile and curled tail as geometry; it must not resemble an ordinary horizontal fish.
+      keywords: curled tail, fish, seahorse
+      score   : 42   generator: ProceduralGenerator   base: infinigen
+
+## FlowerFactory
+  black_velvet_rose
+      request : A single dramatic black velvet rose in full bloom with many tightly layered curling petals, subtle burgundy highlights along the edges, a thorny green stem, and several serrated compound leaves.
+      keywords: along, black, bloom, burgundy, compound, curling, dramatic, edges
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+  checkerboard_flowers_flower
+      request : a strange flower with flat wide petals painted in a black and white checkerboard pattern, several blooms on straight green stems with narrow leaves, surreal Wonderland plant
+      keywords: black, blooms, checkerboard, flat, flower, green, leaves, narrow
+      score   : 74   generator: ProceduralGenerator   base: infinigen
+  cliff_flower
+      request : A cliff wildflower clump: several thin stems rising from a rosette of narrow leaves, each stem topped by a small five-petalled flower in bright magenta with a yellow centre.
+      keywords: bright, centre, cliff, clump, each, five, flower, from
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+  clock_flowers_flower
+      request : a surreal flower whose center is a clock face, round pale disc with numerals and two thin hands, ring of pointed petals around it, upright green stem
+      keywords: around, center, clock, disc, face, flower, green, hands
+      score   : 68   generator: ProceduralGenerator   base: infinigen
+  floating_flowers_flower
+      request : surreal flowers hovering above the ground, blossoms with trailing severed stems drifting in mid air, soft luminous petals, dreamlike Wonderland levitation
+      keywords: above, air, blossoms, dreamlike, drifting, flower, flowers, ground
+      score   : 52   generator: ProceduralGenerator   base: infinigen
+  red_poppy_plant_flower
+      request : A red corn poppy: slender hairy stems with deeply cut leaves, each stem carrying one large cup of four crumpled tissue-thin scarlet-red petals around a black centre with a ring of dark stamens.
+      keywords: flower, meadow, papaver, petal, plant, poppy, red, scarlet
+      score   : 74   generator: ProceduralGenerator   base: infinigen
+  snow_lotus
+      request : A snow lotus: a low rosette of pale woolly bracts enclosing a cluster of small purple florets at the centre, the whole plant covered in fine white hairs, sitting close to the ground.
+      keywords: bracts, centre, close, cluster, covered, enclosing, fine, florets
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  sunflower
+      request : a sunflower: a large flat flower head with a wide ring of long bright yellow petals surrounding a dark brown seed-studded central disc, on a tall thick green stem
+      keywords: flower, sunflower, yellow
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+  white_calla_lily_flower
+      request : A calla lily: tall smooth green stalks with broad glossy arrow-shaped leaves, each stalk topped by a single pure white funnel-shaped spathe curled into a cone around a bright golden-yellow central spike.
+      keywords: arum, calla, elegant, flower, lily, spadix, spathe, white
+      score   : 68   generator: ProceduralGenerator   base: infinigen
+  zinnia_flower_flower
+      request : A zinnia: one stiff upright stem with paired oval leaves, topped by a single flat-domed flower head of many overlapping rounded petals in several rings around a small raised yellow centre. Zinnias in a bed come in vivid mixed colours - scarlet, magenta, orange, yellow, coral, lilac. IMPORTANT: model ONLY the single plant - no soil, no ground, no other plants.
+      keywords: bed, bloom, colourful, flower, garden, magenta, orange, petal
+      score   : 58   generator: ProceduralGenerator   base: infinigen
+
+## FlowerPlantFactory
+  greenhouse_orchid_shelf
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A greenhouse orchid shelf with delicate flowering plants, arching stems, broad glossy leaves, pale blooms with colored centers, and small pots arranged on a narrow shelf.
+      keywords: arching, arranged, assembly, asset, blooms, broad, but, call
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  lavender
+      request : A lavender plant: many thin upright grey-green stems rising from a bushy base, each stem topped by a narrow spike of small purple flowers clustered around it.
+      keywords: around, base, bushy, clustered, each, flowerplant, flowers, from
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  oversized_roses_flowerplant
+      request : a giant rose plant taller than a person, huge layered red rose blooms on thick thorny stems, large serrated leaves, exaggerated scale
+      keywords: blooms, exaggerated, flowerplant, giant, huge, large, layered, leaves
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pink_blossom_glade
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A flowering plant with many pink blossoms, broad dark leaves, tall slender stems, and a soft fairy-garden feel.
+      keywords: assembly, asset, blossoms, broad, but, call, coherent, component
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## FlyingBirdFactory
+  eagle
+      request : A bald eagle in flight: broad outstretched wings with layered dark brown flight feathers, pure white head and tail, a large hooked yellow beak, and yellow talons tucked back.
+      keywords: eagle, flying bird, raptor, wings
+      score   : 34   generator: ProceduralGenerator   base: infinigen [cross_file]
+  hummingbird
+      request : A hummingbird hovering: a tiny body with iridescent green back and a bright red throat patch, wings blurred out to the sides in mid-beat, a very long thin straight needle-like beak, and a short fanned tail.
+      keywords: back, beak, beat, blurred, body, bright, fanned, flyingbird
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## FrogFactory
+  frog
+      request : A green tree frog sitting: a smooth moist rounded body, bulging eyes on top of a wide head, long folded hind legs, short front legs, and round adhesive toe pads on all feet. Bright green back with a cream belly.
+      keywords: adhesive, all, back, belly, body, bright, bulging, cream
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## FruitFactoryGeneralFruit
+  giant_orange
+      request : A giant orange: a huge sphere with a dimpled pitted orange rind, a small green leafy calyx at the top, and a slightly flattened profile at the stem end.
+      keywords: calyx, dimpled, end, flattened, fruitgeneralfruit, giant, green, huge
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+  giant_pumpkin
+      request : A giant pumpkin: a huge squat round-ribbed gourd with deep vertical grooves, bright orange skin with subtle mottling, and a thick woody curved stem on top.
+      keywords: bright, curved, deep, fruitgeneralfruit, giant, gourd, grooves, huge
+      score   : 72   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## GlassPanelDoorFactory
+  conv_glass_automatic_door
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A glass automatic sliding-door unit with two clear panels, metal top rail, vertical handles, motion sensor box, warning stickers, and slim side frames.
+      keywords: assembly, asset, automatic, box, but, call, clear, coherent
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## GlobularCactusFactory
+  egypt_globular_cactus
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A round desert cactus with clustered spines, swollen body, pale sand-yellow coloration, and a few side pups.
+      keywords: assembly, asset, body, but, cactus, call, clustered, coherent
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  flowering_globular_cactus
+      request : A globular barrel cactus in bloom: a round ribbed body densely covered in radial spine clusters, crowned by a ring of bright magenta flowers opening at the top.
+      keywords: barrel, bloom, body, bright, cactus, clusters, covered, crowned
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## GlowingRocksFactory
+  cave_prism_spires
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A set of tall prism spires with sharp facets, translucent blue-violet bodies, and internal light bands.
+      keywords: assembly, asset, bands, blue, bodies, but, call, coherent
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+  giant_ice_crystal
+      request : A cluster of giant transparent ice crystals: tall angular hexagonal prisms of different heights growing from a common base, sharp faceted tips, pale blue translucent material with visible internal fractures.
+      keywords: angular, base, blue, cluster, common, crystals, different, faceted
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  mineral_crystal_cluster
+      request : A cluster of colourful mineral crystals on rock: angular prismatic crystals in amethyst purple, citrine yellow and rose pink growing outward at different angles from a rough grey stone base, faceted translucent faces.
+      keywords: amethyst, angles, angular, base, citrine, cluster, colourful, crystals
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## GrassesMonocotFactory
+  silvergrass
+      request : A miscanthus silvergrass clump: a dense fountain of long narrow arching blades rising from a single base, with several taller stems each ending in a feathery silver-white plume.
+      keywords: arching, base, blades, clump, dense, each, ending, feathery
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## GroupOfSnowmenFactory
+  snowmen_group
+      request : snowmen_group
+      keywords: group, groupofsnowmen, snowmen
+      score   : 68   generator: BlenderGenerator   base: infinigen [cross_file]
+  snowmen_group_2
+      request : snowmen_group
+      keywords: group, groupofsnowmen, snowmen
+      score   : 78   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## HerbivoreFactory
+  alpaca
+      request : An alpaca standing: compact body covered in thick woolly fleece, a long straight neck, a small head with a blunt muzzle and short pointed ears, and slender legs. Cream and light brown fleece.
+      keywords: alpaca, blunt, body, brown, compact, covered, cream, ears
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  alpaca_2
+      request : An alpaca standing: compact body covered in thick woolly fleece, a long straight neck, a small head with a blunt muzzle and short pointed ears, and slender legs. Cream and light brown fleece.
+      keywords: alpaca, blunt, body, brown, compact, covered, cream, ears
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  alpine_hare
+      request : A mountain hare: a compact rounded body with dense white winter fur, very long ears with black tips, large powerful hind legs folded under the body, and short front legs.
+      keywords: black, body, compact, dense, ears, folded, front, fur
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  camel
+      request : a dromedary camel: a tall long-legged quadruped with a single large rounded hump on its back, sandy-beige short fur, a long curved neck, a small narrow head with a drooping lower lip, and broad two-toed feet
+      keywords: back, beige, broad, camel, curved, dromedary, drooping, feet
+      score   : 40   generator: ProceduralGenerator   base: infinigen [cross_file]
+  camel_v2
+      request : A dromedary camel standing: a tall quadruped with a single large rounded hump on the back, a long curved neck, a small head with a blunt muzzle and drooping lips, long slender legs with broad two-toed padded feet, and shaggy sand-coloured fur tufts at the hump, throat and knees.
+      keywords: back, blunt, broad, camel, coloured, curved, dromedary, drooping
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  capybara
+      request : A capybara: a large barrel-shaped rodent with coarse reddish-brown fur, short sturdy legs, a blunt squared muzzle, small rounded ears set high on the head, small eyes, and no visible tail.
+      keywords: barrel, blunt, brown, capybara, coarse, ears, eyes, fur
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  giraffe
+      request : a giraffe: a very tall quadruped with an extremely long neck and legs, a brown-and-cream patchwork spotted coat, and two short skin-covered horns on top of its head
+      keywords: cute, giraffe, herbivore, spotted
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  giraffe_v2
+      request : A giraffe: very tall quadruped with an extremely long neck, long slender legs, a sloping back, a small head with two short skin-covered ossicone horns, and a coat of large irregular orange-brown patches separated by cream lines.
+      keywords: back, brown, coat, covered, cream, extremely, giraffe, head
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  mammoth
+      request : A woolly mammoth: massive quadruped covered in long shaggy reddish-brown fur, a high domed head and shoulder hump, a long trunk, and a pair of very long curved ivory tusks that sweep forward and inward.
+      keywords: brown, covered, curved, domed, forward, fur, head, herbivore
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+  mammoth_2
+      request : A woolly mammoth: massive quadruped covered in long shaggy reddish-brown fur, a high domed head and shoulder hump, a long trunk, and a pair of very long curved ivory tusks that sweep forward and inward.
+      keywords: brown, covered, curved, domed, forward, fur, head, herbivore
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  musk_ox
+      request : A musk ox: a stocky quadruped with an extremely long shaggy dark-brown coat hanging almost to the ground, a broad low head, and heavy horns that meet in a boss across the forehead then curve down beside the face and hook upward.
+      keywords: across, almost, beside, boss, broad, brown, coat, curve
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+  reindeer
+      request : A reindeer: a sturdy deer with a thick grey-brown winter coat and a pale neck mane, broad splayed hooves, and very large branching antlers with flattened palmate ends and a forward-pointing brow tine.
+      keywords: antlers, branching, broad, brow, brown, coat, deer, ends
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  sika_deer
+      request : A sika deer: slender deer with a reddish-brown coat covered in rows of white spots, a white rump patch, thin legs, an upright neck, large oval ears, and modest branching antlers.
+      keywords: antlers, branching, brown, coat, covered, deer, ears, herbivore
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  striped_okapi
+      request : An okapi standing with a deep chocolate-brown velvety body, sloping back, long neck, large upright ears, short skin-covered ossicones, and striking horizontal white-and-black zebra stripes wrapping its upper legs and rump.
+      keywords: back, black, body, brown, chocolate, covered, deep, ears
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  white_deer
+      request : A white stag: slender deer with a pure white coat, long thin legs, an upright neck, large branching antlers with several tines sweeping back from the head, and large ears.
+      keywords: antlers, back, branching, coat, deer, ears, from, head
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  white_deer_2
+      request : A white stag: slender deer with a pure white coat, long thin legs, an upright neck, large branching antlers with several tines sweeping back from the head, and large ears.
+      keywords: antlers, back, branching, coat, deer, ears, from, head
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  zebra
+      request : A zebra: horse-like quadruped covered in bold black-and-white stripes that run vertically on the body and horizontally on the legs, with a short stiff upright mane and large rounded ears.
+      keywords: black, body, bold, covered, ears, herbivore, horizontally, horse
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  zebra_2
+      request : A zebra: horse-like quadruped covered in bold black-and-white stripes that run vertically on the body and horizontally on the legs, with a short stiff upright mane and large rounded ears.
+      keywords: black, body, bold, covered, ears, herbivore, horizontally, horse
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## HoneycombCoralFactory
+  add_beehives
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (3) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A teardrop-shaped wild beehive: layered waxy honeycomb comb with a rounded bulging bottom, tan-golden color, clinging to the rock face.
+      keywords: all, appearance, arrangement, asset, beehive, bottom, build, bulging
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## HornGramophoneFactory
+  gramophone_floor
+      request : gramophone_floor
+      keywords: floor, gramophone, horngramophone
+      score   : 55   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## IglooFactory
+  igloo
+      request : igloo
+      keywords: igloo
+      score   : 55   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## IronboundTreasureChestFactory
+  treasure_chest_floor
+      request : treasure_chest_floor
+      keywords: chest, floor, ironboundtreasurechest, treasure
+      score   : 78   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## JapaneseToriiGateFactory
+  torii_gate
+      request : torii_gate
+      keywords: gate, japanesetoriigate, torii
+      score   : 68   generator: BlenderGenerator   base: infinigen [cross_file]
+  torii_gate_2
+      request : torii_gate
+      keywords: gate, japanesetoriigate, torii
+      score   : 70   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## JellyfishFactory
+  coral_jelly_drift
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A drifting jellyfish with a translucent bell, faint violet emission, and long trailing tentacles.
+      keywords: assembly, asset, bell, but, call, coherent, component, contract
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  glowing_jellyfish
+      request : A glowing jellyfish: a smooth translucent dome-shaped bell emitting soft blue light, with a fringe of short tentacles around the rim and four longer ruffled oral arms trailing beneath.
+      keywords: arms, around, bell, beneath, blue, dome, emitting, four
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+  golden_glowing_jellyfish_jellyfish
+      request : A glowing golden jellyfish: a smooth domed translucent bell in warm amber-gold that emits its own soft luminous light, brightest along the thickened bell rim and in the glowing core at the centre of the bell, so the whole animal reads as lit from within against a dark sea. A fringe of many fine short tentacles hangs around the bell rim and four longer ruffled frilly oral arms trail beneath the centre, all in the same warm gold with brighter glowing edges. The glow must be REAL emitted light, not just a bright yellow base colour. Rich saturated amber and honey gold, not pale washed-out yellow. IMPORTANT: model ONLY the jellyfish itself - no fish, no other creatures, no rocks or background scenery.
+      keywords: amber, bell, bioluminescent, emissive, glow, glowing, gold, golden
+      score   : 34   generator: ProceduralGenerator   base: infinigen
+  jellyfish_lamp
+      request : a blown-glass jellyfish chandelier: the bell is flattened into a wide lampshade and the tentacles hang as regular evenly-spaced strands of glass beads
+      keywords: glowing, jellyfish, jellyfish lamp, lamp
+      score   : 35   generator: ProceduralGenerator   base: infinigen
+  pink_moon_jellyfish_group
+      request : A group of seven translucent moon jellyfish with shallow saucer-shaped bells glowing pearl-pink and violet, four clearly visible horseshoe-shaped gonads inside each bell, fine short marginal tentacles, and soft ruffled oral arms underneath; varied sizes in a loose cluster.
+      keywords: arms, bell, bells, clearly, cluster, each, fine, four
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## KelpMonocotFactory
+  golden_kelp
+      request : A golden kelp frond: a long flexible stipe rising from a holdfast, with wide wavy-edged blades branching off along its length, all in a translucent golden amber colour.
+      keywords: all, along, amber, blades, branching, colour, edged, flexible
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+  metallic_kelp
+      request : A kelp frond made of polished metal: a long flexible stipe with wide wavy blades along its length, the entire surface a reflective brushed silver-steel with visible sheet-metal thickness at the edges.
+      keywords: along, blades, brushed, edges, entire, flexible, frond, its
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## LargeShelfFactory
+  conv_aisle_shelving
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A convenience-store aisle shelving unit with metal uprights, multiple shallow shelves, bright shelf-edge label strips, and varied boxed products filling the rows.
+      keywords: aisle, assembly, asset, boxed, bright, but, call, coherent
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## LeafFactory
+  lotus_leaf
+      request : A lotus pad: a large round flat leaf with a slightly upturned wavy edge, radial veins spreading from the centre where the stem attaches underneath, deep green with a water-repellent sheen.
+      keywords: attaches, centre, deep, edge, flat, from, green, large
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## LizardFactory
+  green_iguana
+      request : A green iguana: bright green lizard with a row of tall spiny scales running along the back from neck to tail, a large round cheek scale, a dewlap under the chin, four clawed splayed legs, and a very long banded tail.
+      keywords: along, back, banded, bright, cheek, chin, clawed, dewlap
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## MolluskFactory
+  blue_ringed_octopus
+      request : A small blue-ringed octopus with soft golden-tan mantle, two prominent eyes, and eight curling muscular arms covered in dozens of vivid electric-blue rings edged in black, with visible suction cups beneath.
+      keywords: arms, beneath, black, blue, covered, cups, curling, dozens
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  octopus_2
+      request : An octopus: a large soft bulbous mantle head with two prominent eyes, and eight long tapering arms spreading outward and curling at the tips, each arm lined underneath with rows of round suckers. Mottled red-brown skin.
+      keywords: arm, arms, brown, bulbous, curling, each, eight, eyes
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## MonitorFactory
+  gaming_triple_monitor_array
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A triple-monitor gaming setup as one coherent display array: three thin screens on a shared stand, slightly angled side monitors, narrow bezels, and dark glossy panels.
+      keywords: angled, array, assembly, asset, bezels, but, call, coherent
+      score   : 3   generator: ProceduralGenerator   base: infinigen
+
+## MossFactory
+  snow_on_trees
+      request : snow_on_trees
+      keywords: moss, snow, trees
+      score   : 55   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## MushroomFactory
+  cave_spore_mushrooms
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A cluster of cave mushrooms with translucent caps, glowing undersides, and damp stems growing from stone.
+      keywords: assembly, asset, but, call, caps, cave, cluster, coherent
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  fly_agaric_cluster
+      request : A natural cluster of fly agaric mushrooms at several growth stages: red domed-to-flat caps covered with many raised white wart-like patches, pale stems with hanging skirt-like annulus rings, visible radial gills beneath tilted caps, and bulbous stem bases. Warts, gills, rings, and varied clustered growth must be explicit geometry.
+      keywords: agaric, annulus, bases, beneath, bulbous, caps, cluster, clustered
+      score   : 40   generator: ProceduralGenerator   base: infinigen [cross_file]
+  giant_mushroom_grove_mushroom
+      request : a cluster of giant fairytale mushrooms, several oversized caps on thick pale stalks, one classic red cap with white spots, others deep purple and blue with speckles, gills visible under the caps, storybook Wonderland scale
+      keywords: blue, cap, caps, classic, cluster, deep, fairytale, giant
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## PalmTreeFactory
+  egypt_sun_baked_palm
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A lone oasis palm with a rough trunk, arching fronds, drooping leaves, and dust caught in the crown.
+      keywords: arching, assembly, asset, but, call, caught, coherent, component
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  palm_tree
+      request : A coastal coconut palm: a single tall slightly leaning trunk with visible ring scars, and a crown of large arching pinnate fronds radiating outward, each frond split into many long narrow leaflets.
+      keywords: arching, coastal, coconut, crown, each, frond, fronds, into
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pandanus_tree_palmtree
+      request : A mature Pandanus screw-pine tree with a stout branching trunk, conspicuous arching stilt and prop roots at the base, and multiple dense spiral rosettes of long narrow sword-shaped green leaves. Leaves radiate in all directions with slightly serrated edges and natural droop. Include several large segmented orange-red pandanus fruits hanging below the leaf crowns, while preserving the unmistakable architectural silhouette.
+      keywords: all, arching, architectural, base, below, branching, conspicuous, crowns
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## PillarFactory
+  cave_crystal_pillar
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A tall crystal pillar with faceted sides, a slightly broken tip, and pale violet light running through the center.
+      keywords: assembly, asset, broken, but, call, center, coherent, component
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  egypt_sandstone_pillar
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A weathered sandstone pillar half-buried in desert sand, with carved grooves, chipped edges, sun-bleached surfaces, and ancient ruin presence.
+      keywords: ancient, assembly, asset, bleached, buried, but, call, carved
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  japanese_stone_lantern_glow
+      request : A Japanese stone lantern (toro) that is LIT from inside: a square stone base, a short turned stone post, a platform, a hollow firebox chamber with four window openings, a pagoda roof and a round finial, all in grey weathered granite - and inside the firebox a bright warm orange-yellow light source (real Emission shader, strength 12) so every window glows strongly and the light spills onto the inner posts. Meant for evening and night scenes.
+      keywords: emission, evening, garden, glow, glowing, granite, japanese, lantern
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## PillowFactory
+  bed_pillows
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (3) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+Three small square throw pillows, compact and soft; standard proportions.
+      keywords: all, appearance, arrangement, asset, build, but, call, cluster
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## PineconeFactory
+  alien_ribbed_seed_pod
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A ribbed alien seed pod with overlapping scale plates, elongated purple ovoid shape, glossy dark seams, small glowing seeds visible between plates, and a twisted stem stub.
+      keywords: alien, assembly, asset, between, but, call, coherent, component
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  sugar_pine_cone
+      request : A single sugar pine cone: an extremely long slender cylindrical cone hanging point-downward, far longer than it is wide, built from many thin flat woody scales lying flat against each other in tight spirals, pale resin beads on the scale tips, and a short thick stalk at the top.
+      keywords: against, beads, built, cone, cylindrical, downward, each, extremely
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## PlantBananaTreeFactory
+  banana_tree_plantbananatree
+      request : A mature banana plant with a sturdy layered pseudostem, a wide crown of very large arching green banana leaves with natural splits, and several clearly visible heavy hanging bunches of ripe yellow bananas beneath the leaves. Bananas must form realistic hands attached to central stalks, with enough spacing to read as individual fruits and without merging into the foliage.
+      keywords: arching, attached, banana, bananas, beneath, bunches, central, clearly
+      score   : 28   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## PrickyPearCactusFactory
+  egypt_prickly_pear_patch
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A prickly-pear cactus with flat pads, dusty green skin, small spines, and a few broken pads around the base.
+      keywords: around, assembly, asset, base, broken, but, cactus, call
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  flowering_prickly_pear_prickypearcactus
+      request : A prickly pear cactus in flower: flat oval blue-green paddle segments joined edge to edge and covered in clusters of fine spines, with several large bright yellow cup-shaped flowers and a few ripe magenta-red fruits along the top edges.
+      keywords: cactus, desert, flower, fruit, magenta, opuntia, paddle, pear
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## ReedMonocotFactory
+  cattail_reed
+      request : A single cattail reed: one tall straight stem with long flat strap leaves sheathing its base, topped by a dense smooth cylindrical brown flower spike like a thick sausage, with a thin bare spike of pale male flowers continuing directly above it.
+      keywords: above, bare, base, brown, cattail, continuing, cylindrical, dense
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## RugFactory
+  area_rug
+      request : area_rug
+      keywords: area, rug
+      score   : 68   generator: BlenderGenerator   base: infinigen [cross_file]
+  gaming_large_mouse_pad
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+An oversized desk mouse pad with stitched edges, black rubber base, subtle woven texture, and a neon geometric border printed along the perimeter.
+      keywords: along, assembly, asset, base, black, border, but, call
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  girl_soft_area_rug
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A soft bedroom area rug with rounded scalloped outline, fluffy fibers, pastel gradient patches, and a slightly raised stitched border.
+      keywords: area, assembly, asset, bedroom, border, but, call, coherent
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  kitchen_mat
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A small flat rectangular kitchen mat, low-pile, plain neutral color, lying flush on the floor.
+      keywords: all, appearance, arrangement, asset, build, but, call, cluster
+      score   : 78   generator: ProceduralGenerator   base: infinigen [cross_file]
+  night_vendor_ground_mat
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A folded vendor ground mat with woven plastic texture, bright stripe pattern, uneven curled corners, and small edge stitching.
+      keywords: assembly, asset, bright, but, call, coherent, component, contract
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+
+## SailboatFactory
+  add_sailboat
+      request : add_sailboat
+      keywords: add, sailboat
+      score   : 45   generator: BlenderGenerator   base: infinigen [cross_file]
+  add_sailboat_2
+      request : add_sailboat
+      keywords: add, sailboat
+      score   : 45   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## ScallopFactory
+  thorny_oyster_spines
+      request : A single thorny oyster shell: two thick ribbed valves clamped shut, the whole outer surface bristling with long flattened spines that curve outward and upward like petals, longest near the shell margin, in mottled orange and cream, with a small hinge ear at the top.
+      keywords: bristling, clamped, cream, curve, ear, flattened, hinge, like
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## SideTableFactory
+  girl_bedside_table
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A small pastel bedside table with rounded corners, one drawer, tiny gold knob, lower shelf, slim legs, and a glossy lacquered finish.
+      keywords: assembly, asset, bedside, but, call, coherent, component, contract
+      score   : 68   generator: ProceduralGenerator   base: infinigen
+
+## SimpleDeskFactory
+  gaming_rgb_desk
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A black gaming desk with angular metal legs, carbon-fiber-like top, raised monitor shelf, cable grommets, and thin RGB light strips along the front edge.
+      keywords: along, angular, assembly, asset, black, but, cable, call
+      score   : 78   generator: ProceduralGenerator   base: infinigen
+  girl_vanity_table
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A cute vanity table with slim white legs, shallow drawers, pastel top surface, small makeup tray, and curved front apron.
+      keywords: apron, assembly, asset, but, call, coherent, component, contract
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  greenhouse_potting_bench
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A greenhouse potting bench with weathered wooden slats, lower shelf, soil stains, small drawer, hanging hooks, and scattered potting-tool silhouettes.
+      keywords: assembly, asset, bench, but, call, coherent, component, contract
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  lab_stained_workbench
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A dirty laboratory workbench with chemical stains, chipped laminate, drawer seams, a raised back rail, small corrosion marks, and scattered instrument outlines on the surface.
+      keywords: assembly, asset, back, but, call, chemical, chipped, coherent
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## SingleCabinetFactory
+  girl_acrylic_makeup_drawers
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A transparent acrylic makeup drawer organizer with stacked shallow drawers, visible cosmetic tubes inside, rounded pulls, and glossy clear plastic edges.
+      keywords: acrylic, assembly, asset, but, call, clear, coherent, component
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+  girl_transparent_drawer_cabinet
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A transparent rolling drawer cabinet with multiple clear drawers, pastel handles, visible folded accessories inside, small caster wheels, and rounded plastic frame.
+      keywords: accessories, assembly, asset, but, cabinet, call, caster, clear
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## SleighFactory
+  sleigh
+      request : sleigh
+      keywords: sleigh
+      score   : 45   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## SmallSubmarineFactory
+  add_submarine
+      request : A small personal research submarine: rounded cylindrical metal hull with a domed glass observation viewport at the front, small side thrusters/propeller at rear, and a top hatch. Yellow-and-white painted hull.
+      keywords: propeller, small, sub, submarine, underwater, viewport, yellow
+      score   : None   generator: BlenderGenerator   base: infinigen [cross_file]
+  submarine_hovering
+      request : submarine_hovering
+      keywords: hovering, smallsubmarine, submarine
+      score   : 58   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## SnakePlantFactory
+  cylindrical_snake_plant
+      request : A single cylindrical snake plant with several stiff upright dark green spears growing from one base, each spear a smooth round tube tapering to a sharp point, faintly banded with pale grey-green cross stripes and grooved along one side. The leaves must be round in cross-section, not flat blades.
+      keywords: along, banded, base, blades, cross, cylindrical, dark, each
+      score   : 68   generator: ProceduralGenerator   base: infinigen
+
+## SpiderPlantFactory
+  curled_vines_spiderplant
+      request : an extremely curly vine plant, long tendrils coiling into tight corkscrew spirals, small heart-shaped leaves along the stems, sprawling twisted growth
+      keywords: along, coiling, corkscrew, curly, extremely, growth, heart, into
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  spider_plant_with_runners
+      request : A single spider plant with an arching rosette of narrow cream-striped green leaves, and several long thin wiry runners trailing outward and downward, each ending in a small complete plantlet with its own miniature leaf rosette and pale aerial roots.
+      keywords: aerial, arching, complete, cream, downward, each, ending, green
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## SpinyLobsterFactory
+  slipper_lobster
+      request : A single slipper lobster: a flattened armoured body with a broad squared-off tail fan, and instead of long whip antennae a pair of wide flat plate-like antennal shovels projecting forward from the head like two scalloped blades, small stalked eyes tucked between them, and short stout walking legs.
+      keywords: antennae, antennal, armoured, between, blades, body, broad, eyes
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## StarCoralFactory
+  coral_star_field
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A field of star corals with small star-shaped polyp clusters, subtle pink cores, and scattered reef rubble.
+      keywords: assembly, asset, but, call, clusters, coherent, component, contract
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## SucculentFactory
+  alien_spiral_succulent
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A spiral alien succulent with thick fleshy leaves arranged in a tight logarithmic spiral, deep violet outer leaves, pale lavender tips, waxy material, and bead-like dew bumps.
+      keywords: alien, arranged, assembly, asset, bead, bumps, but, call
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  cave_luminous_succulent
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A small succulent with glassy leaves, pale crystal edges, and a soft internal glow.
+      keywords: assembly, asset, but, call, coherent, component, contract, create
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  greenhouse_succulent_seedling_tray
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A greenhouse seedling tray full of small succulents as one asset, with grid cells, tiny rosettes, varied green and pink tips, dark soil, and plastic tray walls.
+      keywords: assembly, asset, but, call, cells, coherent, component, contract
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+  lithops_living_stone
+      request : A single lithops living-stone succulent: two fat fused pebble-like lobes forming one squat body with a deep narrow slit across the top, translucent grey-green windowed upper surfaces marbled with darker veins, and no visible stem. It must be a two-lobed fused body, not a rosette of stacked leaves.
+      keywords: across, body, darker, deep, fat, forming, fused, green
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+  pink_luminous_succulent
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A compact succulent rosette with pale pink tips, waxy leaves, bead-like dew, and a soft translucent glow.
+      keywords: assembly, asset, bead, but, call, coherent, compact, component
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## TableDiningFactory
+  camp_folding_table
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A lightweight folding camping table with aluminum slat tabletop, crossed collapsible legs, hinge brackets, rounded feet, and small carrying handle.
+      keywords: aluminum, assembly, asset, brackets, but, call, camping, carrying
+      score   : 72   generator: ProceduralGenerator   base: infinigen
+  night_plastic_table_chair_set
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A single outdoor plastic table-and-chair set with a round table, four stackable plastic stools tucked around it, glossy molded surfaces, and simple tubular legs.
+      keywords: around, assembly, asset, but, call, chair, coherent, component
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+  piano
+      request : A piano with a keyboard, lid, pedals, music stand, and glossy lacquer finish.
+      keywords: finish, glossy, keyboard, lacquer, lid, music, pedals, piano
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## TaroMonocotFactory
+  giant_elephant_ear
+      request : A single giant elephant-ear plant with a few enormous heart-shaped leaves held on tall thick fleshy stalks, each leaf tip pointing downward, deeply quilted between pale raised veins, and the stalk joining the underside of the blade well inside the margin rather than at the notch.
+      keywords: between, blade, deeply, downward, each, ear, elephant, enormous
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## TentFactory
+  tent
+      request : tent
+      keywords: tent
+      score   : 45   generator: BlenderGenerator   base: infinigen [cross_file]
+  tent_2
+      request : tent
+      keywords: tent
+      score   : 45   generator: BlenderGenerator   base: infinigen [cross_file]
+
+## TreeFactory
+  autumn_maple_tree_tree
+      request : A maple tree in autumn: a broad rounded crown on a straight grey-barked trunk, densely covered in five-lobed maple leaves all turned to one intense autumn colour. Autumn maples range from clear yellow through orange and scarlet to deep crimson, each tree one colour. IMPORTANT: model ONLY the single tree - no ground, no fallen leaves.
+      keywords: autumn, colourful, crimson, deciduous, fall, foliage, maple, orange
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+  autumn_sugar_maple
+      request : A mature sugar maple with a broad rounded crown, strong spreading branches, grey furrowed trunk, and dense five-lobed leaves transitioning from golden yellow through vivid orange to deep crimson.
+      keywords: branches, broad, crimson, crown, deep, dense, five, from
+      score   : 60   generator: ProceduralGenerator   base: infinigen [cross_file]
+  bald_cypress
+      request : A bald cypress tree: a straight tapering trunk with a widely flared buttressed base, horizontal spreading branches, and soft feathery needle foliage in rusty orange-brown autumn colour.
+      keywords: autumn, bald, base, branches, brown, buttressed, colour, cypress
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  blue_jacaranda_tree
+      request : A graceful jacaranda tree with a spreading umbrella crown, twisting dark branches, delicate fern-like foliage, and abundant hanging clusters of trumpet-shaped violet-blue flowers across the entire canopy.
+      keywords: abundant, across, blue, branches, canopy, clusters, crown, dark
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  blue_sausage_fruit_tree_tree
+      request : A mature blue sausage fruit tree, Decaisnea fargesii, with multiple natural spreading branches, compound green leaves, and many extraordinary long curved cobalt-blue sausage-shaped seed pods hanging downward from separate stems throughout the crown. Make the blue pods large and unmistakable but naturally spaced, never intersecting or fused together. Preserve a believable small-tree structure and visible branches.
+      keywords: believable, blue, branches, but, cobalt, compound, crown, curved
+      score   : 34   generator: ProceduralGenerator   base: infinigen [cross_file]
+  cave_rooted_tree
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A rooted cavern tree with a thick twisted trunk, crystal dust on the bark, and sparse luminous leaves.
+      keywords: assembly, asset, bark, but, call, cavern, coherent, component
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  cherry_blossom_trees
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A flowering cherry (sakura) tree: slender dark trunk, broad spreading canopy densely covered in soft pink blossom clusters instead of green leaves; a few petals scattered on the branches.
+      keywords: all, appearance, arrangement, asset, blossom, branches, broad, build
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  cherry_blossom_trees_2
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A flowering cherry (sakura) tree: slender dark trunk, broad spreading canopy densely covered in soft pink blossom clusters instead of green leaves; a few petals scattered on the branches.
+      keywords: all, appearance, arrangement, asset, blossom, branches, broad, build
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  christmas_tree_shanda
+      request : a decorated christmas tree: a dense symmetrical cone-shaped fir with tiered layers of deep green needled branches, hung all over with glossy round baubles in red and gold, and a bright star at the very top
+      keywords: baubles, christmas tree, ornaments, pine, star, tree, xmas
+      score   : 42   generator: ProceduralGenerator   base: infinigen [cross_file]
+  crape_myrtle_tree_tree
+      request : A crape myrtle: a small multi-trunked tree with smooth mottled peeling bark and small oval leaves, every branch tip carrying a big frothy conical cluster of crinkled crepe-textured flowers, so the crown is heavily coloured. Crape myrtles bloom in pink, lavender, purple, red and white. IMPORTANT: model ONLY the single tree - no ground, no other plants.
+      keywords: blossom, colourful, crape, crepe, flowering, lagerstroemia, lavender, myrtle
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  dragon_blood_tree_tree
+      request : A dragon blood tree: a thick smooth pale trunk splitting repeatedly into dense upward branches that end in a tight flat-topped umbrella crown of stiff spiky blue-green sword-shaped leaves, like a mushroom silhouette.
+      keywords: blood, crown, desert, dracaena, dragon, leaf, pale, socotra
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  flame_tree_poinciana_tree
+      request : A royal poinciana flame tree in full bloom: a broad flat-topped umbrella crown of fine feathery bipinnate leaflets, blanketed with masses of large scarlet-red five-petalled flowers so the crown reads as a vivid red canopy, on a wide spreading grey trunk.
+      keywords: crown, flamboyant, flame, flower, flowering, poinciana, red, scarlet
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  gac_tree_tree
+      request : A vigorous mature gac fruit vine trained into a self-supporting small tree form, with a thick woody base, branching climbing vines, broad deeply lobed green leaves, curling tendrils, small pale flowers, and many large ripe orange-red gac fruits hanging separately. Each fruit is round to oval with a distinctive short-spiked surface; keep them abundant, clearly visible, naturally spaced, and non-intersecting. No trellis or support object.
+      keywords: abundant, base, branching, broad, clearly, climbing, curling, deeply
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+  glowing_magic_tree_01_forest_glowing_tree_animals_seed0_raised_device2_retry01
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A full tree keeping trunk, branches and a complete canopy. Trunk deep blue, foliage cyan-blue leaves with soft self-emission (magical glow). Same overall proportions and silhouette as an ordinary tree, only recolored and emissive.
+      keywords: all, appearance, arrangement, asset, blue, branches, build, but
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  golden_ginkgo_tree_tree
+      request : A ginkgo tree in full autumn colour: every leaf is a small fan-shaped ginkgo leaf in brilliant golden yellow, the canopy densely packed so the whole crown reads as a glowing gold mass, on a straight grey-barked trunk with upward-angled branches.
+      keywords: autumn, fan, gingko, ginkgo, golden, leaf, maidenhair, tree
+      score   : 68   generator: ProceduralGenerator   base: infinigen
+  green_apple_tree_tree
+      request : A mature green apple tree with a wide balanced crown, sturdy trunk, healthy green leaves, and an abundant harvest of large bright Granny-Smith-green apples. Distribute the apples naturally throughout the canopy, each hanging separately from a twig with clear spacing; no intersecting, fused, or grape-like fruit clusters. Preserve visible branches and a convincing apple-tree silhouette.
+      keywords: abundant, apple, apples, balanced, branches, bright, canopy, clear
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  jacaranda_purple_tree_tree
+      request : A jacaranda tree in full bloom: a spreading open crown carrying masses of lavender-purple trumpet flowers in loose clusters and almost no green leaves, so the whole canopy reads as a violet cloud, on a slender pale grey trunk.
+      keywords: blossom, canopy, flower, flowering, jacaranda, lavender, purple, tree
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  japanese_red_maple_tree
+      request : A Japanese maple: a low spreading tree with slender dark branches and a dense layered canopy of small deeply-cut seven-lobed leaves in intense crimson red, the outline mounded and cloud-like.
+      keywords: acer, autumn, crimson, japanese, leaf, lobed, maple, ornamental
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  lemon_tree_tree
+      request : A mature lemon tree with a rounded dense but open crown, sturdy branching trunk, glossy dark-green oval leaves, a few white citrus blossoms, and many large ripe bright-yellow lemons hanging individually throughout the canopy. Give each lemon its characteristic elongated oval shape and pointed ends. Keep fruits abundant but separated, attached to branches, and free of intersections.
+      keywords: abundant, attached, blossoms, branches, branching, bright, but, canopy
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  lime_tree_tree
+      request : A mature lime tree with a compact broad crown, thorny fine branches, glossy green citrus leaves, a few small white blossoms, and many ripe vivid-green limes distributed naturally across the canopy. The limes should be clearly visible, round to slightly oval, individually attached and naturally spaced, with no fused fruit masses or implausible crowding.
+      keywords: across, attached, blossoms, branches, broad, canopy, citrus, clearly
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  mango_tree
+      request : A mango tree: a short thick trunk with a dense rounded evergreen canopy of long glossy dark-green leaves, with several ripe red-and-yellow mangoes hanging on long stalks among the foliage.
+      keywords: among, canopy, dark, dense, evergreen, foliage, glossy, green
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  mango_tree_tree
+      request : A mature mango tree with a dense rounded evergreen crown, sturdy dark-barked trunk with visible branching, long glossy lance-shaped dark-green leaves, and many large ripe mangoes hanging individually on slender stalks throughout the canopy. Give each mango its characteristic plump oval kidney shape with a gradient from green through golden-yellow to a red blush. Keep the fruit abundant but clearly separated, attached to branches, and free of intersecting or fused clusters.
+      keywords: abundant, attached, barked, blush, branches, branching, but, canopy
+      score   : 34   generator: ProceduralGenerator   base: infinigen [cross_file]
+  mango_trees
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A mango tree: broad rounded dense canopy of glossy dark green lanceolate leaves on a sturdy trunk, bearing scattered oval yellow-orange ripe mango fruits hanging in the foliage.
+      keywords: all, appearance, arrangement, asset, bearing, broad, build, but
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  mango_trees_2
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A mango tree: broad rounded dense canopy of glossy dark green lanceolate leaves on a sturdy trunk, bearing scattered oval yellow-orange ripe mango fruits hanging in the foliage.
+      keywords: all, appearance, arrangement, asset, bearing, broad, build, but
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  monkey_puzzle_tree_tree
+      request : A monkey puzzle araucaria: a straight dark trunk with stiff branches arranged in regular whorls that curve upward at the tips, every branch completely sheathed in overlapping rigid triangular dark green spine-tipped scales, giving a reptilian bristly look.
+      keywords: araucaria, conifer, evergreen, monkey, puzzle, scale, spiky, tree
+      score   : 28   generator: ProceduralGenerator   base: infinigen [cross_file]
+  orange_maple_samara_tree
+      request : An orange autumn maple tree: the whole canopy is dense five-lobed maple leaves in vivid orange, and hanging among them are many bright red winged samara seed pairs (two elongated wings joined at a seed, like helicopter keys), clearly visible against the orange leaves. Brown-grey bark trunk.
+      keywords: autumn, canopy, foliage, helicopter, leaf, maple, orange, red
+      score   : 58   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pink_trees_pink_pony_raised_0812
+      request : A normal broadleaf tree with the same structure as the base, but foliage and leaves recolored a distinctly pink hue across the whole canopy; keep the trunk and branches natural woody bark detail. No structural change, only leaf/canopy color.
+      keywords: across, bark, base, branches, broadleaf, but, canopy, change
+      score   : 68   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pink_twisted_ancient_tree
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A twisted ancient forest tree with pink-lavender bark, dark plum leaves, a knotted trunk, exposed roots, faint glowing veins in the wood, and a misty halo around the crown.
+      keywords: ancient, around, assembly, asset, bark, but, call, coherent
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+  pomegranate_tree_tree
+      request : A mature pomegranate tree with a broad natural crown, glossy narrow green leaves, and many individually spaced large ripe pomegranates hanging visibly from separate branches. The fruits are round, deep ruby red with distinct crown-shaped calyxes, abundant across the canopy without intersecting or forming fused clusters. Keep a believable sturdy trunk, visible branching, and a balanced tree silhouette.
+      keywords: abundant, across, are, balanced, believable, branches, branching, broad
+      score   : 22   generator: ProceduralGenerator   base: infinigen [cross_file]
+  purple_grape_tree_tree
+      request : A mature free-standing grapevine trained into a compact tree form, with a thick twisted woody trunk, spreading vine branches, broad lobed grape leaves, curling tendrils, and many clearly visible hanging bunches of ripe dark-purple grapes. Each bunch consists of realistically sized individual grapes; space the bunches around the crown so they do not fuse into one mass. No trellis or support object.
+      keywords: around, branches, broad, bunch, bunches, clearly, compact, consists
+      score   : 52   generator: ProceduralGenerator   base: infinigen [cross_file]
+  replace_fruits_golden
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A tree of the same form as the existing forest trees but bearing oversized, glossy golden fruits hanging abundantly from the branches; fruits noticeably enlarged and metallic-gold in color.
+      keywords: abundantly, all, appearance, arrangement, asset, bearing, branches, build
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  replace_fruits_golden_2
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A tree of the same form as the existing forest trees but bearing oversized, glossy golden fruits hanging abundantly from the branches; fruits noticeably enlarged and metallic-gold in color.
+      keywords: abundantly, all, appearance, arrangement, asset, bearing, branches, build
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  replace_fruits_golden_3
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A tree of the same form as the existing forest trees but bearing oversized, glossy golden fruits hanging abundantly from the branches; fruits noticeably enlarged and metallic-gold in color.
+      keywords: abundantly, all, appearance, arrangement, asset, bearing, branches, build
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  rowan_tree_tree
+      request : A mature rowan tree, Sorbus aucuparia or mountain ash, with an airy rounded crown, slender gray-brown trunk, delicate pinnate compound leaves, and many drooping clusters of small vivid orange-red berries distributed across the outer branches. Keep the berry clusters distinct and naturally spaced, preserve visible fine branching, and maintain a graceful believable rowan silhouette.
+      keywords: across, airy, ash, aucuparia, believable, berries, berry, branches
+      score   : 44   generator: ProceduralGenerator   base: infinigen [cross_file]
+  run
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate and judge exactly ONE logical object for each create_asset() call. The scene pipeline will call this Factory once per placeholder; it owns the requested total count (1) and all group arrangement. Do not build a flock, school, cluster, row, or other repeated group inside create_asset(), even if the source description mentions a plural count or spatial arrangement. Use the source description only for the appearance of one member. A returned hierarchy may contain component parts of that one object, but not multiple logical copies.
+
+SOURCE SCENE DESCRIPTION:
+A mango tree: broad rounded dense canopy of glossy dark green lanceolate leaves on a sturdy trunk, bearing scattered oval yellow-orange ripe mango fruits hanging in the foliage.
+      keywords: all, appearance, arrangement, asset, bearing, broad, build, but
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  scifi_glow_tree_high_rerun_0916_tree
+      request : A mature science-fiction ornamental tree with a thick, graceful, smooth mirror-polished silver metallic trunk that visibly bends and twists in a clear sinuous S-curve, then divides into elegant spreading branches. It has a broad, airy, balanced crown of broad lance-shaped leaves glowing intense electric blue and cyan from within, plus many polished golden spherical fruits hanging from visible separate stems. Keep the fruit abundant but naturally spaced as individual fruits or small readable groups, with no fused masses or intersections. Preserve open negative space, visible silver branches, a strong full-tree silhouette, and realistic structural balance. No natural brown bark or green foliage.
+      keywords: abundant, airy, balance, balanced, bark, bends, blue, branches
+      score   : 33   generator: ProceduralGenerator   base: infinigen [cross_file]
+  scifi_glow_tree_tree
+      request : A science-fiction alien tree: a smooth silver metallic trunk that twists and curves in a sinuous S-shape, branches carrying broad leaves that glow a luminous electric blue as if lit from within, and clusters of polished golden spherical fruits hanging among the leaves. The whole tree reads as metallic and bioluminescent, not natural bark and green foliage.
+      keywords: alien, bioluminescent, blue, fiction, fruit, futuristic, glow, glowing
+      score   : 74   generator: ProceduralGenerator   base: infinigen [cross_file]
+  spiral_trees_tree
+      request : a whimsical tree whose trunk twists like a spiral candy stick, tightly helical bark ridges winding upward, slender curling branches, sparse rounded foliage, Alice in Wonderland storybook look
+      keywords: alice, bark, branches, candy, curling, foliage, helical, like
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+  weeping_willow
+      request : A weeping willow with a sturdy leaning trunk, a broad rounded crown, and hundreds of long thin flexible branchlets that arc downward into dense curtain-like cascades nearly touching the ground, carrying many narrow lance-shaped leaves. The strongly drooping branch hierarchy must be generated structurally, not suggested only by leaf color.
+      keywords: drooping branches, tree, weeping willow
+      score   : 28   generator: ProceduralGenerator   base: infinigen [cross_file]
+  weeping_willow_tree_tree
+      request : A weeping willow: a short thick gnarled trunk splitting into arching branches from which very long slender withes hang straight down almost to the ground, densely covered in narrow pale green lance-shaped leaves, giving a curtain-like drooping silhouette.
+      keywords: branch, curtain, drooping, green, hanging, riverside, salix, tree
+      score   : 34   generator: ProceduralGenerator   base: infinigen [cross_file]
+  white_birch_grove_tree
+      request : A multi-trunk paper birch tree with slender white peeling bark marked by dark horizontal lenticels, fine drooping twigs, and a light airy crown of small triangular golden-green leaves.
+      keywords: airy, bark, birch, crown, dark, drooping, fine, golden
+      score   : 55   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## TubeCoralFactory
+  anemone_green_pink_tubecoral
+      request : A green sea anemone with pink tips: a broad rounded mound of hundreds of long soft finger-like tentacles radiating from a low fleshy disc, each tentacle a smooth tapering tube swelling into a rounded bulb near the tip. The tentacle bodies are a luminous yellow-green with a slight jelly-like translucency, and each bulbous tip is a vivid magenta-pink, giving a strong two-tone contrast across the whole anemone. IMPORTANT: model ONLY the anemone itself - do NOT add any fish, other animals, rocks or background scenery.
+      keywords: anemone, bulb, clownfish, coral, green, host, magenta, pink
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+  anemone_purple_bulb_tubecoral
+      request : A magnificent sea anemone: hundreds of long soft finger-like tentacles packed densely and radiating outward and upward from a low fleshy central disc, forming one rounded cushion-shaped mound. Each tentacle is a smooth tapering tube that swells into a rounded bulb near its tip. The tentacle bodies are pale lavender-lilac with a soft jelly-like sheen, and every bulbous tip is a vivid magenta-purple. Keep the colours saturated and the surface soft and fleshy, not glassy or see-through. IMPORTANT: model ONLY the anemone itself - do NOT add any fish, other animals, rocks or background scenery.
+      keywords: anemone, bulb, clownfish, coral, host, lavender, magenta, purple
+      score   : 78   generator: ProceduralGenerator   base: infinigen [cross_file]
+  anemone_rainbow_mixed_tubecoral
+      request : A colourful tropical sea anemone: a dense rounded cushion of hundreds of long soft finger-like tentacles radiating from a low central disc, each a smooth tapering tube ending in a swollen rounded bulb. The tentacles are multicoloured across the anemone - some turquoise, some coral pink, some lime green, some pale gold - with bright contrasting orange and magenta bulb tips, giving a vivid rainbow reef look. Soft fleshy jelly-like surface, strongly saturated colours. IMPORTANT: model ONLY the anemone itself - do NOT add any fish, other animals, rocks or background scenery.
+      keywords: anemone, bulb, clownfish, colourful, coral, gold, green, host
+      score   : 78   generator: ProceduralGenerator   base: infinigen [cross_file]
+  anemone_seed_palette_tubecoral
+      request : A sea anemone whose colour is driven by the factory seed: hundreds of long soft finger-like tentacles radiating from a low fleshy disc into one rounded cushion mound, each tentacle a smooth tapering tube swelling into a rounded bulb tip. Every factory_seed produces a different hue across the whole spectrum (blue, mint, teal, coral red, lime, magenta, gold, orange), the bulb tips a deeper more saturated shade of the same hue. Scatter many of these and no two are the same colour.
+      keywords: anemone, bulb, clownfish, colourful, coral, host, hue, multicolour
+      score   : 78   generator: ProceduralGenerator   base: infinigen [cross_file]
+  anemone_white_bulb_tubecoral
+      request : A white bleached sea anemone: hundreds of long soft finger-like tentacles packed densely and radiating outward from a low fleshy central disc into one rounded cushion-shaped mound. Each tentacle is a smooth tapering tube with a distinctly swollen rounded knob at the very tip. The tentacle bodies are a pale translucent white with a faint cool lilac-grey tint near the base, and every tip knob is a bright opaque pure white, so the tips read as hundreds of small white beads. Soft fleshy jelly-like surface. IMPORTANT: model ONLY the anemone itself - do NOT add any fish, other animals, rocks or background scenery.
+      keywords: anemone, bleached, bulb, clownfish, coral, host, knob, pale
+      score   : 78   generator: ProceduralGenerator   base: infinigen [cross_file]
+  coral_tube_forest
+      request : SINGLE LOGICAL INSTANCE CONTRACT
+Generate exactly ONE logical object per create_asset() call. Component parts may form one coherent assembly, but do not create unrelated duplicate objects. Preserve meaningful procedural resampling.
+
+SOURCE OBJECT DESCRIPTION:
+A dense cluster of tube corals with many hollow upright tubes, varied heights, and soft cyan edges.
+      keywords: assembly, asset, but, call, cluster, coherent, component, contract
+      score   : 62   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## TussockMonocotFactory
+  pampas_grass_plume
+      request : A single pampas grass tussock: a dense fountain of long arching sharp-edged grey-green blades, and several very tall straight stems rising well clear of the clump, each ending in a large soft feathery silver-white plume.
+      keywords: arching, blades, clear, clump, dense, each, edged, ending
+      score   : 68   generator: ProceduralGenerator   base: infinigen
+  pampas_grass_plume_tussockmonocot
+      request : A pampas grass clump: a dense fountain of long arching narrow blue-green blades, from which tall straight stems rise well above the foliage, each topped by a large fluffy creamy-white feathery plume.
+      keywords: cortaderia, cream, feather, grass, ornamental, pampas, plume, tall
+      score   : 55   generator: ProceduralGenerator   base: infinigen
+
+## UrchinFactory
+  slate_pencil_urchin
+      request : A single slate pencil urchin with a low domed dark red test, covered in thick blunt cylindrical brick-red spines like short crayons, each spine much thicker than a needle and rounded at the tip, with a dense fringe of tiny short spines between them.
+      keywords: between, blunt, brick, covered, crayons, cylindrical, dark, dense
+      score   : 62   generator: ProceduralGenerator   base: infinigen
+
+## WheatMonocotFactory
+  bearded_barley_ear
+      request : A single bearded barley plant with one upright ear at the top of a slender stem, the ear packed with plump grains in neat rows, and from every grain a very long straight stiff bristle awn projecting upward, the fan of awns longer than the ear itself.
+      keywords: awn, awns, barley, bearded, bristle, ear, every, fan
+      score   : 45   generator: ProceduralGenerator   base: infinigen
+
+## WindowFactory
+  gothic_rose_window
+      request : A Gothic cathedral window in a tall pointed stone arch, centered on a large circular rose window filled with intricate radial stone tracery, trefoil and quatrefoil openings, slender mullions, and colored glass panes. Replace the ordinary rectangular window structure with a true pointed arch and layered radial tracery geometry.
+      keywords: cathedral, gothic rose window, stained glass, window
+      score   : 45   generator: ProceduralGenerator   base: infinigen [cross_file]
+
+## YellowSubmarineFactory
+  yellow_submarine
+      request : yellow_submarine
+      keywords: submarine, yellow, yellowsubmarine
+      score   : 45   generator: BlenderGenerator   base: infinigen [cross_file]
+  yellow_submarine_2
+      request : yellow_submarine
+      keywords: submarine, yellow, yellowsubmarine
+      score   : 62   generator: BlenderGenerator   base: infinigen [cross_file]

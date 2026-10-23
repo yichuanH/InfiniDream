@@ -1,0 +1,36 @@
+SUMMARY: This factory builds a single cantilevered staircase — open steel treads projecting from an anchored wall spine with a slim tubular guardrail running the full length. `cantilever.py` is a thin subclass of `straight.py` that forces wall-based support and post-style handrails, and adds a `valid_contour` check ensuring the run hugs a wall (needed for cantilevering). `straight.py` contains all the actual geometry generation (steps, treads, rails, sides, handrails, posts, bars, glass) driven by many randomly sampled dimensional/material knobs.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/elements/staircases/cantilever.py
+  CantileverStaircaseFactory: cantilever variant of StraightStaircase; forces wall anchoring and post handrails.
+    knobs: support_types("wall", fixed) -> forces wall-anchored spine (no under-supports, cantilever look); handrail_types(weighted_choice: horizontal-post:2, vertical-post:2) -> selects slim tubular guardrail style; overrides glass/rail styles out.
+  valid_contour(): requires >50% of staircase edge points within 0.1 of room contour boundary -> enforces run hugging a wall (cantilever constraint). knob: distance threshold(0.1), fraction threshold(0.5).
+
+FILE: assets/objects/elements/staircases/straight.py
+  StraightStaircaseFactory.__init__: samples all staircase parameters (base class; cantilever overrides support/handrail types).
+    knobs: support_types(weighted single-rail/double-rail/side/solid/hole) -> overridden to "wall" by cantilever; handrail_types(weighted glass/horizontal-post/vertical-post) -> overridden by cantilever; hole_size(log_uniform 0.6-1.0) -> stair hole cutout size; rail_offset(step_width*uniform 0.15-0.3), is_rail_circular(50%), rail_width(log_uniform 0.08-0.2), rail_height(log_uniform 0.08-0.12) -> rail geometry; has_tread(75% if stepped else always), tread_height(0.01-0.02 stepped / 0.06-0.08 open), tread_length(step_length+0.01-0.02), tread_width(step_width+0.01-0.02 at 80% else step_width) -> tread deck size; side_type("zig-zag"/"straight" 50/50), side_height(step_height*log_uniform 0.2-0.8), side_thickness(uniform 0.03-0.08) -> stringer sides; handrail width/height(log_uniform 0.02-0.06 each), handrail_offset(width*log_uniform 1-2), handrail_extension(uniform 0.1-0.2) -> tubular rail thickness & overhang; post_height(log_uniform 0.8-1.2), post_k(ceil step_width/step_length), post_width(handrail_width*log_uniform 0.6-0.8), post_minor_width(post_width*log_uniform 0.3-0.5), is_post_circular(50%) -> baluster geometry; bar_size(log_uniform 0.1-0.2), n_bars(floor post_height/bar_size*uniform 0.35-0.75) -> horizontal-post rail count/spacing (perforated deck look); glass_height(post_height-uniform 0-0.05), glass_margin(step_height/2+uniform 0-0.05) -> glass infill; mirror(50%), rot_z(random 0/90/180/270°), end_margin(step_length*8) -> orientation & landing extension.
+    material knobs (weighted_sample from material_assignments): step_surface, tread_surface, rail_surface, side_surface, handrail_surface, post_surface, glass_surface -> per-part materials/colors (steel/perforated-metal appearance).
+  build_size_config: base dimensions. knobs: n(randint 13-21) step count; step_height(wall_height/n fixed); step_width(uniform 0.8-1.6); step_length(step_height*log_uniform 0.8-1.2).
+  make_steps/make_rails/make_treads/make_inner_sides/make_outer_sides: build each component from above knobs.
+  make_handrails/make_single_handrail/make_posts/make_bars/make_glasses: build guardrail run, balusters, and infill (bevel width uniform 0.2-0.5, segments randint 4-7).
+  make_guardrail: standalone wall-mounted guardrail generation (segmentize spacing = post_k*step_length).
+  create_asset/create_placeholder/create_cutter: assembly of one staircase instance (single logical object).
+  finalize_assets: applies sampled materials per tagged selection.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material palettes (step/tread/rail/side/handrail/post/glasses) sampled per part.
+  assets/utils/decorate.py -> mesh ops: mirror, read/write_co, remove_faces/vertices, subsurf, write_attribute.
+  assets/utils/mesh.py -> line/polygon helpers (canonicalize_ls, convert2ls).
+  assets/utils/nodegroup.py -> geo_radius node group for tubular profiles.
+  assets/utils/object.py -> primitive/object constructors (new_cube, new_line, new_circle, join_objects, mesh2obj, separate_loose).
+  assets/utils/shapes.py -> cut_polygon_by_line for slicing step profiles.
+  core/constraints/constraint_language/constants.py -> RoomConstants (wall_height, wall_thickness, door_size).
+  core/nodes/* -> geometry-node graph API (Nodes, NodeWrangler).
+  core/placement/detail.py -> sharp_remesh_with_attrs for wall spine remesh.
+  core/placement/factory.py -> AssetFactory base class (create_asset entry, seeding).
+  core/surface.py -> geomod application & material assignment utilities.
+  core/tagging.py, core/tags.py -> subpart tagging (Wall/Ceiling/Visible/SupportSurface).
+  core/util/blender.py -> Blender op wrappers (modify_mesh, ViewportMode, apply_transform, delete).
+  core/util/math.py -> FixedSeed, normalize.
+  core/util/random.py -> log_uniform, weighted_sample, random_general (rg) sampling helpers.

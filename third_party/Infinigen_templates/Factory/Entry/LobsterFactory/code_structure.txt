@@ -1,0 +1,39 @@
+SUMMARY: This factory procedurally builds crustaceans (lobster, crab, spiny-lobster) as rigged, animated creatures assembled from independently-generated parts (body, legs, claws, tail+fins, eyes, antennae) joined onto a genome skeleton. The entry file crustacean.py defines per-species parameter dictionaries, the genome assembly logic, the chitin/eye shaders, and post-processing that maps tag attributes to materials; part factories under parts/crustacean/ generate each body-part mesh; util/ handles genome trees, joining, rigging, and repeated-driver animation. To satisfy a "scorpion" request you would primarily retune LobsterFactory.lobster_params (claw/tail/leg curls and joints) and the shader colors to dark brown.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/crustacean.py
+  module constants:
+    knobs: n_legs(4, fixed) -> number of walking-leg pairs; n_limbs(5, fixed) -> leg attach slots along body; n_side_fin(2, fixed) -> side fins per tail
+  crustacean_genome(sp): assembles body + legs + claws + tail/fins + eyes + antennae into a CreatureGenome tree
+    knobs: leg_x_lengths(np.sort(uniform(0.6,1,4))[::-1]*leg_x_length, random) -> per-leg length falloff; fin_x_lengths(same pattern, random) -> per-fin length falloff; per-side attach loop side in [1,-1] -> bilateral symmetry; tail attach Joint((0,0,180)) -> tail flipped rearward (raise for curled-up scorpion tail via tail_curl instead); final fin attach coord (0.99,0.5,0.9) -> terminal tail fan position
+  build_base_hue(): samples base color hue
+    knobs: p=0.6 -> chance of red/brown hue uniform(0,0.05) vs blue-green uniform(0.4,0.45); set narrow low range for dark-brown chitin
+  shader_crustacean(nw, params): chitin surface shader
+    knobs: value_shift(log_uniform(2,10), random) -> overall brightness; bright_color sat(uniform(0.8,1.0)) val(log_uniform(0.02,0.05)*shift) -> main shell tone; dark_color hue offset(uniform(-0.05,0.05)) -> shading variation; light_color sat(uniform(0,0.4)) val(log_uniform(0.2,1.0)) -> ratio-masked underside; specular(uniform(0.6,0.8)); specular_tint(uniform(0,1)); clearcoat/Coat(uniform(0.2,0.8)); roughness(uniform(0.1,0.3)) -> glossiness; metallic(uniform(0.6,0.8)); MusgraveTexture Scale(log_uniform(5,8)) -> mottling scale; color_ramp stops [0,0.3,0.7,1.0] bright->dark
+  shader_eye(nw): fixed dark eye
+    knobs: Base Color((0.1,0.1,0.1,1), fixed); Specular(0, fixed)
+  crustacean_postprocessing(body_parts, extras, params): assigns materials per tag
+    knobs: tag_list(["body","claw","leg","eye"]) -> which tags get which material; extras forced to "claw" material
+  animate_crustacean_move(arma, params): dispatches per-part animate_bones drivers
+  CrustaceanFactory: base factory; picks species
+    knobs: max_expected_radius(1); max_distance(40); species(np.random.choice of lobster/crab/spiny_lobster, random per seed)
+  CrustaceanFactory.create_asset(...): builds+rigs+animates; min_remesh_size(0.005) -> mesh detail floor; roll("GLOBAL_POS_Z") -> bone roll axis
+  CrustaceanFactory.lobster_params(): the params dict for lobster (used by LobsterFactory)
+    knobs: body_fn/leg_fn/claw_fn(Lobster*), tail_fn(CrustaceanTailFactory), antenna_fn(LobsterAntennaFactory), fin_fn(CrustaceanFinFactory) -> which parts exist (set to None to remove); leg_x_length(x_length*log_uniform(0.6,0.8)); claw_x_length(*log_uniform(1.2,1.5)) -> claw arm length; tail_x_length(*log_uniform(1.2,1.8)) -> tail length (raise for long scorpion tail); antenna_x_length(*log_uniform(1.6,3.0)); fin_x_length(*log_uniform(1.2,2.5)); x_legs(linspace 0.05..uniform(0.2,0.25)) -> leg row placement; leg_angle(uniform(0.3,0.35)) -> leg splay; leg_joint(x uniform(-5,5), y uniform(0,10), z sort uniform(95,110)+uniform(-8,8)) -> leg bend; x_claw_offset(uniform(0.08,0.1)); claw_angle(uniform(0.4,0.5)); claw_joint(x uniform(-80,-70),y uniform(-10,10),z uniform(10,20)) -> pincer orientation (forward-facing for scorpion); x_eye(uniform(0.8,0.88)); eye_angle(uniform(0.8,0.85)); eye_joint(0,uniform(-60,0),uniform(10,70)); x_antenna(uniform(0.76,0.8)); antenna_angle(uniform(0.6,0.7)); antenna_joint(x uniform(70,110),y uniform(-40,-30),z uniform(20,40)); x_fins(sort uniform(0.85,0.95,2)); fin_joints(x sort uniform(0,30), z sort uniform(10,30)); leg_rot(x uniform(0.8pi,1.1pi)); leg_curl(x(-1.1pi,-0.7pi), z base±0.02pi with base uniform(-0.4pi,0.4pi)) -> walking-leg animation range; claw_curl(x(-0.1pi,0.2pi)); claw_lower_curl(x(-0.1pi,0.1pi)) -> pincer open/close; tail_curl(x(-0.6pi,0)) -> tail arch (increase magnitude to curl over back like a scorpion stinger); antenna_curl(x(0.1pi,0.3pi),z(0,0.8pi)); base_hue(build_base_hue()); freq(1/log_uniform(400,500)) -> animation speed
+  CrustaceanFactory.crab_params(): crab variant (no tail/antenna/fins; body/leg/claw = Crab*)
+    knobs: same schema as lobster with crab-specific ranges (leg_x_length y*log_uniform(2,3), 8 spread legs, eye on stalks x uniform(0.92,0.96), freq 1/log_uniform(100,200))
+  CrustaceanFactory.spiny_lobster_params(): overrides lobster with SpinyLobsterAntennaFactory, claw_fn=LobsterLegFactory (thin claws), long antennae
+  LobsterFactory / CrabFactory / SpinyLobsterFactory: force self.species
+
+FILE: assets/objects/creatures/parts/crustacean/body.py
+  CrabBodyFactory: flat carapace via leaf surface, spikes, mouth, head bump, bend
+    knobs (sample_params, all random): x_length(uniform(0.8,1.2)); y_length(x*uniform(0.5,0.7)) -> width; x_tip(uniform(0.3,0.6)); y_tail(uniform(0.1,0.3)); has_sharp_tip(p=0.4); front/back_midpoint(uniform(0.7,0.9)); front_angle(pi/12..pi/8); back_angle(pi/6..pi/4); tip_size(uniform(0.05,0.15)); upper_z(x*uniform(0.15,0.3)) -> dome height; upper_alpha(uniform(0.8,0.9)); upper_shift(uniform(-0.6,-0.4)); noise_strength(uniform(0.02,0.03)); noise_scale(uniform(8,15)); lower_z(x*uniform(0.3,0.4)); lower_alpha(uniform(0.96,0.98)); lower_shift(uniform(0.1,0.2)); spike_height(uniform(0.05,0.2) or 0, p=0.5); spike_depth(log_uniform(0.4,2)); spike_center(uniform(0.3,0.7)); spike_density(log_uniform(100,500)); mouth_z(uniform(0.5,0.8)); mouth_x(uniform(0.1,0.15)); mouth_noise_scale/strength; bend_angle(uniform(0,pi/3)); bend_height(uniform(0.08,0.12)); color_cutoff(uniform(0,0.5)) -> underside color ratio
+    class consts: min_spike_distance(0.1); min_spike_radius(0.02)
+  LobsterBodyFactory(CrabBodyFactory): spin-based elongated body, 4-segment skeleton
+    knobs: x_length(uniform(0.6,0.8)); y_length(uniform(0.15,0.2)); z_length(y*uniform(1,1.2)); midpoint_first(uniform(0.65,0.75)); midpoint_second(uniform(0.95,1.05)) -> body profile; z_shift(uniform(0.4,0.6)); z_shift_midpoint(uniform(0.2,0.3)) -> arch; noise_strength(uniform(0.02,0.04)); noise_scale(uniform(5,8)); bottom_shift(uniform(0.3,0.5)); bottom_cutoff(uniform(0.2,0.3)) -> flat underside; mouth_* params; min_spike_distance(0.08); min_spike_radius(0.01)
+
+FILE: assets/objects/creatures/parts/crustacean/claw.py
+  CrabClawFactory(CrabLegFactory): jointed arm + pincer (upper + hinged lower)
+    knobs (sample_params, random): z_length(y*uniform(1,1.2)); x_mid_first(uniform(0.2,0.25)); x_mid_second(uniform(0.4,0.6)) -> pincer start; y_mid_first(uniform(1.5,2.0)); y_mid_second(y_mid_first*log_uniform(1,1.5)) -> claw bulk; y_expand(uniform(1.4,1.5)); noise_strength(uniform(0.01,0.02)); top_shift(uniform(0.6,0.8)); claw_y_first(uniform(0.6,1.5)); claw_y_second(*uniform(0.4,0.6)) -> pincer taper; claw_x_depth((1-x_mid)*uniform(0.3,0.5)); claw_x_turn(uniform(0.2,0.4)); claw_z_width(uniform(0.2,0.3)); claw_spike_strength(uniform(0.02,0.03)); claw_spike_distance(uniform(0.03,0.06)) -> pincer teeth; lower_z_scale(uniform(0.4,0.6)); lower_scale(uniform(0.75,0.9)); lower_z_offset(uniform(-0.5,0.5)); lower rotation_euler[1](uniform(pi/12,pi/4)) -> pincer gape; min_spike_radius(0.01)
+    animate_bones: main bones use claw_curl, extra(lower) bones

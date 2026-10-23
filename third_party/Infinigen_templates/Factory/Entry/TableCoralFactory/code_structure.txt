@@ -1,0 +1,64 @@
+SUMMARY: This factory builds a single "table coral" — a flat, broad, layered disc-shaped coral with tiny distributed polyp tentacles and a colored (potentially lavender) shader. TableCoralFactory (in generate.py) wraps the CoralFactory pipeline forcing the TableBaseCoralFactory geometry, which uses differential-growth (flat_make) to grow a flattened layered mesh; generate.py then remeshes it, assigns a procedurally-colored coral material, adds noise/bump displacement, and distributes tentacle instances on the surface. The base geometry, tentacle behavior, and shader colors are the primary tunables.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/corals/generate.py
+  TableCoralFactory: entry point; fixes base geometry to TableBaseCoralFactory. No knobs itself.
+  CoralFactory.create_asset: assembles one coral (geometry + material + noise + tentacles).
+    knobs: obj.scale uniform(0.8,1.2,3) (random per-axis) -> overall size jitter; face_size(0.01 default) -> remesh resolution/detail; realize(True) -> whether tentacle instances are realized into mesh.
+  CoralFactory.__init__: samples base_hue and builds material (weights list only used when factory_method=None, not for Table).
+  CoralFactory.build_base_hue: sets overall coral color family.
+    knobs: 0.25 prob -> fully random hue vs biased; uniform(-0.2,0.3)%1 -> biased hue band (currently red/orange/purple-leaning; widen/shift toward ~0.75 for lavender glow).
+  CoralFactory.shader_coral: full material color/roughness/subsurface.
+    knobs: shift uniform(0.05,0.1)*±1 -> secondary hue offset; subsurface_color hsv2rgba(uniform(0,1),uniform(0,1),1.0) (random) -> glow tint (set hue~0.75 for lavender); bright_color sat uniform(0.7,0.9) val 0.2; dark_color sat uniform(0.5,0.7) val 0.1; light_color hue base±0.2 sat uniform(0.2,0.4) val 0.4 -> moonlit highlight; specular uniform(0.25,0.5); musgrave scale uniform(10,20) x2 -> color pattern frequency; color_ramp stops [0,0.3,0.7,1.0]; roughness float_curve (0,0.5)->(1,1.0); subsurface_ratio uniform(0,0.05) w/ 0.5 prob else 0 -> glow strength; subsurface_radius uniform(0.05,0.2) -> glow spread.
+  CoralFactory.apply_noise_texture: surface roughening (used when has_bump).
+    knobs: type choice STUCCI/MARBLE (random); noise_scale log_uniform(0.01,0.02); strength = noise_strength*uniform(0.9,1.2).
+  CoralFactory.apply_bump: pitted VORONOI displacement (used when not has_bump).
+    knobs: noise_scale log_uniform(0.02,0.03); noise_intensity log_uniform(1.5,2); minkovsky_exponent uniform(1,1.5); strength = -noise_strength*uniform(1,2).
+
+FILE: assets/objects/corals/diff_growth.py
+  DiffGrowthBaseCoralFactory.flat_make: builds the flat table disc (Table uses this).
+    knobs: max_polygons 4e2 -> edge/layer density of disc; repulsion_radius 2 -> spread/ruffle spacing; inhibit_shell 1 -> flatness; obj.scale z uniform(1,2) (random) -> vertical thickening before flattening.
+  DiffGrowthBaseCoralFactory.diff_growth_make: base polygon seed + growth call.
+    knobs: n_base 4 -> initial polygon sides; stride 2 -> colony spacing; n_colonies (flat forces 1).
+  TableBaseCoralFactory: sets maker=flat_make; inherits tentacle_prob 0.8, points_fn=make_upward_points_fn(0.05, π/3).
+  DiffGrowthBaseCoralFactory.create_asset: post-processing of disc.
+    knobs: SMOOTH iterations=2; SUBSURF levels=2 -> smoothness; SOLIDIFY thickness=0.01 -> shell thickness; default_scale [1,1,1] -> base footprint; location z offset factor 0.8 -> sit height.
+  BaseCoralFactory (base.py): shared defaults for Table via inheritance.
+    knobs: tentacle_distance 0.05; noise_strength 0.02 -> displacement amount; tentacle_prob 0.5 (overridden to 0.8 for flat); bump_prob 0.3 -> noise vs bump split; density 500 -> tentacle count per area.
+
+FILE: assets/objects/corals/tentacles.py
+  build_tentacles: shape of one polyp/tentacle instance.
+    knobs: n_branch 5; n_major 8; std 0.5; momentum 0.5; sz 0.008 -> tentacle length/curl; init_vec sample_direction(0.6); base radius log_uniform(0.002,0.004).
+  make_upward_points_fn: (Table's points_fn) selects upward-facing polyp locations.
+    knobs: min_distance 0.05 -> polyp spacing; max_angle π/3 -> how top-facing surfaces get polyps.
+  geo_tentacles: instancing on surface.
+    knobs: density(500 passed) -> polyp count; Scale uniform([0.6]*3,[1.0]*3) -> polyp size variation.
+  shader_tentacles: polyp color.
+    knobs: roughness 0.8; specular 0.25; color hue base±0.1 sat uniform(0.4,0.6) val 0.5; fresnel_color hsv2rgba(uniform(0,1),0.6,0.6) (random rim tint); Subsurface Weight 0.01.
+
+FILE: assets/objects/corals/__init__.py
+  Module exports only; no knobs.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  infinigen_gpl/extras/diff_growth.py -> differential-growth mesh simulation (build_diff_growth) producing ruffled/flat surfaces.
+  assets/objects/trees/tree.py -> build_radius_tree / recursive path generator used to build tentacle geometry.
+  assets/utils/decorate.py -> vertex read/write, geo_extension displacement, subsurface helpers.
+  assets/utils/draw.py -> circular interpolation / angle-based shaping helpers.
+  assets/utils/laplacian.py -> laplacian 3D mesh builder (other coral types).
+  assets/utils/mesh.py -> polygon_angles, treeify, convex mesh builders.
+  assets/utils/misc.py -> assign_material, sample_direction utilities.
+  assets/utils/nodegroup.py -> geo_radius node group for skinning curves/edges.
+  assets/utils/object.py -> mesh/obj creation (mesh2obj, new_circle, new_icosphere, join_objects, origin helpers).
+  assets/utils/reaction_diffusion.py -> reaction-diffusion patterns (other coral types).
+  assets/utils/shortest_path.py -> geo_shortest_path node graph (fan coral).
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py, nodegroups/* -> geometry/shader node graph construction API (build_color_ramp, etc).
+  core/surface.py -> shaderfunc_to_material, add_geomod, eval_argument bridging Python to node graphs.
+  core/placement/factory.py -> AssetFactory base class and make_asset_collection.
+  core/placement/detail.py -> remesh_with_attrs for adaptive resolution.
+  core/tagging.py, core/tags.py -> tag_object semantic labeling and COMBINED_ATTR_NAME.
+  core/util/blender.py -> mesh ops, modifiers, transforms, ViewportMode, deep_clone_obj.
+  core/util/color.py -> hsv2rgba color conversion.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> log_uniform sampling.
+  core/util/logging.py, __init__.py files -> package plumbing.

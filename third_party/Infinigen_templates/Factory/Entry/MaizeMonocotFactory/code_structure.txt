@@ -1,0 +1,61 @@
+SUMMARY: This factory builds a maize (corn) plant as a procedural monocot: a tall stem with instanced grass-like leaves distributed along it, plus a spun-mesh husk near the top. MaizeMonocotFactory subclasses GrassesMonocotFactory (which subclasses MonocotGrowthFactory), overriding leaf shape, stem height, scaling, and adding the husk. The base growth class handles stem generation, leaf-collection instancing along the stem via geometry nodes, and material/coloring. NOTE: as written there is no separate angled ear, no peeled-back husks, no colored kernels, and no silk tuft — those must be added to match the request.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/grasses.py
+
+  MaizeMonocotFactory.__init__: sets overall maize proportions.
+    knobs: stem_offset(uniform(2.0,2.5), random) -> stalk height; scale_curve([(0,1.0),(1,0.6)], fixed) -> leaf size taper base->tip; leaf_range((0.1,0.7), fixed) -> vertical band of stem where leaves appear; inherits count/angle/z_drag/min_y_angle/max_y_angle/bend_angle from GrassesMonocotFactory.
+
+  MaizeMonocotFactory.build_leaf: shape of each corn leaf blade.
+    knobs: x_anchors([0, u(0.1,0.2), u(0.5,0.7), 1.0], random) -> leaf length profile; y_anchors([0, u(0.03,0.06), u(0.03,0.06), 0], random) -> leaf width; face_size -> mesh density.
+
+  MaizeMonocotFactory.build_husk: the ear husk cone (spun mesh) near stalk top.
+    knobs: x_anchors(0, u(0.04,0.05), 0.03, 0, random) -> husk radius profile; z_anchors(0, 0.01, u(0.24,0.3), u(0.35,0.4), random) -> husk height/taper; STUCCI noise_scale(0.01, fixed) & DISPLACE strength(0.02, fixed) -> husk surface bumpiness; location[-1]=stem_offset-0.02 -> husk vertical placement; rotation_euler[0]=uniform(0,pi*0.2) -> husk/ear tilt angle (increase to hold ear at an angle); NOTE: no cob/kernel geometry, no peeled/hanging husk leaves, no silk here — add them to this method to satisfy the request.
+
+  MaizeMonocotFactory.create_asset: assembles stem+leaves+husk, then decorates.
+    knobs: join order / add ear+kernels+silk objects here; decorate_monocot applies twist/bend/scale/material.
+
+  GrassesMonocotFactory.__init__ (inherited base for maize): distribution/pose knobs.
+    knobs: stem_offset(u(1.5,2.0)) overridden by maize; angle(u(pi/6,pi/3), random) -> phyllotaxis rotation between leaves; z_drag(u(0,0.2)) -> droop of whole plant; min_y_angle(u(0.35pi,0.45pi))/max_y_angle(u(0.45pi,0.5pi)) -> leaf pitch base->tip; count(int(log_uniform(16,64)), random) -> number of leaf slots along stem; bend_angle(pi/2) -> overall stalk bend.
+
+  GrassesMonocotFactory.build_base_hue: (not used by maize unless overridden) leaf hue selection; maize uses MonocotGrowthFactory.build_base_hue -> uniform(0.15,0.35) (green/yellow-green).
+
+  MonocotGrowthFactory.__init__ (base): global growth + color/material defaults.
+    knobs: perturb(0.05) -> random jitter of leaf rotation/scale; leaf_prob(u(0.8,0.9), random) -> fraction of slots that grow a leaf; radius(0.01) -> stem thickness; twist_angle(pi/6) -> stalk twist; z_scale(u(1.0,1.2)) -> vertical stretch; base_hue -> plant color; bright_color(hsv2rgba(hue,u(0.6,0.8),log_u(0.05,0.1))) & dark_color(hsv sat u(0.8,1.0), val log_u(0.05,0.2)) -> two-tone leaf coloring (edit for red/purple/amber/near-black kernels if you reuse this material for a cob).
+
+  MonocotGrowthFactory.decorate_leaf: per-leaf bending/warping.
+    knobs: y_ratio(4)/y_bend_angle(pi/6)/z_bend_angle(pi/6) -> leaf curl amounts; noise_scale(0.1)/strength(0.02) -> leaf surface texture; per-axis DISPLACE strength(u(0.01,0.02)*width).
+
+  MonocotGrowthFactory.make_geo_flower: geometry-node instancing of leaves along stem.
+    knobs: line End(0,0,stem_offset); ResampleCurve count; y_rotation from min/max_y_angle; z_rotation accumulates angle*u(0.95,1.05); scale from scale_curve; is_leaf gated by leaf_prob + leaf_range.
+
+  MonocotGrowthFactory.build_stem: the stalk mesh.
+    knobs: SUBSURF levels(9); geo_radius(self.radius,16) -> stem radius/segments; STUCCI noise_scale(0.1)/DISPLACE strength(0.01) -> stem surface roughness.
+
+  MonocotGrowthFactory.decorate_monocot: whole-plant deform + material.
+    knobs: z_drag droop; TWIST angle(uniform(-twist_angle,twist_angle)); BEND angle(uniform(0,bend_angle)); scale(u(0.8,1.2),u(0.8,1.2),z_scale); random Z rotation.
+
+  MonocotGrowthFactory.shader_monocot: leaf material.
+    knobs: specular(u(0,0.2)); clearcoat(0 or u(0.2,0.5), 20% prob) -> glossiness (raise for glossy kernels); color_ramp stops [0,0.3,0.7,1.0] between bright/dark_color; musgrave scale(10); NoiseTexture Scale(50); roughness curve [(0,0.5),(1,0.8)]; Subsurface Weight(0.01)/Radius(0.01).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/draw.py -> leaf(), bezier_curve(), spin() mesh-construction helpers.
+  assets/utils/decorate.py -> remove_vertices, displace_vertices, geo_extension, write_attribute, write_material_index.
+  assets/utils/mesh.py -> polygon_angles and mesh utilities.
+  assets/utils/misc.py -> assign_material helper.
+  assets/utils/object.py -> join_objects, data2mesh, mesh2obj, origin2leftmost.
+  assets/utils/nodegroup.py -> geo_radius nodegroup (stem thickness).
+  assets/utils/shapes.py -> shape primitives used by draw utils.
+  core/nodes/node_wrangler.py -> NodeWrangler node-graph builder API.
+  core/nodes/node_info.py -> Nodes enum of Blender geometry/shader nodes.
+  core/nodes/node_utils.py -> build_color_ramp and node helpers.
+  core/surface.py -> add_geomod, shaderfunc_to_material, attribute read/eval.
+  core/tagging.py, core/tags.py -> tag_object semantic tagging.
+  core/placement/factory.py -> AssetFactory base, make_asset_collection.
+  core/placement/detail.py -> remesh_with_attrs, adapt_mesh_resolution.
+  core/util/blender.py -> butil (modifiers, viewport modes, transforms, collections).
+  core/util/color.py -> hsv2rgba color conversion.
+  core/util/math.py -> FixedSeed deterministic seeding.
+  core/util/random.py -> log_uniform sampling.
+  core/nodes/nodegroups/transfer_attributes.py, compatibility.py, utils.py -> node-graph support/compat.

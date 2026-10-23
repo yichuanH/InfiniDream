@@ -1,0 +1,46 @@
+SUMMARY: WallShelfFactory builds a single wall-mounted shelf unit: one flat plate (the shelf surface) plus optional curved bracket supports on top and/or bottom. The upper-level file wall_shelf.py defines all geometry (plate dimensions, bevels, support contours) and material selection via weighted-choice tables; __init__.py just exports the factory. Everything is procedurally sampled per factory_seed.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/wall_decorations/__init__.py
+  module exports: registers WallShelfFactory (and sibling wall-decoration factories); no tunables.
+
+FILE: assets/objects/wall_decorations/wall_shelf.py
+  WallShelfFactory (class-level weighted-choice tables):
+    knobs: support_sides_(weighted: none=0.5, bottom=1, top=1, both=1.5) -> whether/where bracket supports appear
+    knobs: support_margins(weighted: 0 w=2, uniform(0.0,0.2) w=1) -> inset of support positions from plate ends
+    knobs: support_ratios(weighted: 1 w=2, uniform(0.5,0.9) w=1) -> depth scale of curved support contour
+    knobs: support_alphas(weighted nested: 1; log_uniform(0.4,0.7); log_uniform(1.5,3); 10) -> superellipse exponent -> concave/round/square bracket curve
+    knobs: support_joins("mitre","round","bevel", uniform choice) -> corner style when thickening support outline
+    knobs: plate_bevels(weighted: none/front/side equal) -> which plate edges get beveled
+    knobs: plate_surfaces(weighted: wood.Wood w=10, + metals) -> shelf plate material (random)
+    knobs: support_surfaces(weighted: metals + Wood w=5 + PlasticRough w=5) -> bracket material (random)
+  WallShelfFactory.__init__: samples per-instance dimensions
+    knobs: n_support(margin==0: [2,3,4] p=[.7,.2,.1]; else [2,3] p=[.8,.2]) -> number of bracket supports along length
+    knobs: support_locs(linspace over [-0.5+margin,0.5-margin]) -> support spacing along shelf
+    knobs: length(log_uniform 0.3-0.8) -> shelf horizontal span
+    knobs: width(log_uniform 0.1-0.2) -> shelf depth from wall
+    knobs: thickness(none: log_uniform 0.03-0.08; else 0.01-0.05) -> plate slab thickness
+    knobs: support_width(log_uniform 0.01-0.015) -> bracket bar thickness (along width axis)
+    knobs: support_thickness(support_width * log_uniform 0.4-1.0) -> bracket outline width
+    knobs: support_length(width * uniform 0.7-1.1) -> bracket reach/size
+  create_placeholder: builds bounding box + tagged 2D support surface (SupportSurface subpart); sizes from above.
+  create_asset: assembles plate + cloned supports positioned at support_locs; assigns plate/support materials.
+  make_plate: builds bbox slab, selects front/side edges per plate_bevel, bevels.
+    knobs: bevel offset(uniform(0.3,0.5)*thickness) -> edge round amount; segments(randint 4-9) -> bevel smoothness
+  make_support_contour: superellipse-based L/curve profile (uses support_alphas, support_ratios); theta 31 samples.
+  make_support: unions top/bottom contours, buffers by support_thickness with support_join, extrudes by support_width.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides metals weighted material list used in surface tables
+  assets/materials/wood/wood.py -> Wood material generator for plate/support
+  assets/materials/plastic/__init__.py -> PlasticRough material for supports
+  assets/utils/decorate.py -> read_edge_center/read_edge_direction/select_edges for bevel selection
+  assets/utils/object.py -> join_objects, new_bbox, new_bbox_2d geometry helpers
+  assets/utils/shapes.py -> polygon2obj converts shapely contour to mesh
+  core/surface.py -> assign_material, write_attr_data
+  core/tagging.py, core/tags.py -> Subpart.SupportSurface tagging (t.PREFIX)
+  core/placement/factory.py -> AssetFactory base class / placeholder pipeline
+  core/util/blender.py -> ViewportMode, apply_transform, deep_clone_obj mesh ops
+  core/util/random.py -> random_general (rg), log_uniform sampling helpers
+  core/nodes/*, core/util/{color,math,logging}.py -> node graph / math / util engine internals
+  assets/materials/* (ceramic, fabric, metal, art, etc.) -> material shader library referenced via assignments

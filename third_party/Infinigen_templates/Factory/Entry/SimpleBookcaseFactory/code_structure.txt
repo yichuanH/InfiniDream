@@ -1,0 +1,50 @@
+SUMMARY: This factory builds a single freestanding bookcase/shelf assembly: two side boards, three horizontal division shelves, a backboard, decorative metal screw heads, and two metal wall-attachment brackets, all joined into one mesh. The upper-level file `simple_bookcase.py` defines the geometry-node subgroups (side boards, division boards, backboard, screw heads, attach gadgets) and the `geometry_nodes` assembler, plus two factory classes that sample dimensions and materials. `utils.py` provides a tagged-cube helper (for support-surface tagging) and geometry-extraction/rotation helpers. NOTE: as written it produces a white/metal wooden-panel bookcase, not an iron-pipe/reclaimed-timber industrial shelf — materials, screw-head geometry, and panel-vs-pipe structure would need editing to match that request.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/shelves/simple_bookcase.py
+  nodegroup_side_board(nw): builds the two vertical side panels.
+    knobs: board_thickness -> side panel thickness; depth/height/width -> overall side panel extent; the two transforms place panels at ±(width-thickness)/2, centered vertically.
+  nodegroup_division_board(nw, tag_support): one horizontal shelf plank; width shrunk by 2*side_thickness.
+    knobs: board_thickness -> shelf plank thickness; depth/width -> shelf footprint; tag_support(True) -> tags top face as SupportSurface via nodegroup_tagged_cube.
+  nodegroup_division_boards(nw): instantiates 3 shelves (bottom+gap, middle, top).
+    knobs: thickness/height/gap -> vertical positions; produces board1/board2/board3 (only 3 shelves — request asks for 5).
+  nodegroup_back_board(nw): rear panel.
+    knobs: width/thickness/height/depth -> backboard size & placement (offset to rear by depth).
+  nodegroup_screw_head(nw): decorative cylindrical screw/bolt heads mirrored on both sides.
+    knobs: Depth(cylinder length)/Radius -> screw head size; bottom_gap, division_thickness, screw_gap -> XYZ placement of the 5-per-side screw cluster.
+  nodegroup_attach_gadget(nw): two L-shaped metal wall-mount brackets (top + back plates).
+    knobs: attach_thickness, attach_width, attach_back_len, attach_top_len, depth, height, division_thickness -> bracket dimensions/placement.
+  geometry_nodes(nw, **kwargs): top-level assembler; joins wood parts (frame_material), screw heads & brackets (metal_material), triangulates, rotates -90° about Z.
+    knobs: consumes all params below; swap frame_material/metal_material for different look; change which subgroup outputs are joined to add/remove parts.
+  SimpleBookcaseBaseFactory.get_asset_params(i): samples all geometry/material params (mostly RANDOM per instance).
+    knobs: depth(clip normal(0.3,0.05)→[0.15,0.45]) -> shelf depth; width(clip normal(0.5,0.1)→[0.25,0.75]) -> shelf width; height(clip normal(0.8,0.1)→[0.5,1.0]) -> shelf height; side_board_thickness(uniform 0.005–0.03); division_board_thickness(clip normal(0.015,0.005)→[0.005,0.025]); bottom_gap(clip normal(0.14,0.05)→[0,0.2]) -> height of lowest shelf; backboard_thickness(uniform 0.01–0.02); screw_head_depth(uniform 0.002–0.008); screw_head_radius(uniform 0.003–0.008); screw_head_dist(uniform 0.03–0.1); attach_thickness(uniform 0.002–0.005); attach_width(uniform 0.01–0.04); attach_top_length(uniform 0.03–0.1); attach_back_length(uniform 0.02–0.05); frame_material(get_shelf_material("white") — FIXED, change to "wood"/reclaimed for timber); metal_material(get_shelf_material("metal") — change for black iron pipe look); tag_support(True).
+  SimpleBookcaseBaseFactory.create_asset(i): builds plane, applies geometry_nodes, relabels tags. knobs: apply=True bakes mesh.
+  SimpleBookcaseFactory.sample_params(): overrides base sampling with a Dimensions tuple.
+    knobs: Dimensions = (uniform 0.25–0.4 depth-ish, uniform 0.5–0.7 width, uniform 0.7–0.9 height); depth = Dimensions[0]-0.015; width=Dimensions[1]; height=Dimensions[2] (all RANDOM per instance).
+
+FILE: assets/objects/shelves/utils.py
+  nodegroup_tagged_cube(nw): cube with face index==2 tagged as SupportSurface (used for shelf top surfaces).
+    knobs: Size input; the Compare index (3:2) selects which face is tagged as support.
+  get_nodegroup_assets(func, params): extracts geometry outputs of a nodegroup into separate objects (utility, not in main path).
+  blender_rotate(vec): coordinate-frame rotation helper (X,Y,Z)->(X,Z,-Y) for 3- or 4-vectors.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/wood/plywood.py -> get_shelf_material() provides "white"/"wood"/"metal" shelf shaders.
+  assets/materials/wood/wood.py -> wood surface shader used by plywood material.
+  assets/materials/metal/*.py -> brushed/galvanized/hammered/basic metal shaders for metal parts.
+  assets/materials/ceramic/glass.py, plastic/plastic_rough.py -> extra material shaders (available, unused here).
+  assets/materials/utils/common.py -> shared shader-building helpers.
+  assets/utils/extract_nodegroup_parts.py -> extract_nodegroup_geo used by get_nodegroup_assets.
+  assets/utils/object.py -> object creation utilities.
+  core/nodes/node_wrangler.py -> NodeWrangler/Nodes API for building geometry node graphs.
+  core/nodes/node_utils.py -> to_nodegroup decorator and node helpers.
+  core/nodes/node_info.py, utils.py, compatibility.py -> node metadata/compat layer.
+  core/surface.py -> surface.add_geomod applies geometry_nodes to the object.
+  core/tagging.py, core/tags.py -> tag_system/tag_nodegroup and Subpart.SupportSurface labels.
+  core/placement/factory.py -> AssetFactory base class (seed, create_asset contract).
+  core/placement/detail.py -> LOD/detail placement support.
+  core/util/blender.py -> butil.TemporaryObject and Blender helpers.
+  core/util/random.py, math.py, color.py -> sampling/color/math utilities.
+  core/util/logging.py -> logging.
+  __init__.py files -> package exports (SimpleBookcaseFactory registered in shelves/__init__.py).

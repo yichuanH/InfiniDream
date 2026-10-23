@@ -1,0 +1,46 @@
+SUMMARY: TowelFactory builds a single folded or rolled cotton towel mesh from a subdivided plane, applying a fabric/rug surface material, solidify, bevel, and subsurf. The upper-level files define the towel geometry generation, its material sampling, and a supporting RugFactory (used both as a standalone rug and as one of the towel's possible surface materials). Fold-vs-roll style, dimensions, and thickness are all randomly sampled per instance.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/clothes/towel.py
+  TowelFactory.__init__: overall towel proportions, style, and material selection.
+    knobs: width(log_uniform 0.3-0.6) -> towel base width; length(width*log_uniform(1,1.5)) -> towel base length; thickness(log_uniform 0.003-0.01) -> fabric thickness; fold_type(choice fold/roll, weights [2,1]) -> folded vs rolled shape; folds(randint 2-4) -> number of fold operations; extra_thickness(thickness*uniform(0.2,0.3)) -> puffiness/loft; fold_count(15 fixed) -> subdivisions per fold, fold smoothness; roll_count(256 fixed) -> roll spiral resolution; surface_material_gen(weighted_sample from material_assignments.towel) -> fabric shader; ArtRug branch -> printed rug art surface option.
+  TowelFactory.fold: creates one folded drape with mirroring and folded edge geometry.
+    knobs: rotation_euler[-1](0 or pi randomly, +pi/2 by aspect) -> fold orientation; location[0] jitter(uniform(-thickness,thickness)) -> fold offset; theta curve (uses thickness) -> fold-edge roundness; mirror probability(uniform<0.5) -> flips fold direction.
+  TowelFactory.compute_roll_total / pre_roll / roll: builds Archimedean-spiral rolled towel geometry.
+    knobs: roll_total(solved from length/thickness) -> number of wraps; radius growth((thickness+extra_thickness)/(2*pi)) -> roll tightness.
+  TowelFactory.create_asset: assembles final mesh and modifiers.
+    knobs: wrap_sides strength(uniform(0.2,0.4)) -> UV/surface distortion; SOLIDIFY thickness(self.thickness) -> shell thickness; subdivide_edge_ring counts(16 fixed) -> smoothing resolution; BEVEL width(thickness*uniform(0.4,0.8)), segments(2) -> edge rounding; geo_extension arg(uniform(0.05,0.1)) -> soft edge extension/sag; subsurf level(1) -> final smoothness.
+
+FILE: assets/objects/elements/rug.py
+  RugFactory.__init__: parameters for standalone/embedded rug surface asset.
+    knobs: width(clip_gaussian(3,1,2,6)) -> rug width; length(width*uniform(1,1.5)) -> rug length; rug_shape(choice rectangle/circle/rounded/ellipse) -> outline; rounded_buffer(width*uniform(0.1,0.5)) -> corner rounding; thickness(uniform(0.01,0.02)) -> rug thickness; surface(weighted_sample material_assignments.rug_fabric) -> rug material; ArtRug branch -> printed art rug.
+  RugFactory.build_shape: constructs the rug outline mesh per rug_shape.
+    knobs: circle vertices(128) -> circle/ellipse smoothness; BEVEL segments(16) -> rounded-corner smoothness.
+  RugFactory.create_asset: wraps surface and solidifies.
+
+FILE: assets/objects/clothes/__init__.py
+  module exports: registers BlanketFactory, PantsFactory, ShirtFactory, TowelFactory.
+
+FILE: assets/objects/elements/__init__.py
+  module exports: registers door/staircase/pillar/rug/warehouse element factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material-generator pools (towel, rug_fabric).
+  assets/materials/art.py -> ArtRug procedural printed-pattern surface.
+  assets/materials/fabric/__init__.py -> fabric shader generators for towel/rug surfaces.
+  assets/materials/metal/__init__.py -> metal (chrome) shaders available to material pools.
+  assets/materials/{ceramic,plastic,wood,plant,creature,fluid,terrain,dev}/__init__.py -> additional shader libraries.
+  assets/materials/wear_tear/{edge_wear,scratches}.py -> surface aging/wear effects.
+  assets/materials/lamp_shaders.py, text.py -> extra shader utilities.
+  assets/materials/utils/{__init__,common}.py -> shared shader-node helpers.
+  assets/utils/decorate.py -> geo_extension, mirror, read_co/write_co, subdivide_edge_ring, subsurf, read_edge_direction mesh ops.
+  assets/utils/object.py -> new_plane, new_base_circle, new_bbox, center object builders.
+  assets/utils/uv.py -> wrap_sides UV projection for surface application.
+  core/surface.py -> add_geomod geometry-node application.
+  core/placement/factory.py -> AssetFactory base class and seeding.
+  core/placement/detail.py -> LOD/detail handling.
+  core/nodes/{node_wrangler,node_info,utils}.py -> geometry/shader node graph construction.
+  core/util/random.py -> log_uniform, weighted_sample, clip_gaussian samplers.
+  core/util/math.py -> FixedSeed and math helpers.
+  core/util/blender.py -> butil apply_transform, modify_mesh, ViewportMode utilities.
+  core/tags.py, core/util/logging.py -> tagging and logging support.

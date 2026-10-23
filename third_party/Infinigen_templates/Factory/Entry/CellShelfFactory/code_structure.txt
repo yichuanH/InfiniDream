@@ -1,0 +1,43 @@
+SUMMARY: This factory builds a single grid-of-cubbies cell shelf (open-back or backboarded), assembled from procedural geometry-node subgroups (side/top-bottom/vertical/horizontal division boards, optional base frame legs, screw heads, attachment gadgets). The upper-level cell_shelf.py defines all board-generating node groups plus the geometry_nodes assembler and the AssetFactory classes that sample dimensions/materials and emit one coherent shelf mesh. utils.py provides a support-tagged cube helper used to mark shelf surfaces. Note: this produces only the empty shelf assembly — the plush prizes/toys/ribbons implied by the request are not generated here (they would be placed by a separate scene-composition step).
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/shelves/cell_shelf.py
+  CellShelfBaseFactory.get_asset_params: samples/defaults all shelf geometry & material params (used when params not preset)
+    knobs: depth(clip normal(0.39,0.05)->0.29..0.49) -> shelf front-to-back depth; cell_size(clip normal(0.335,0.03)->0.26..0.40) -> per-cubby size; vertical_cell_num(randint 1..6) -> rows; horizontal_cell_num(randint 1..6) -> columns; division_board_thickness(clip normal(0.015,0.005)->0.008..0.022) -> inner divider thickness; external_board_thickness(clip normal(0.04,0.005)->0.028..0.052) -> outer frame thickness; has_backboard(fixed False) -> True adds solid back panel vs open back+attachment gadget; has_base_frame(choice True/False p=[0.4,0.6]) -> adds standing legs; base_leg_height(clip normal(0.174,0.03)->0.1..0.25) -> leg height; base_leg_size(clip normal(0.035,0.007)->0.02..0.05) -> leg cross-section; attachment_size(clip normal(0.05,0.02)->0.02..0.1) -> wall-mount tab size; wood_material(choice black_wood/white/wood p=[0.3,0.2,0.5]) -> shelf color/finish; base_material(choice black/white p=[0.4,0.6]) -> leg finish
+  CellShelfBaseFactory.get_material_func: maps material name strings to shader materials
+    knobs: wood_material -> shader_shelves_white/black_wood/wood; base_material -> shader_shelves_white_metallic/black_metallic (screw heads use random weighted_sample(material_assignments.metals))
+  CellShelfBaseFactory.create_asset: builds mesh via geometry_nodes and relabels tags (one object per call)
+  CellShelfFactory.sample_params: overrides sampling to derive cells from target Dimensions
+    knobs: Dimensions[0] depth(uniform 0.3..0.45); Dimensions[1] width(uniform 0.70..2.10); Dimensions[2] height(uniform 0.35..2.10); cell pitch divisor(0.35 fixed) -> columns count; has_base_frame(fixed False)
+  TVStandFactory.sample_params: same pattern, shorter unit
+    knobs: Dimensions[2] height(uniform 0.3..0.5) -> squat TV-stand proportions; other knobs as CellShelfFactory
+  CellShelfFactory.create_placeholder: computes bounding box for placement (edit to change footprint/clearance, e.g. y-margin factor 1.1)
+  geometry_nodes: top-level node assembler; joins sideboard/top-bottom/v-divisions/h-divisions/backboard-or-attachment/base-frame/screws, sets materials, triangulates, rotates -90° Z
+    knobs: final Rotation(0,0,-1.5708) -> shelf orientation
+  nodegroup_side_board / nodegroup_top_bottom_board / nodegroup_v_division_board / nodegroup_h_division_board: per-panel geometry math (edit to change how boards size/space; tag_support flag marks shelf surfaces)
+  nodegroup_v_division_board_placement / nodegroup_h_division_placement: divider positioning math
+  nodegroup_back_board: solid rear panel (Y thickness fixed 0.01)
+  nodegroup_attach_gadget: wall-mount tabs when no backboard (tab depth offset -0.02, Y thickness 0.001)
+  nodegroup_base_frame: leg/frame geometry when has_base_frame
+  nodegroup_screw_head: decorative screw cylinders (Radius 0.005, Depth 0.001)
+
+FILE: assets/objects/shelves/utils.py
+  nodegroup_tagged_cube: cube with face index==2 tagged as SupportSurface -> which shelf faces count as usable support (change compare index/tag)
+  get_nodegroup_assets: helper to extract geometry outputs from a nodegroup
+  blender_rotate: coordinate axis remap helper for vectors
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle
+  core/surface.py -> add_geomod, shaderfunc_to_material application
+  core/tagging.py, core/tags.py -> semantic part tagging (SupportSurface)
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py -> geometry/shader node graph construction (Nodes, to_nodegroup)
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> weighted_sample for random metal material
+  assets/composition/material_assignments.py -> metals material pool for screw heads
+  assets/materials/wood/plywood.py -> shader_shelves_white/black_wood/wood/white_metallic/black_metallic shaders
+  assets/materials/metal/*, ceramic/*, plastic/*, fabric/* -> material shader library backing material pools
+  assets/utils/object.py -> new_bbox placeholder bounding box
+  assets/utils/extract_nodegroup_parts.py -> extract_nodegroup_geo output extraction
+  assets/utils/decorate.py -> mesh decoration helpers
+  core/util/blender.py -> TemporaryObject and blender utilities
+  core/nodes/compatibility.py, utils.py -> node graph version/compat handling

@@ -1,0 +1,66 @@
+SUMMARY: This factory builds procedural cactus assets; the GlobularCactusFactory entry produces a round, ribbed barrel-cactus body covered in radial spine clusters. The upper-level files define several cactus body shapes (globular, columnar, prickly-pear, kalidium), a shared spike-instancing system, and a common material/shader shell. generate.py wraps a chosen base-body factory, remeshes it, applies noise displacement and a cactus shader, then scatters spike clusters over the surface. NOTE: the requested magenta crown of flowers is NOT implemented here — there is no flower geometry; only spines and green-hued body/spine shaders exist.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/cactus/generate.py
+  CactusFactory: top-level wrapper; picks a base body, builds material, remeshes, displaces, scatters spikes.
+    knobs: base_hue(uniform 0.2-0.4, random) -> body/skin green-to-yellow hue (raise toward ~0.85 for magenta); factory_methods weights([1,1,1]) -> relative probability of globular/columnar/prickly-pear when random; face_size(0.01) -> mesh detail & whether spikes apply (spikes only if <=0.05); DISPLACE texture type(random STUCCI/MARBLE) -> surface bumpiness style; noise_scale(log_uniform 0.1-0.15, random) -> displacement bump frequency.
+  shader_cactus: cactus body surface shader.
+    knobs: shift(uniform -0.15..0.15, random) -> hue variance of bright band; bright_color(hsv v=0.02) & dark_color(sat 0.8 v=0.01) -> very dark rib coloring; fresnel_color(hue base-0.05..0.1, sat0.9, v uniform0.3-0.5) -> rim highlight color; specular(0.25) -> gloss; musgrave scale(log_uniform 10-50) -> rib/patch color pattern scale; roughness curve((0,0.5)->(1,0.8)) -> surface roughness range.
+  GlobularCactusFactory/ColumnarCactusFactory/PrickyPearCactusFactory/KalidiumCactusFactory: fixed-shape variants (force one base body).
+
+FILE: assets/objects/cactus/globular.py
+  GlobularBaseCactusFactory: builds the round ribbed barrel body (used by entry).
+    knobs: spike_distance(0.08) -> spacing between spine clusters; star_resolution(randint 6-12, random) -> number of ribs/ridges; resolution(64, fixed) -> vertical mesh smoothness; frequency(uniform -0.2..0.2, random) -> spiral twist of ribs; rib bulge scale(uniform 1.1-1.2, random) -> how pronounced ribs are; radius anchors(random per point: base 0.2-0.4, mid 0.5-0.8, upper 0.4-0.6, tip 0.05) -> body profile/barrel silhouette; overall radius mult(log_uniform 0.5-1.0) -> body fatness; obj.scale(uniform 0.8-1.5 per axis, random) -> body stretch; rotation_euler z(uniform 0-2pi) -> yaw.
+
+FILE: assets/objects/cactus/base.py
+  BaseCactusFactory: shared defaults + spike selection setup.
+    knobs: spike_distance(0.025) -> default spine spacing; cap_percentage(0.1) -> fraction near top that gets dense cap spines (increase to crown the top); noise_strength(0.02) -> body displacement amount; base_radius(0.002) -> spine thickness; density(5e4) -> spines per unit area.
+
+FILE: assets/objects/cactus/spike.py
+  build_spikes: single radial spine cluster geometry.
+    knobs: n_branch(4) -> spines per cluster; n_major(9) -> segments per spine; sz(uniform 0.005-0.01, random) -> spine length; radius_fn decay(0.5^..) -> taper; geo_radius tip(0.001) -> tip sharpness; sample_direction(0.8) -> spread angle.
+  make_default_selections: where spikes go (cap vs surface distribution).
+    knobs: cap curve((0,1),(cap_percentage,0.5),(1,0)) -> top-vs-body spine bias; density -> surface spine count.
+  geo_spikes: instancing of clusters onto body.
+    knobs: rotation perturb / AlignEuler factor(uniform 0.2-0.5) -> spine cluster tilt randomness; Scale(uniform 0.5-1.0) -> per-cluster size variation; realize(bool) -> bake instances.
+  shader_spikes: spine material.
+    knobs: color(hsv hue 0.2-0.4, sat 0.1-0.3, v 0.8, random) -> spine color (raise value/change hue for pale/bright spines); roughness(0.8); specular(0.25); mix_ratio(0.9) -> translucency blend; Subsurface Weight(0.1).
+
+FILE: assets/objects/cactus/columnar.py
+  ColumnarBaseCactusFactory: tall branching column body (alt shape).
+    knobs: spike_distance(0.08); base_radius(0.25); resolution(16); radius_decay(uniform 0.5-0.8); n_major(16); n_minor(randint 10-14); b_minor(randint 2-4) -> arm count; star_resolution(randint 5-8) -> rib count; perturb(0.1); rib bulge(uniform 1.15-1.25); align_tilt noise(pi/4..pi/2) -> rib twist.
+
+FILE: assets/objects/cactus/pricky_pear.py
+  PrickyPearBaseCactusFactory: flat-pad segmented cactus (alt shape).
+    knobs: spike_distance(0.08); leaf radius anchors(random); pad scale(x0.8-1.2,y0.2-0.25,z0.8-1.2); build_leaves level(2) -> branching depth; child count n(randint 1-3); spawn angles(±pi/3..pi/2); child scale(uniform 0.5-0.75).
+
+FILE: assets/objects/cactus/kalidium.py
+  KalidiumBaseCactusFactory: coral-like twig cactus (alt shape, no spikes; density/noise=0).
+    knobs: resolution(20) -> voxel grid density; removal sphere radius(1.1) & prune prob(0.05); shortest_path end count(5); trunk radius(0.006); twig count(5) & twig radius(0.005/0.006); twig distribution Density(2e3), scale(uniform 1.0-1.5).
+
+FILE: assets/objects/cactus/__init__.py
+  Module exports (no tunables).
+
+FILE: assets/objects/trees/tree.py
+  build_radius_tree / recursive_path / rand_path / space_colonization: skeleton generator used by columnar/kalidium/spike branches (path std, momentum, sz control branch waviness/length).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> geo_extension musgrave surface warp, vertex read/displace helpers.
+  assets/utils/misc.py -> assign_material, sample_direction, toggle show/hide helpers.
+  assets/utils/nodegroup.py -> geo_radius (skin curves), align_tilt node groups.
+  assets/utils/object.py -> new_cube, join_objects, mesh2obj/data2mesh, origin/separate helpers.
+  assets/utils/shortest_path.py -> geo_shortest_path node group (kalidium twig skeleton).
+  core/nodes/node_wrangler.py -> NodeWrangler geometry/shader node construction API.
+  core/nodes/node_info.py -> Nodes enum of Blender node types.
+  core/nodes/node_utils.py -> build_color_ramp and node helpers.
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer node groups.
+  core/surface.py -> add_geomod, shaderfunc_to_material, eval_argument, write_attr_data.
+  core/tagging.py / core/tags.py -> tag_object semantic labeling (cactus, cactus_spike).
+  core/placement/factory.py -> AssetFactory base class, make_asset_collection.
+  core/placement/detail.py -> remesh_with_attrs, subsurface2face_size.
+  core/util/blender.py -> modify_mesh, deep_clone_obj, transform/collection utilities.
+  core/util/color.py -> hsv2rgba color conversion.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> log_uniform sampling.
+  assets/objects/trees/utils/* -> geometrynodes/mesh/helper used by build_radius_tree.

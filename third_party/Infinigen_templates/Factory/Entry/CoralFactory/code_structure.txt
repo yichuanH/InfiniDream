@@ -1,0 +1,85 @@
+SUMMARY: The Coral factory generates a wide variety of procedural coral colonies (diff-growth leather/table, reaction-diffusion brain/honeycomb, tube, branching tree/bush/twig, cauliflower, elkhorn, star, fan). The entry file generate.py selects a base-coral geometry factory, remeshes it, assigns a shared coral shader, and optionally scatters tentacle/polyp instances. For the requested branching-violet/pink glowing coral, the most relevant pieces are the tree.py branching factories (finger-like branches), tentacles.py (polyp openings), and shader_coral / build_base_hue in generate.py (violet-pink color); tube.py provides polyp-hole tubes.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/corals/base.py
+  BaseCoralFactory: shared defaults for all coral types
+    knobs: tentacle_distance(0.05)->spacing of scattered polyps; default_scale([0.8,0.8,0.8])->overall size; noise_strength(0.02)->surface bumpiness magnitude; tentacle_prob(0.5)->chance polyps/tentacles are added; bump_prob(0.3)->chance of bump vs noise displacement; density(500)->polyp scatter count
+
+FILE: assets/objects/corals/generate.py
+  CoralFactory.__init__: picks which base coral to build
+    knobs: factory_methods(list of 7 base factories)->coral archetype; weights([0.15,0.2,0.15,0.2,0.2,0.15,0.2], normalized)->selection probability (use factory_method=TreeBaseCoralFactory/BushBaseCoralFactory/TwigBaseCoralFactory for branching); factory_method(None=random) -> force one type
+  CoralFactory.create_asset: assembly, scaling, displacement, polyps
+    knobs: obj.scale jitter (uniform(0.8,1.2,3))->random size variation; face_size(0.01)->remesh resolution; tentacle addition gated by factory.tentacle_prob & has_bump
+  CoralFactory.build_base_hue: sets overall coral color
+    knobs: 0.25 prob -> fully random hue; else uniform(-0.2,0.3)%1 -> reddish/violet/pink range (raise toward ~0.75-0.9 for violet/magenta)
+  CoralFactory.apply_noise_texture: fine surface texture
+    knobs: type choice(STUCCI/MARBLE); noise_scale(log_uniform 0.01-0.02); strength(noise_strength*uniform(0.9,1.2))
+  CoralFactory.apply_bump: pitted/polyp-like voronoi bumps
+    knobs: noise_scale(log_uniform 0.02-0.03); noise_intensity(log_uniform 1.5-2); minkovsky_exponent(uniform 1-1.5); strength(-noise_strength*uniform(1,2))
+  CoralFactory.shader_coral: main coral surface material (color/glow via emission-like brightness)
+    knobs: shift(uniform 0.05-0.1, ±)->hue offset of bright regions; subsurface_color(hsv random full)->SSS tint; bright_color(hue+shift,sat 0.7-0.9,val 0.2); dark_color(base hue,sat 0.5-0.7,val 0.1); light_color(hue±0.2,sat 0.2-0.4,val 0.4); specular(uniform 0.25-0.5); color_ramp positions [0,0.3,0.7,1.0]->dark-to-bright band; musgrave scales(uniform 10-20)->pattern frequency; roughness curve(0.5->1.0); subsurface_ratio(0 or uniform 0-0.05, 50%)->glow/translucency; subsurface_radius(uniform 0.05-0.2). NOTE: to make tips "luminously pink" raise vals / add Emission node here.
+
+FILE: assets/objects/corals/tentacles.py
+  build_tentacles: geometry of individual polyp/tentacle instances
+    knobs: n_branch(5); n_major(8); std(0.5); momentum(0.5); sz(0.008)->tentacle length/thickness; init_vec spread sample_direction(0.6); radius base(uniform 0.002-0.004)
+  make_radius_points_fn / make_upward_points_fn / make_min_distance_points_fn: where polyps appear
+    knobs: min_distance->polyp spacing; radius_threshold->only place beyond this radius (tips); max_angle->only upward faces
+  geo_tentacles: scatter of polyps onto surface
+    knobs: density(500); rotation random(0-2π); instance scale(uniform 0.6-1.0)
+  shader_tentacles: polyp/tentacle color (default green-ish, base_hue passed in)
+    knobs: roughness(0.8); specular(0.25); color(hue±0.1,sat 0.4-0.6,val 0.5); fresnel_color(random hue,0.6,0.6)->rim tint; Subsurface Weight(0.01)
+
+FILE: assets/objects/corals/tree.py  (branching finger-like corals — most relevant to request)
+  TreeBaseCoralFactory: branching coral (twig/bush)
+    knobs: default_scale([1,1,1]); tentacle_prob(0.8)->polyps very likely; noise_strength(0.01); tip(0.4); configs radius(0.08); points_fn radius_threshold(0.4); method weights([0.5,0.5])
+  bush_config/twig_config: branch topology
+    knobs: n_branch(randint 6-8)->number of finger branches; n_major/n_minor/n_detail(4-5,4-5,3-4)->sub-branch counts; span(bush 0.4-0.5 / twig 0.7-0.8)->upward vs outward splay; per-branch sz(uniform 0.08-0.1)->thickness; ang_min/ang_max(π/12..π/8 bush, π/8..π/6 twig)->branch split angle; momentum/std->waviness; axis2([0,0,1])->upward bias
+  radius_fn: branch tapering
+    knobs: radius_decay_root(0.85)->thinning up the branch; radius_decay_leaf(uniform 0.4-0.6)->tip taper
+  create_asset: knobs: resolution(16)->branch smoothness; geo_radius profile segments(32)
+
+FILE: assets/objects/corals/tube.py  (tube coral — polyp-hole openings)
+  TubeBaseCoralFactory / geo_coral_tube: extruded tubes with open tops (polyp openings)
+    knobs: default_scale([0.7]*3); radius_threshold(0.4); ico_sphere_perturb(0.2); growth_z(1); short_length_range(0.2-0.4); long_length_range(0.4-1.2); angles(linspace 2π/5..π/10,6); scales(linspace 1..0.9,6); face_perturb(0.4); growth_prob(0.75); SOLIDIFY thickness(0.05); DISPLACE strength(0.1)
+
+FILE: assets/objects/corals/diff_growth.py
+  DiffGrowthBaseCoralFactory: leather/table flat corals
+    knobs: makers/weights([0.7,0.3]); leather tentacle_prob(0.5)/flat(0.8); n_base(4); stride(2); leather growth_vec z(0.8-1.2), growth_scale z(0.5-0.7), max_polygons(1e3*n), fac_noise(2.0), dt(0.25); flat max_polygons(4e2*n), repulsion_radius(2), inhibit_shell(1); SUBSURF levels(2); SOLIDIFY thickness(0.01)
+
+FILE: assets/objects/corals/reaction_diffusion.py
+  ReactionDiffusionBaseCoralFactory: brain/honeycomb pattern corals
+    knobs: weights([0.5,0.5]); brain feed_rate(0.055); honeycomb feed_rate(0.070, kill-0.001); periodic_weight_fn(brain 100/0.02, honeycomb 5); icosphere subdivisions(8) radius(3); SUBSURF level(2); DISPLACE strength(0.4)
+
+FILE: assets/objects/corals/laplacian.py
+  CauliflowerBaseCoralFactory: lumpy cauliflower coral
+    knobs: tentacle_prob(0.4); noise_strength(0.015); points_fn radius_threshold(0.6); SUBSURF levels(1)
+
+FILE: assets/objects/corals/star.py
+  StarBaseCoralFactory: star-polyp coral (dense flower polyps)
+    knobs: tentacle_prob(1.0); noise_strength(0.002); density(3000); perturb(0.05); dual-mesh displace(-0.9*z); resolution(16); scale jitter(uniform 0.9-1.2); anchor(uniform 0.4-0.6, 0.08-0.15)->polyp bump height; outer band t(0.4-0.6)
+
+FILE: assets/objects/corals/elkhorn.py
+  ElkhornBaseCoralFactory: flat plate/antler elkhorn coral
+    knobs: tentacle_prob(0.0); noise_strength(0.005); circle vertices(1024); large_radius(uniform 0.08-0.12); angle_radius(0.2); cluster interp ranges (scale 0.3-1.0, rotation 0-π/3, power 1.0-1.6); STUCCI noise_scale(log_uniform 0.1-0.5); DISPLACE strength(uniform 0.1-0.2); SOLIDIFY thickness(0.02)
+
+FILE: assets/objects/corals/fan.py
+  FanBaseCoralFactory: sea-fan lattice coral
+    knobs: tentacle_prob(0.0); noise_strength(0.0); circle vertices(512); angle shape values(uniform 0.2-0.8); STUCCI noise_scale(uniform 0.5-1); DISPLACE strength(uniform 0.5-1.0); scale x(uniform 0.6-1.2); shortest_path weight(0.4..1); radius base(0.008), thresh(uniform 100-200), ratio(uniform 0.5-1.5)
+
+FILE: assets/objects/corals/__init__.py
+  module exports only (no knobs)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/trees/tree.py -> tree skeleton/space-colonization + radius-tree builder used for branching corals & tentacles
+  infinigen_gpl/extras/diff_growth.py -> differential growth simulation for leather/table corals
+  assets/utils/reaction_diffusion.py -> reaction-diffusion pattern generation (brain/honeycomb)
+  assets/utils/laplacian.py -> laplacian growth mesh for cauliflower coral
+  assets/utils/mesh.py -> convex/polygon mesh builders, treeify, polygon_angles
+  assets/utils/shortest_path.py -> geo_shortest_path node for fan lattice
+  assets/utils/draw.py -> shape_by_angles, make_circular_interp shaping helpers
+  assets/utils/nodegroup.py -> geo_radius profile node
+  assets/utils/decorate.py -> geo_extension, vertex read/write, displace/remove helpers
+  assets/utils/object.py -> mesh/object creation utilities (icosphere, circle, join, origin)
+  assets/utils/misc.py -> assign_material, sample_direction
+  core/surface.py -> shaderfun

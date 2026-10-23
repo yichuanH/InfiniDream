@@ -1,0 +1,59 @@
+SUMMARY: AugerFactory builds a single auger snail shell: a long slender tapering spire made of many tightly stacked shallow whorls, each marked by a spiral groove, glossy tan with darker axial flecks. The upper-level files split into geometry (snail.py revolves a cross-section along a helix; shell.py handles bivalves), a shared base config (base.py), and a common material/decoration pipeline (generate.py) that applies subsurf, solidify, noise displacement, and a procedural wave-texture shader. AugerFactory = MolluskFactory driven by AugerBaseFactory using auger_make.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mollusk/base.py
+  BaseMolluskFactory: shared defaults for all mollusks
+    knobs: max_expected_radius(0.5) -> overall bounding scale; noise_strength(0.02) -> surface bump amplitude from DISPLACE; ratio(1) -> mix balance of X vs Z color ramps; x_scale(2) -> horizontal wave-texture frequency; z_scale(1) -> vertical wave-texture frequency; distortion(1) -> wave-texture warping (overridden by subclasses)
+
+FILE: assets/objects/mollusk/generate.py
+  MolluskFactory: assembles factory + material, applies decoration
+    knobs: factory_methods([SnailBaseFactory, ShellBaseFactory]) + weights([1,1]) -> which mollusk type when random (AugerFactory forces AugerBaseFactory)
+  decorate_mollusk: mesh finishing
+    knobs: face_size(0.01) -> subsurf density/detail; SOLIDIFY thickness(0.005) -> shell wall thickness; texture type(random STUCCI/MARBLE) -> displacement pattern; noise_scale(log_uniform 0.1-0.2, random) -> displacement grain; DISPLACE strength(=noise_strength) -> bump depth
+  build_base_hue (static): sets tan/brown hue
+    knobs: prob(0.4) -> chance of hue in uniform(0,0.2) else uniform(0.05,0.12) (tan/orange range); random each build
+  shader_mollusk (static): glossy tan shell shader with axial flecks
+    knobs: roughness(uniform 0.2-0.8, random) -> gloss; specular(0.3 fixed) -> highlight; value_scale(log_uniform 1-20, random) -> brightness of light/dark colors; saturation_scale(log_uniform 0.4-1, random) -> color saturation; dark_color value(0.005*value_scale**1.5) & light_color value(0.05*value_scale) -> fleck vs base brightness; hue jitter(uniform -0.06..0.06) -> color variation; dark_prob(0.4) -> fraction of dark axial flecks; n(randint 3-5) -> number of color bands; WaveTexture wave_profile("SAW"), bands_direction("X"/"Z") -> axial vs spiral striping; Scale(x_scale/z_scale), Distortion -> stripe frequency/warp
+
+FILE: assets/objects/mollusk/snail.py
+  SnailBaseFactory: revolves a cross-section along a helix into a spire
+    knobs: freq(256) -> whorl angular resolution / smoothness; ratio(uniform 0-0.3 or 0.7-1.0, random) -> color-ramp X/Z mix; z_scale(log_uniform 0.2-1, random) -> vertical shader frequency; distortion(log_uniform 2-20, random) -> shader warp
+  build_cross_section (static): shape of the whorl profile
+    knobs: n(64) -> profile vertex count; affine(1) -> profile aspect (squash); spike(0.0) -> random radial spikes amplitude; concave(2.2) -> rounded-square vs circular profile; spike hit prob(<0.2); z-rotation jitter(uniform 0..pi/12)
+  snail_make: array-modifier helix revolution + bridge
+    knobs: lateral(0.15) -> vertical advance per whorl (spire tightness); longitudinal(0.04) -> axis offset per step; freq(28) -> steps per whorl; scale(0.99) -> per-step shrink (taper); loop(8) -> number of whorls; affine, spike passthrough
+  auger_make: AUGER preset (this factory's shape)
+    knobs: solve_scale shrink(uniform 0.7-0.8) -> overall taper to needle point; lateral seed(uniform 0.1-0.15, small -> slender tall spire); longitude seed(uniform 0.9-1.0 -> narrow aperture axis); loop(randint 8-12 -> many stacked whorls); affine(uniform 0.5-0.6 -> flattened whorls); all random per build
+  conch_make/volute_make/nautilus_make: alternate presets (not used by Auger)
+  geo_shader_vector (static): assigns spiral UV/vector for shader striping (spiral groove)
+    knobs: n, interval control groove pitch mapping
+  geo_affine (static): random per-axis shear
+    knobs: offset(uniform -0.1..0.1, random) -> slight asymmetric distortion
+  create_asset: normalize scale, random orient, recenter
+    knobs: rotation_euler(uniform 0..2pi, random); location z lift(dimensions[-1]*0.4)
+
+FILE: assets/objects/mollusk/shell.py
+  ShellBaseFactory + scallop/clam/mussel makers: bivalve shells (NOT used by Auger; edit only to alter other factories)
+    knobs: z_scale(log_uniform 2-10); add_radial_groove frequency(45)/scale(0.02); add_hinge length(0.4)/width(0.1); various shape_by_angles ranges
+
+FILE: assets/objects/mollusk/__init__.py
+  re-exports factory classes; no tunables
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class / asset instancing framework
+  core/placement/detail.py -> level-of-detail / face-size resolution helpers
+  core/surface.py -> shaderfunc_to_material and add_geomod (attach shaders/geometry-node mods)
+  core/nodes/node_wrangler.py -> NodeWrangler API for building shader/geometry node graphs
+  core/nodes/node_info.py -> Nodes enum (WaveTexture, PrincipledBSDF, MixRGB, SetPosition, etc.)
+  core/nodes/node_utils.py -> build_color_ramp helper for color ramps
+  core/nodes/compatibility.py, core/nodes/utils.py -> node graph version/compat utilities
+  assets/utils/decorate.py -> subsurface2face_size, displace_vertices mesh operations
+  assets/utils/object.py -> mesh2obj/data2mesh/new_circle/new_empty/center helpers
+  assets/utils/draw.py -> shape_by_angles profile deformation
+  assets/utils/misc.py -> assign_material helper
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> butil mesh ops (modify_mesh, join_objects, apply_transform, ViewportMode, deep_clone_obj, delete)
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/color.py, core/util/logging.py -> color/logging utilities

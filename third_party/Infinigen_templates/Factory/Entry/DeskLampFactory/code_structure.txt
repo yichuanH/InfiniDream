@@ -1,0 +1,43 @@
+SUMMARY: This factory builds a single procedural lamp (desk or floor variant) as one coherent assembly: a base, a curved stand, a drum/shade head with an internal bulb rack, and an optional interior point light. DeskLampFactory subclasses LampFactory with lamp_type="DeskLamp". The upper-level file samples all geometry parameters and material assignments, then drives a geometry-node network (base + bezier stand + reversible bulb + shade head) to mesh the object and attach a warm-tinted PointLamp bulb.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/lamp/lamp.py
+  LampFactory.__init__: sets up bulb light, material choices, default param table.
+    knobs: bulb_fac.params["Temperature"](*0.6, floored at 2500) -> warmth of glow (lower=warmer); bulb_fac.params["Wattage"](*0.5) -> brightness of interior light; lamp_type("DeskLamp"/"FloorLamp1"/"FloorLamp2") -> which default preset / height regime; lampshade_material(weighted_sample of material_assignments.lampshade) -> shade appearance (random); metal_material(weighted_sample of material_assignments.furniture_leg) -> base/stand/rack metal look (random).
+  LampFactory.lamp_default_params["DeskLamp"]: fixed fallback dims used only when use_default=True.
+    knobs: StandRadius(0.01); StandHeight(0.3); BaseRadius(0.07); BaseHeight(0.02); ShadeHeight(0.18); HeadTopRadius(0.08); HeadBotRadius(0.11); ReverseLamp(True) -> shade/bulb flip orientation; RackThickness(0.002); CurvePoint1/2/3((0,0,0),(0,0,0.2),(0,0,0.3)) -> stand bezier shape/height.
+  LampFactory.sample_parameters: default sampling path (use_default=False) actually used at build.
+    knobs: stand_radius(U 0.005-0.015); base_radius(U 0.05-0.15); base_height(U 0.01-0.03); shade_height(U 0.18-0.3); head_top_radius(U 0.07-0.15); head_bot_radius(=top+U 0-0.05 -> flare); rack_thickness(U 0.001-0.003); reverse_lamp(True fixed); height(DeskLamp U 0.25-0.4, else U 1-1.5) -> overall lamp height; z1,z2,z3(sampled up curve) -> stand bezier control heights; x1,x2,x3(0 fixed; commented-out arched-neck option) -> lateral neck offset.
+  LampFactory.get_material_params: wraps materials + wear layers.
+    knobs: BlackMaterial/MetalMaterial(metal_material); LampshadeMaterial(lampshade_material); scratch(applied if U()<=scratch_prob from material_assignments.wear_tear_prob); edge_wear(same, probabilistic).
+  LampFactory.create_asset: builds mesh, optionally adds bulb light.
+    knobs: bulb spawn probability(np.random.uniform()<0.6) -> chance an interior PointLamp is added; bulb.location.z(bound_box top - ShadeHeight*0.5) -> vertical placement of light inside shade; shade_flat() -> flat shading.
+  DeskLampFactory: forces lamp_type="DeskLamp" (height 0.25-0.4).
+  FloorLampFactory: random lamp_type in {"FloorLamp1","FloorLamp2"}.
+  nodegroup_bulb: bulb+filament+socket geometry.
+    knobs: spiral Rotations(5.0), Start/End Radius(0.15), Height(0.2) -> filament coil; curve_circle radii(0.15 glass, 0.015 stem); float_curve profiles -> bulb glass silhouette and stem taper; final Translation Z(0.3).
+  nodegroup_bulb_rack: wire cage holding bulb.
+    knobs: Thickness(0.02 default, driven by RackThickness); Amount(3) -> number of support wires; InnerRadius/OuterRadius/InnerHeight/OuterHeight -> cage taper geometry.
+  nodegroup_reversiable_bulb: scales/flips bulb assembly.
+    knobs: Scale(0.3 default, driven ~0.8*TopRadius); Reverse(bool) -> 180° flip (π) and rack-support sign; -0.015 support offset.
+  nodegroup_lamp_head: shade cone + rack + bulb.
+    knobs: TopRadius*0.8 -> bulb scale; *0.15 -> inner rack radius; MapRange Top->Bot radius -> shade cone flare; extrude Offset Scale(0.005) -> shade wall thickness; RackHeight/ReverseBulb signs -> shade/rack stacking.
+  nodegroup_lamp_geometry: top-level assembly (base disk, stand bezier, head placement).
+    knobs: ShadeHeight*0.4 and *0.2 (MULTIPLY_ADD with ReverseLamp) -> rack height positioning; base curve_line/circle from BaseRadius/BaseHeight; bezier_segment from CurvePoint1-3 -> stand curve; AlignEulerToVector -> head orients to stand tangent; LightPosition sample (End Z 0.1) -> reported light anchor; outputs Bounding Box.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material pools (lampshade, furniture_leg) and wear_tear/wear_tear_prob probabilities.
+  assets/lighting/indoor_lights.py -> PointLampFactory providing the emissive bulb light (Temperature/Wattage params).
+  assets/materials/lamp_shaders.py -> lampshade/bulb shader definitions.
+  assets/materials/ceramic|fabric|metal|plastic/__init__.py -> material families sampled for base and shade.
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> optional surface wear applied in finalize_assets.
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry-node graph construction (Nodes, NodeWrangler, to_nodegroup, assign_curve).
+  core/placement/factory.py -> AssetFactory base class / create_asset contract.
+  core/placement/detail.py -> level-of-detail handling.
+  core/util/blender.py -> spawn_cube, modify_mesh, parent_to, SelectObjects helpers.
+  core/util/math.py -> FixedSeed for deterministic per-seed sampling.
+  core/util/random.py -> weighted_sample for material selection.
+  core/util/color.py -> color utilities used by shaders.
+  core/surface.py -> material/shader application infrastructure.
+  assets/utils/object.py -> object utility helpers.

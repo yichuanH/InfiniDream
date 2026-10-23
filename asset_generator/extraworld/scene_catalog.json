@@ -1,0 +1,71 @@
+{
+  "_doc": "Router catalog for ExtraWorld. Membership authority for 'is this thing producible by the ENVIRONMENT layer (gin) alone?'. Extracted from infinigen_o/infinigen/infinigen_examples/configs_nature. Usage: for each entity the scene planner extracts, (1) match its noun against catalog[].keywords; (2) if MATCHED and it is NOT a landmark/hero and needs no novel look or precise placement -> route to ENV layer, set the listed gin knob(s). (3) if UNMATCHED -> must go to OBJECT layer (code-editing). See biome_defaults for what each scene_type already enables.",
+
+  "controllable_catalog": [
+    {"name": "grass",           "kind": "ground_scatter", "gin": ["compose_nature.grass_chance"], "density_gin": "compose_nature.grass_select_max", "density_range": {"sparse": 0.3, "normal": 0.5, "many": 0.75, "dense": 0.95}, "keywords": ["grass", "lawn", "turf", "草", "草地"]},
+    {"name": "monocots",        "kind": "ground_scatter", "gin": ["compose_nature.monocots_chance"], "keywords": ["reeds", "sedge", "monocot", "tall grass", "禾本", "蘆葦"]},
+    {"name": "ferns",           "kind": "ground_scatter", "gin": ["compose_nature.ferns_chance"], "keywords": ["fern", "蕨", "蕨類"]},
+    {"name": "flowers",         "kind": "ground_scatter", "gin": ["compose_nature.flowers_chance"], "keywords": ["flower", "wildflower", "bloom", "花", "野花"]},
+    {"name": "mushroom",        "kind": "ground_scatter", "gin": ["compose_nature.mushroom_chance", "populate_scene.mushroom_chance"], "density_gin": "compose_nature.mushroom_density", "density_range": {"sparse": 1, "normal": 2, "many": 5, "dense": 9}, "keywords": ["mushroom", "fungus", "toadstool", "蘑菇", "菇"]},
+    {"name": "cactus",          "kind": "ground_scatter", "gin": ["compose_nature.cactus_chance"], "keywords": ["cactus", "succulent", "仙人掌"]},
+    {"name": "bushes",          "kind": "ground_scatter", "gin": ["compose_nature.bushes_chance"], "keywords": ["bush", "shrub", "灌木", "叢"]},
+    {"name": "decorative_plants","kind": "ground_scatter","gin": ["compose_nature.decorative_plants_chance"], "keywords": ["small plant", "decorative plant", "小植物"]},
+    {"name": "ground_leaves",   "kind": "ground_scatter", "gin": ["compose_nature.ground_leaves_chance"], "keywords": ["fallen leaves", "leaf litter", "落葉", "枯葉"]},
+    {"name": "ground_twigs",    "kind": "ground_scatter", "gin": ["compose_nature.ground_twigs_chance"], "keywords": ["twigs", "sticks", "枯枝", "樹枝"]},
+    {"name": "pinecone",        "kind": "ground_scatter", "gin": ["compose_nature.pinecone_chance"], "keywords": ["pinecone", "松果"]},
+    {"name": "pine_needle",     "kind": "ground_scatter", "gin": ["compose_nature.pine_needle_chance"], "keywords": ["pine needles", "松針"]},
+
+    {"name": "trees",           "kind": "tree", "gin": ["compose_nature.trees_chance"], "density_gin": "compose_nature.tree_density", "density_range": {"sparse": 0.03, "normal": 0.08, "many": 0.14, "dense": 0.2}, "keywords": ["tree", "forest", "woods", "樹", "森林"]},
+    {"name": "chopped_trees",   "kind": "tree", "gin": ["compose_nature.chopped_trees_chance"], "keywords": ["log", "fallen tree", "stump", "倒木", "樹樁"]},
+    {"name": "coconut_trees",   "kind": "tree", "gin": ["compose_nature.coconut_trees_chance"], "keywords": ["coconut tree", "椰子樹"]},
+    {"name": "palm_trees",      "kind": "tree", "gin": ["compose_nature.palm_trees_chance"], "keywords": ["palm", "棕櫚"]},
+
+    {"name": "boulders",        "kind": "rock", "gin": ["compose_nature.boulders_chance"], "density_gin": "compose_nature.boulder_density", "density_range": {"sparse": 0.02, "normal": 0.04, "many": 0.08, "dense": 0.14}, "keywords": ["boulder", "large rock", "巨石"]},
+    {"name": "rocks",           "kind": "rock", "gin": ["compose_nature.rocks_chance"], "keywords": ["rock", "stone", "pebble", "石", "岩石"]},
+    {"name": "glowing_rocks",   "kind": "rock", "gin": ["compose_nature.glowing_rocks_chance"], "density_gin": "compose_nature.glow_rock_density", "density_range": {"sparse": 0.01, "normal": 0.025, "many": 0.06, "dense": 0.12}, "keywords": ["glowing rock", "luminous crystal", "發光石"]},
+
+    {"name": "moss",            "kind": "surface_cover", "gin": ["populate_scene.moss_chance"], "keywords": ["moss", "苔", "青苔"]},
+    {"name": "lichen",          "kind": "surface_cover", "gin": ["populate_scene.lichen_chance"], "keywords": ["lichen", "地衣"]},
+    {"name": "ivy",             "kind": "surface_cover", "gin": ["populate_scene.ivy_chance"], "keywords": ["ivy", "vine", "常春藤", "藤"]},
+    {"name": "slime_mold",      "kind": "surface_cover", "gin": ["populate_scene.slime_mold_chance"], "keywords": ["slime mold", "黏菌"]},
+    {"name": "snow_layer",      "kind": "surface_cover", "gin": ["populate_scene.snow_layer_chance"], "keywords": ["snow cover", "snow on ground", "積雪"]},
+
+    {"name": "corals",          "kind": "underwater", "gin": ["compose_nature.corals_chance"], "density_gin": "compose_nature.coral_density", "density_range": {"sparse": 1.0, "normal": 2.5, "many": 5.0, "dense": 8.0}, "keywords": ["coral", "珊瑚"]},
+    {"name": "seaweed",         "kind": "underwater", "gin": ["compose_nature.seaweed_chance"], "keywords": ["seaweed", "海草"]},
+    {"name": "kelp",            "kind": "underwater", "gin": ["compose_nature.kelp_chance"], "density_gin": "compose_nature.kelp_density", "density_range": {"sparse": 0.2, "normal": 0.6, "many": 1.2, "dense": 2.0}, "keywords": ["kelp", "海帶"]},
+    {"name": "seashell",        "kind": "underwater", "gin": ["compose_nature.seashell_chance", "compose_nature.seashells_chance"], "keywords": ["shell", "seashell", "貝殼"]},
+    {"name": "urchin",          "kind": "underwater", "gin": ["compose_nature.urchin_chance"], "keywords": ["urchin", "海膽"]},
+    {"name": "jellyfish",       "kind": "underwater", "gin": ["compose_nature.jellyfish_chance"], "keywords": ["jellyfish", "水母"]},
+
+    {"name": "ground_creatures","kind": "creature", "gin": ["compose_nature.ground_creatures_chance", "compose_nature.ground_creature_registry"], "keywords": ["animal", "beast", "carnivore", "herbivore", "tiger", "snake", "陸生動物", "老虎", "蛇"]},
+    {"name": "flying_creatures","kind": "creature", "gin": ["compose_nature.flying_creatures_chance", "compose_nature.flying_creature_registry"], "keywords": ["bird", "dragonfly", "flying", "鳥", "蜻蜓", "飛"]},
+    {"name": "fish_school",     "kind": "creature", "gin": ["compose_nature.fish_school_chance"], "keywords": ["fish", "school of fish", "魚", "魚群"]},
+    {"name": "bug_swarm",       "kind": "creature", "gin": ["compose_nature.bug_swarm_chance"], "keywords": ["bugs", "insects", "swarm", "蟲", "蟲群"]},
+
+    {"name": "rain",            "kind": "particle", "gin": ["compose_nature.rain_particles_chance"], "keywords": ["rain", "雨"]},
+    {"name": "snowfall",        "kind": "particle", "gin": ["compose_nature.snow_particles_chance"], "keywords": ["snowfall", "falling snow", "下雪", "雪"]},
+    {"name": "dust",            "kind": "particle", "gin": ["compose_nature.dust_particles_chance"], "keywords": ["dust", "sand particles", "沙塵", "灰塵"]},
+    {"name": "falling_leaves",  "kind": "particle", "gin": ["compose_nature.leaf_particles_chance"], "keywords": ["falling leaves", "落葉飄", "飄葉"]},
+
+    {"name": "clouds",          "kind": "atmosphere", "gin": ["compose_nature.clouds_chance", "compose_nature.fancy_clouds_chance"], "keywords": ["cloud", "雲"]},
+    {"name": "wind",            "kind": "atmosphere", "gin": ["compose_nature.wind_chance"], "keywords": ["wind", "breeze", "風"]},
+    {"name": "caustics",        "kind": "atmosphere", "gin": ["compose_nature.caustics_chance"], "keywords": ["caustics", "underwater light", "焦散"]}
+  ],
+
+  "biome_defaults": {
+    "arctic":         {"wind": 0.5, "boulders": 0.3, "rocks": 0.3},
+    "canyon":         {"ground_creatures": 0.2},
+    "cave":           {"trees": 0.4, "rocks": 0.8, "glowing_rocks": 1, "grass": 0.4, "ferns": 0.6, "mushroom": 0.8, "flying_creatures": 0.2},
+    "cliff":          {"flying_creatures": 0.6},
+    "coast":          {"flying_creatures": 0.6},
+    "coral_reef":     {"kelp": 0.1, "urchin": 0.1, "corals": 1.0, "seaweed": 0.2, "seashell": 0.7},
+    "desert":         {"trees": 0.25, "cactus": 0.7, "ground_leaves": 0.5, "ground_twigs": 0.3, "chopped_trees": 0.1, "grass": 0.1, "pine_needle": 0.05, "tree_density": 0.02, "falling_leaves": 0.05, "ground_creatures": 1.0},
+    "forest":         {"ground_creatures": 0.1, "flying_creatures": 0.7, "trees": 1.0, "tree_density": 0.11, "ground_leaves": 0.7, "ground_twigs": 0.7, "chopped_trees": 0.3, "grass": 0.4, "ferns": 0.6, "flowers": 0.4, "monocots": 0.5, "mushroom": 0.3, "pinecone": 0.5, "pine_needle": 0.6, "lichen": 0.6, "falling_leaves": 0.7},
+    "kelp_forest":    {"ground_leaves": 0.2, "ground_twigs": 0.4, "kelp": 1.0, "urchin": 0.7, "seaweed": 0.8, "seashell": 0.8},
+    "mountain":       {"flying_creatures": 0.7, "trees": 0.5, "tree_density": 0.06},
+    "plain":          {"flying_creatures": 0.7, "tree_density": 0.02, "grass": 1.0},
+    "river":          {"flying_creatures": 0.7, "slime_mold": 0.3, "ivy": 0.3, "lichen": 0.3},
+    "snowy_mountain": {"snowfall": 0.5, "flying_creatures": 0.5, "boulders": 1.0},
+    "under_water":    {"creatures": 1.0, "glowing_rocks": 0.05, "rocks": 0.5, "kelp": 0.7, "corals": 0.8, "seaweed": 0.8, "seashell": 0.8, "urchin": 0.8, "caustics": 0.6, "fish_school": 0.3}
+  }
+}

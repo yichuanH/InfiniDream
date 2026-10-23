@@ -1,0 +1,39 @@
+SUMMARY: WineglassFactory procedurally builds a single stemmed wineglass by spinning a profile curve (foot → stem/neck → cup) into a surface of revolution, solidifying it to give thickness, and applying a glass material with optional wear/scratches. The upper-level files are the tableware package init, a shared TablewareFactory base (material selection, guard/inside surface logic, solidify helpers), and the wineglass entry file defining the glass silhouette proportions. (Note: the selecting request describes a gaming desk, which is unrelated to this wineglass asset.)
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/tableware/__init__.py
+  module init: re-exports all tableware factories including WineglassFactory
+    knobs: none (just imports)
+
+FILE: assets/objects/tableware/base.py
+  TablewareFactory.__init__: sets shared material/wear defaults inherited by wineglass
+    knobs: thickness(0.01, overridden by wineglass) -> wall thickness; surface(weighted_sample(material_assignments.cup), random) -> outer material; inside_surface(random cup material) -> inner material when has_inside; guard_surface(random woods material) -> guard material; scratch_prob/edge_wear_prob(material_assignments.wear_tear_prob) -> chance of scratch/edge-wear applied; scratch,edge_wear(sampled if prob passes) -> surface aging; has_guard(False) -> extrude guard band on/off; has_inside(False) -> assign separate inside material; lower_thresh(uniform(0.5,0.8), random) -> z-fraction defining lower-inside region; scale(1.0) -> overall size; metal_color("bw+natural") -> metal tint preset
+  TablewareFactory.add_guard: extrudes selected faces into a guard band
+    knobs: guard_depth(=thickness) -> guard extrusion depth; selection -> which faces become guard
+  TablewareFactory.make_double_sided: restricts selection to near-vertical normals
+    knobs: normal-z threshold(0.8) -> steepness cutoff for double-sided faces
+  TablewareFactory.solidify_with_inside: solidify + tag inside/lower-inside faces
+    knobs: thickness(arg) -> shell thickness; lower_thresh(inherited) -> inside/lower-inside boundary
+  TablewareFactory.finalize_assets: assigns materials + wear in order
+
+FILE: assets/objects/tableware/wineglass.py
+  WineglassFactory.__init__: defines glass silhouette proportions (all in FixedSeed)
+    knobs: x_end(0.25 fixed) -> foot/base radius; z_length(log_uniform(0.6,2.0), random) -> total height; z_cup(uniform(0.3,0.6)*z_length, random) -> height where cup begins; z_mid(z_cup+uniform(0.3,0.5)*(z_length-z_cup), random) -> mid-cup height; x_neck(log_uniform(0.01,0.02), random) -> stem/neck radius; x_top(x_end*log_uniform(1,1.4), random) -> cup rim radius; x_mid(x_top*log_uniform(0.9,1.2), random) -> widest cup radius; has_guard(False) -> no guard band; thickness(uniform(0.01,0.03), random) -> glass wall thickness; surface(weighted_sample(material_assignments.glasses), random) -> glass material; scale(log_uniform(0.1,0.3), random) -> final overall size
+  WineglassFactory.create_asset: builds mesh via spin + solidify + smooth shading
+    knobs: z_bottom(z_length*log_uniform(0.01,0.05), random) -> foot thickness/base bump height; x_anchors/z_anchors tuples -> profile control points of revolution; spin smoothness indices [0,1,2,3] -> which segments are smoothed; SOLIDIFY thickness(=self.thickness); shade_smooth() -> smooth normals
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material category pools (cup, glasses, woods) and wear_tear probabilities
+  assets/materials/* -> concrete material/shader generators (glass, ceramic, metal, plastic, wood, wear_tear, etc.)
+  assets/utils/draw.py -> spin(): builds surface of revolution from anchor curves
+  assets/utils/decorate.py -> read_co, write_attribute helpers
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/mesh.py, assets/utils/object.py -> mesh/object utilities
+  core/surface.py -> add_geomod, assign_material, eval_argument geometry-node plumbing
+  core/nodes/node_info.py, node_wrangler.py -> geometry-node graph API (Nodes, NodeWrangler)
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> level-of-detail/remeshing support
+  core/util/blender.py -> butil (modify_mesh, apply_transform, SelectObjects, etc.)
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform, weighted_sample samplers
+  core/util/logging.py, core/util/__init__.py, __init__ files -> package/runtime plumbing

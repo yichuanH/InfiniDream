@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Python wrapper for LLM_BACKEND=openai: puts the `anthropic` shim first on PYTHONPATH
+# at exec time (run_e2e.sh sets PYTHONPATH per command, so a one-off export is not enough),
+# then runs the real interpreter (BI_REAL_PYTHON, or `python` on PATH).
+SHIM_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+REAL_PY=${BI_REAL_PYTHON:-$(command -v python)}
+export PYTHONPATH="$SHIM_DIR${PYTHONPATH:+:$PYTHONPATH}"
+exec "$REAL_PY" "$@"

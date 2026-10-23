@@ -1,0 +1,35 @@
+SUMMARY: The FoodBoxFactory builds a single beveled cuboid representing one retail snack box/carton, wrapped with a procedurally-generated printed text/label material on all six faces. The upper-level file `food_box.py` defines the box dimensions, the shared/independent texturing decision, and the mesh construction (cube + UV wrap + bevel). The `__init__.py` simply exports this and sibling tableware factories.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/tableware/food_box.py
+  FoodBoxFactory.__init__: samples box geometry, label material, and texture-sharing flag
+    knobs: log_uniform(0.05, 0.3, 3) (random) -> box edge dimensions in meters; sorted then reordered so dimensions=[mid, min, max] (width, depth, height); changing 0.05/0.3 bounds resizes overall box.
+    knobs: dimensions reorder [d[1],d[0],d[2]] (fixed) -> which sampled sizes map to X/Y/Z; controls box proportions/uprightness.
+    knobs: self.surface = text.Text(seed)() (random per seed) -> the printed label/text material applied to faces.
+    knobs: texture_shared = uniform()<0.4 (random, 40% prob) -> whether all six faces share one texture (True) or each face is textured independently (False).
+  FoodBoxFactory.create_placeholder: makes base cube scaled to half-dimensions
+    knobs: obj.scale = self.dimensions/2 (derived) -> physical size of placeholder cube.
+  FoodBoxFactory.create_asset: finalizes visible mesh
+    knobs: wrap_six_sides(obj, surface, texture_shared) -> applies label material to all faces per shared flag.
+    knobs: BEVEL width=0.001 (fixed) -> rounding of box edges; increase for softer/larger corners.
+
+FILE: assets/objects/tableware/__init__.py
+  module exports: re-exports FoodBoxFactory and sibling tableware factories
+    knobs: (none numeric) -> add/remove factory imports to change available tableware assets.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/text.py -> Text material generator producing barcode/label-like printed surface.
+  assets/utils/object.py -> new_cube() and object creation helpers.
+  assets/utils/uv.py -> wrap_six_sides() UV-unwraps and applies material to each box face.
+  assets/utils/decorate.py -> mesh decoration utilities.
+  assets/utils/misc.py -> misc asset helpers.
+  core/placement/factory.py -> AssetFactory base class (placeholder/asset lifecycle).
+  core/placement/detail.py -> level-of-detail/placeholder resolution.
+  core/util/blender.py -> butil copy/apply_transform/modify_mesh (BEVEL) operations.
+  core/util/math.py -> FixedSeed for deterministic per-seed sampling.
+  core/util/random.py -> log_uniform sampling for dimensions.
+  core/nodes/node_wrangler.py, core/nodes/node_info.py -> shader node graph construction backend.
+  core/surface.py -> material/surface application framework.
+  core/util/logging.py -> logging.
+  assets/materials/utils/common.py -> shared material node helpers.
+  __init__.py, assets/__init__.py, assets/materials/__init__.py, assets/utils/__init__.py, core/__init__.py, core/placement/__init__.py, core/util/__init__.py, assets/materials/utils/__init__.py -> package initialization/exports.

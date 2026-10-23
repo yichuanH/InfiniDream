@@ -1,0 +1,36 @@
+SUMMARY: The CeilingClassicLampFactory builds a ceiling-mounted lamp consisting of a hanging cable, a conical/domed shade body with an inner metal fixture, distributed cross-supports along the shade, an emissive-style bulb sphere, and a parented point light. The upper-level file defines three shader functions (shade, inner metal, cable), a single geometry-nodes group that assembles the whole fixture, and the AssetFactory that samples all dimensional parameters and attaches lighting. NOTE: despite the request describing an elaborate multi-tier crystal chandelier with radial arms, bead chains, and teardrop pendants, the current code generates a simpler single-shade cable lamp — those chandelier features are not implemented in this factory.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/lamp/ceiling_classic_lamp.py
+  shader_lamp_material: shade/lampshade surface material.
+    knobs: Base Color(colors.textile_hsv() -> random HSV textile color); Roughness(uniform 0.2-0.9, random) -> matte↔glossy; Subsurface Radius((0.1,0.1,0.1)) -> soft translucency; Sheen Weight(0.2068); Coat Roughness(0.1436); Transmission Weight(0.4045) -> glass-like transparency; Alpha(0.8614) -> opacity; Emission Strength(0.0) -> off; VoronoiTexture Scale(104.3) -> bump density; Displacement Scale(0.4) -> surface relief depth
+  shader_inside_metal: inner metal fixture material.
+    knobs: Base Color((0.0018,0.0015,0.0,1) dark), Metallic(1.0 fixed), Roughness(0.0682) -> mirror↔brushed
+  shader_cable: hanging cable material.
+    knobs: Base Color((0,0,0,1) black), Metallic(1.0 fixed), Roughness(0.4273)
+  geometry_nodes: assembles cable + shade + inner metal cross-supports + bulb sphere.
+    knobs: exposed inputs cable_length/cable_radius/height/bottom_radius/top_radius/Thickness/Amount (all driven by factory params below); CurveCircle Resolution(87) -> cable roundness; cross-support duplication via DuplicateElements(Amount) spaced along top circle; MapRange radius profile 3=bottom_radius,4=top_radius -> shade taper; ExtrudeMesh Offset Scale(0.0050) -> shade wall thickness; ico_sphere Radius(0.0500 fixed), Subdivisions(4) -> bulb size/smoothness; multiply constants -1.5/-0.1 and 3.1416 rotation -> shade positioning/flip
+  CeilingClassicLampFactory.__init__: samples all lamp dimensions (random per factory_seed).
+    knobs: cable_length(uniform 0.6-0.71) -> drop height; cable_radius(uniform 0.015-0.02) -> cable thickness; height(uniform 0.4-0.71) -> shade height; top_radius(uniform 0.05-0.2) -> narrow (top) opening; bottom_radius(uniform 0.22-0.35) -> wide (bottom) opening; Thickness(uniform 0.002-0.006) -> cross-support wire thickness; Amount(randint 1-8) -> number of radial cross-supports
+  CeilingClassicLampFactory.create_placeholder: applies geometry_nodes to a cube; tags object.
+  CeilingClassicLampFactory.create_asset: clones placeholder, spawns PointLampFactory light and parents it to the lamp.
+    knobs: light source = PointLampFactory(factory_seed) (edit for brightness/color/type)
+FILE: assets/objects/lamp/__init__.py
+  module exports: registers CeilingClassicLampFactory (and other lamp factories); no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/colors.py -> color palettes/HSV samplers (textile_hsv, hsv2rgba)
+  assets/lighting/indoor_lights.py -> PointLampFactory light-source generator
+  assets/materials/lamp_shaders.py -> shader_lamp_bulb_nonemissive bulb material
+  assets/materials/utils/common.py -> shared shader helper nodes
+  assets/utils/object.py -> object creation utilities
+  core/nodes/node_wrangler.py -> NodeWrangler / Nodes node-graph builder API
+  core/nodes/node_utils.py -> to_nodegroup decorator and node helpers
+  core/nodes/node_info.py, compatibility.py, utils.py -> node metadata/compat layer
+  core/surface.py -> shaderfunc_to_material conversion
+  core/tagging.py, core/tags.py -> semantic tagging of generated geometry
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> level-of-detail/face-size handling
+  core/util/blender.py -> spawn_cube, modify_mesh, deep_clone_obj, parent_to
+  core/util/math.py -> FixedSeed deterministic RNG
+  core/util/random.py, color.py, logging.py -> RNG/color/logging utilities

@@ -1,0 +1,36 @@
+SUMMARY: LeafFactoryPine procedurally generates a single pine/fir twig: a curved central stem covered in short cone-shaped needles, used as the leaf/foliage primitive for building dense fir tree canopies (e.g. a christmas tree's green needled branches). The upper-level file defines the needle geometry and shader, the twig stem geometry and shader, geometry-node groups that instance many needles along the stem at randomized angles/density, and the AssetFactory that samples per-instance randomness (seed, curvature, length, needle angle, scale).
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/leaves/leaf_pine.py
+  shader_needle(nw): appearance of each needle (sheen + glossy + translucent mix).
+    knobs: sheen Color(0.016,0.2241,0.0252) -> needle base green tint; glossy Color(0.5771,0.8,0.5713) -> glossy highlight color (light green); glossy Roughness(0.4) -> shininess of needles; mix_shader Fac(0.3) sheen/glossy blend; translucent Color(0.0116,0.4409,0.0262) -> backlit green; mix_shader_1 Fac(0.1) -> amount of translucency
+  geometry_needle(nw): shape of a single needle (a thin cone).
+    knobs: Vertices(4) -> needle cross-section facets; Radius Top(0.01)/Radius Bottom(0.02) -> needle taper/thickness; Depth(1.0) -> needle length
+  make_needle/apply_needle: builds the reusable "Needle" mesh instanced onto twigs (fixed).
+  nodegroup_instance_needle(nw): scatters needles along the stem curve.
+    knobs: Needle Density(default 0.9) -> fraction of points that grow a needle; greater_than threshold(0.1) -> bare length near stem base; random_value Z max(0.6) -> needle length variation; combine_xyz X/Y(0.8,0.8) -> needle base scale in X/Y; value_1(0.3) -> overall needle scale multiplier; X Angle Mean/Range -> needle pitch relative to stem; random_value_1 max(360) -> random needle roll around stem
+  nodegroup_needle5(nw): stacks 5 instance_needle passes (seeds +0..+4) for fuller coverage.
+    knobs: number of instanceneedle calls(5, fixed) -> needle density/overlap
+  shader_twig(nw): stem/branch material (brown woody).
+    knobs: Base Color(0.08,0.0329,0.0414) -> twig brown color; Specular IOR Level(0.0527); Roughness(0.4491)
+  nodegroup_pine_twig(nw): builds the curved stem mesh + attaches needles.
+    knobs: divide constants(Resolution/30, then /2) -> stem curvature scaling; noise_texture W(-1.7) & value(0.5) & multiply(0.1) -> stem wobble/jitter amount; map_range/power(base 2.0) -> stem radius taper tip->base; curve_circle Resolution(16)/Radius(0.01) -> stem thickness & roundness; SetShadeSmooth(False) -> flat shading
+  geometry_node_pine_twig(nw, ...): entry wrapper passing params into pine_twig group.
+    knobs: length(30), middle_y(0.0), middle_z(0.0), x_angle_mean(-50.0), x_angle_range(10.0) -> defaults overridden by factory
+  LeafFactoryPine.create_asset: samples per-twig randomness and produces final mesh.
+    knobs: scale(class attr 0.7) -> overall twig size; seed=randint(0,1e6) random; middle_y=normal(0,0.1)/middle_z=normal(0,0.1) -> random stem bend; length=randint(25,35) -> stem length/needle count; x_angle_mean=uniform(-40,-60) -> random needle pitch; x_angle_range=10.0 fixed; obj.scale*=normal(1,0.05) -> per-twig size jitter; tag "leaf_pine"
+    note: LeafFactoryPine takes season="autumn" arg but it is unused here (no seasonal color change)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/surface.py -> shaderfunc_to_material, add_geomod, add_material helpers
+  core/nodes/node_wrangler.py -> Nodes enum and node graph construction API
+  core/nodes/node_utils.py -> to_nodegroup decorator for reusable geometry node groups
+  core/nodes/node_info.py, compatibility.py, utils.py -> node type/version resolution
+  core/placement/factory.py -> AssetFactory base class (seeded asset generation)
+  core/placement/detail.py -> level-of-detail / resolution handling
+  core/tagging.py, core/tags.py -> tag_object semantic labeling
+  core/util/blender.py -> apply_transform, purge_empty_materials, object utils
+  core/util/random.py, math.py, color.py -> sampling and color helpers
+  core/util/logging.py -> logging
+  assets/utils/object.py -> mesh object creation utilities
+  assets/__init__.py, core/__init__.py, and other __init__.py -> package wiring

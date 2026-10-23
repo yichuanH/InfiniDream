@@ -1,0 +1,71 @@
+SUMMARY: This factory builds procedural coral assets; the requested entry, BushCoralFactory, produces a branching, tree-like coral. BushCoralFactory wraps CoralFactory (generate.py) with BushBaseCoralFactory (tree.py), which generates a recursive branching skeleton via build_radius_tree/recursive_path (trees/tree.py) using randomized path directions and spawn angles. CoralFactory then remeshes, assigns a procedural shader, applies noise/bump displacement, and optionally scatters tentacles. NOTE: current tree.py growth is organic (curved paths, oblique branch angles via `rand_path` momentum/std and `get_spawn_pt` random rotation); to satisfy the right-angle/grid request you must edit tree.py's bush_config and/or trees/tree.py path/spawn logic to snap directions to axis-aligned segments.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/corals/generate.py
+  CoralFactory: top-level orchestrator — builds base geometry, material, noise/tentacles.
+    knobs: factory_methods list & weights [0.15,0.2,0.15,0.2,0.2,0.15,0.2](fixed set, random pick) -> which coral type when method=None (Bush* bypasses this); create_asset scale uniform(0.8,1.2,3) -> random per-axis size jitter; face_size(0.01) -> remesh resolution/detail.
+  CoralFactory.build_base_hue: base color hue.
+    knobs: 0.25 prob -> full-random hue vs uniform(-0.2,0.3)%1 (reddish/orange band).
+  CoralFactory.shader_coral: surface look.
+    knobs: shift uniform(0.05,0.1)*±1 -> hue offset of bright accent; subsurface_color hsv2rgba(rand,rand,1.0); bright_color sat uniform(0.7,0.9) val 0.2; dark_color sat uniform(0.5,0.7) val 0.1; light_color hue±uniform(-0.2,0.2) sat uniform(0.2,0.4) val 0.4; specular uniform(0.25,0.5); color ramp stops [0,0.3,0.7,1.0]; musgrave scale uniform(10,20) -> color patch size; roughness curve (0->0.5,1->1.0); subsurface_ratio uniform(0,0.05) or 0 (50%); subsurface_radius uniform(0.05,0.2).
+  CoralFactory.apply_noise_texture: STUCCI/MARBLE bump when has_bump.
+    knobs: noise_scale log_uniform(0.01,0.02); strength = noise_strength*uniform(0.9,1.2).
+  CoralFactory.apply_bump: VORONOI inward displacement.
+    knobs: noise_scale log_uniform(0.02,0.03); noise_intensity log_uniform(1.5,2); minkovsky_exponent uniform(1,1.5); strength = -noise_strength*uniform(1,2).
+  BushCoralFactory: entry — wires CoralFactory to BushBaseCoralFactory (no local knobs).
+
+FILE: assets/objects/corals/tree.py  (** primary file for the right-angle/grid request **)
+  TreeBaseCoralFactory: shared tree-coral config; Bush uses bush_config.
+    knobs: default_scale [1,1,1]; tentacle_prob(0.8) -> chance of tentacles; noise_strength(0.01) -> bump amount; tip(0.4); radius(0.08) -> trunk thickness; points_fn radius (0.05,0.4) -> tentacle placement min-dist/radius-threshold.
+  TreeBaseCoralFactory.bush_config: recursive branch skeleton (3 levels: major/minor/detail).
+    knobs: n_branch randint(6,8) -> main branch count; n_major/n_minor/n_detail randint(4,5)/(4,5)/(3,4) -> segments per level; span uniform(0.4,0.5) -> outward vs upward lean of major branches; per-level path_kargs std(0.4) -> path wobble (SET TO 0 for straight segments), momentum(0.4/0.6) -> directional persistence, sz decays (0.03,0.08-0.1,0.01) -> segment lengths; spawn_kargs ang_min π/12 ang_max π/8 -> branch-off angle range (SET BOTH TO π/2 for 90° turns), axis2=[0,0,1] -> branch rotation axis; init_vec uses cos/sin(2πidx/n_branch±uniform(-π/9,π/9)) with z=sqrt(1-span²) -> radial direction jitter (remove jitter & snap to axes for grid look).
+  TreeBaseCoralFactory.twig_config: alternate (not used by Bush) — same knob families, ang π/8–π/6, span uniform(0.7,0.8), doubled n_pts.
+  TreeBaseCoralFactory.radius_fn: taper along branches.
+    knobs: radius_decay_root(0.85); radius_decay_leaf uniform(0.4,0.6) -> tip thinning.
+  create_asset: resolution(16) -> curve smoothness (LOWER toward 1 for blocky segments); geo_radius segments arg 32 -> cross-section roundness.
+
+FILE: assets/objects/corals/base.py
+  BaseCoralFactory: defaults inherited by all base factories.
+    knobs: tentacle_distance(0.05); default_scale([0.8]*3); noise_strength(0.02); tentacle_prob(0.5); bump_prob(0.3); density(500) -> tentacle scatter count.
+
+FILE: assets/objects/corals/tentacles.py
+  build_tentacles: spike geometry scattered on surface.
+    knobs: n_branch(5); n_major(8); path std(0.5) momentum(0.5) sz(0.008); spawn init_vec sample_direction(0.6); base_radius uniform(0.002,0.004).
+  make_radius_points_fn/make_upward_points_fn/make_min_distance_points_fn: where tentacles land (min_distance, radius_threshold, max_angle).
+  geo_tentacles: instancing.
+    knobs: density(default 500); scale uniform([0.6]*3,[1.0]*3); random rotation uniform(0,2π).
+  shader_tentacles: tentacle color.
+    knobs: roughness(0.8); specular(0.25); color hue base±uniform(-0.1,0.1) sat uniform(0.4,0.6) val 0.5; fresnel_color hsv2rgba(rand,0.6,0.6).
+
+FILE: assets/objects/trees/tree.py  (** low-level growth engine — edit for grid/right-angle behavior **)
+  rand_path: generates each branch segment path.
+    knobs: std -> per-step random deviation (0 = straight); momentum -> smoothing; sz/sz_decay -> segment length; init_vec -> start direction. Snap `new_delta`/`delta` to nearest axis here to force axis-aligned straight/90° growth.
+  get_spawn_pt: chooses branch-off point & new direction.
+    knobs: rng[0.5,1]; ang_min/ang_max -> branch turn angle (force π/2); axis2 -> rotation axis; rnd_ang random sign. Override init_vec to an axis vector for right-angle turns.
+  recursive_path: builds nested branch hierarchy from configs (n, path_kargs, spawn_kargs, children, symmetry).
+  build_radius_tree / FineTreeVertices: converts skeleton to mesh with per-vertex radius; resolution -> interpolation subdivisions (quadratic interp `interp1d` smooths corners — set kind='linear' or resolution=1 to keep sharp 90° corners).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class & asset collection helpers.
+  core/placement/detail.py -> remesh_with_attrs (uniform remeshing at face_size).
+  core/surface.py -> shaderfunc_to_material, add_geomod, geometry-node evaluation.
+  core/nodes/node_wrangler.py -> NodeWrangler helpers (uniform, musgrave, compare, extrude, etc.).
+  core/nodes/node_info.py -> Nodes enum of geometry/shader node types.
+  core/nodes/node_utils.py -> build_color_ramp and node-graph utilities.
+  core/tagging.py / core/tags.py -> tag_object semantic labeling, COMBINED_ATTR_NAME.
+  core/util/blender.py -> mesh modifier/edit-mode/transform wrappers (butil).
+  core/util/color.py -> hsv2rgba color conversion.
+  core/util/math.py -> FixedSeed deterministic seeding.
+  core/util/random.py -> log_uniform sampling.
+  assets/utils/object.py -> new_icosphere, new_circle, mesh2obj, data2mesh, join_objects, origin2lowest, etc.
+  assets/utils/decorate.py -> geo_extension, read_co/write_co, displace_vertices, remove_vertices, subsurface2face_size.
+  assets/utils/mesh.py -> polygon_angles, treeify, build_convex_mesh.
+  assets/utils/draw.py -> shape_by_angles, make_circular_interp.
+  assets/utils/nodegroup.py -> geo_radius node group (radius-based tube skinning).
+  assets/utils/shortest_path.py -> geo_shortest_path (fan coral growth).
+  assets/utils/laplacian.py -> build_laplacian_3d (cauliflower coral).
+  assets/utils/reaction_diffusion.py -> reaction_diffusion, feed2kill, make_periodic_weight_fn (brain/honeycomb).
+  assets/utils/misc.py -> assign_material, sample_direction.
+  infinigen_gpl/extras/diff_growth.py -> build_diff_growth (leather/table coral).
+  assets/objects/trees/utils/* (geometrynodes, helper, mesh) -> tree skeleton radius/skin node groups & rodrigues_rot helpers.

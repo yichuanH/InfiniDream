@@ -1,0 +1,37 @@
+SUMMARY: This factory builds a single upholstered seating asset (SofaFactory with an ArmChair-scale subclass) as one coherent geometry-nodes assembly: a padded shell with arms, backrest, seat cushions, baseboard, and legs. The upper-level file `sofa.py` defines the procedural node graph (`nodegroup_sofa_geometry` plus helper node groups), a randomized parameter sampler (`sofa_parameter_distribution`), and the two AssetFactory classes that instantiate geometry, assign a fabric material, and produce a smoothed high-poly mesh. `ArmChairFactory` overrides only the overall dimensions to make a compact single-seat chair.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/seating/sofa.py
+  nodegroup_array_fill_line (node group): tiles an instance evenly along a line between two points; used to array seat/back cushions.
+    knobs: Count(int, driven by params) -> number of cushion segments; Instance Dimensions -> per-cushion spacing.
+
+  nodegroup_corner_cube (node group): builds a box positioned by a corner/centering reference; base primitive for arms, boards, cushions, feet.
+    knobs: Vertices X/Y/Z(default 4) -> mesh resolution/subdiv quality; CenteringLoc, Dimensions, SupportingEdgeFac -> placement/shape.
+
+  nodegroup_sofa_geometry (main geometry graph): assembles arms, backrest, baseboard, seat cushions, backrest cushions, and legs; tags support/cushion surfaces; outputs geometry + bounding box.
+    knobs (exposed sockets, set via params): Dimensions(x,y,z) -> overall footprint/height; Arm Dimensions -> arm size; Back Dimensions -> backrest thickness/height; Seat Dimensions -> cushion size; Foot Dimensions -> foot/leg-base block size; Baseboard Height(0.13) -> plinth thickness; Backrest Width(0.11) -> back cushion depth; Seat Margin(0.97) -> cushion inset; Backrest Angle(-0.20) -> back recline; arm_width(0.70) -> arm taper via FloatCurve; Arm Type(SQUARE=0/ROUND=1/ANGULAR=2) -> arm silhouette; Arm_height(0.7318) -> angular-arm profile via FloatCurve; arms_angle(0.8727) -> angular-arm rotation; Footrest(bool) -> adds chaise section; Count(4) -> multi-seat vs single (branches geometry); Scaling footrest(1.5) -> footrest X-scale; Reflection(±1) -> mirror side of footrest; leg_type(bool) -> cone taper leg vs block foot; leg_dimensions(0.5) -> leg XY thickness; leg_z(1.0) -> leg height scale; leg_faces(20) -> leg cylinder/cone facets; Subdivide(True) -> smooth subdivision on/off.
+    hardcoded curve/shape knobs: FloatCurve points for arm_width taper `[(0.0092,0.7688)...(1.0,0.2187)]`; FloatCurve for Arm_height `[(0.1341,0.2094)...(1.0,0.0)]`; cone leg Radius Top 0.01 / Radius Bottom 0.025 / Depth 0.07; back-cushion ExtrudeMesh Offset 0.03 and ScaleElements 0.6 (tufting look); SubdivisionSurface levels.
+
+  sofa_parameter_distribution(dimensions): samples all node-graph params (mostly random per seed).
+    knobs: Dimensions default random uniform(0.95,1.1) x clip_gaussian(1.75,0.75,0.9,3) x uniform(0.69,0.97); Arm Dimensions Y uniform(0.06,0.15), Z uniform(0.5,0.75); Back Dimensions X uniform(0.15,0.25); Seat Dimensions Y uniform(0.7,1) Z uniform(0.15,0.3); Foot Dimensions X uniform(0.07,0.25); Baseboard Height uniform(0.05,0.09); Backrest Width uniform(0.1,0.2); Seat Margin uniform(0.97,1); Backrest Angle uniform(-0.15,-0.5); Arm Type p=[0.4,0.2,0.4] (square/round/angular); arm_width uniform(0.6,0.9); Arm_height uniform(0.7,1.0); arms_angle uniform(0.0,1.08); Footrest prob 0.5 & length>2; Count 4 with prob 0.2 else 1; Scaling footrest uniform(1.3,1.6); Reflection ±1 (p 0.5); leg_type bool (p 0.5); leg_dimensions uniform(0.4,0.9); leg_z uniform(1.1,2.5); leg_faces uniform(4,25).
+
+  SofaFactory: entry factory; samples params under FixedSeed, picks a fabric material, builds placeholder mesh, and produces smoothed high-poly asset.
+    knobs: sofa_fabric via weighted_sample(material_assignments.fabrics) -> upholstery material (swap list/weights to bias fabric/leather); create_placeholder SUBSURF/relabel; create_asset SUBSURF levels=1 + shade_smooth -> final smoothness.
+
+  ArmChairFactory(SofaFactory): compact single-chair variant, overrides dimensions only.
+    knobs: dimensions = uniform(0.8,1) x uniform(0.9,1.1) x uniform(0.69,0.97) -> chair footprint/height (narrower depth than sofa to force single-seat scale).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides `fabrics` weighted material list used for upholstery.
+  assets/materials/** -> material shader node groups (fabric, wood, metal, wear_tear, etc.).
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py -> geometry-node graph construction API (`Nodes`, `NodeWrangler`, `to_nodegroup`, `assign_curve`).
+  core/placement/factory.py -> `AssetFactory` base class and create_asset lifecycle.
+  core/placement/detail.py -> level-of-detail / face-size handling.
+  core/surface.py -> `assign_material` and surface utilities.
+  core/tagging.py, core/tags.py -> semantic tagging (`Subpart.SupportSurface`, TAG_support/cushion) for support-surface labeling.
+  core/util/blender.py -> mesh spawn/copy/modify helpers (spawn_vert, modify_mesh, copy, SelectObjects).
+  core/util/math.py -> `FixedSeed` deterministic seeding.
+  core/util/random.py -> `clip_gaussian`, `weighted_sample` sampling helpers.
+  core/util/color.py, logging.py -> color/logging utilities.
+  assets/utils/object.py -> object-level helper utilities.

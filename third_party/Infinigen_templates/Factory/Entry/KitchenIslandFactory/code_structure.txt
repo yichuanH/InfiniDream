@@ -1,0 +1,82 @@
+SUMMARY: This factory builds a kitchen island — a single freestanding cabinet body (bottom cabinets with drawers/doors) topped with a thick marble worktop. KitchenIslandFactory is a thin subclass of KitchenSpaceFactory forced into island mode (wider, no upper cabinets/hood/backsplash). KitchenSpaceFactory assembles a KitchenCabinetFactory (which composes LargeShelf frames + doors/drawers) and adds a generated marble table-top slab on top via geometry nodes. The table_top / table_utils / range_hood / drawer / door modules are the reusable procedural components it draws from.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/shelves/kitchen_space.py
+  KitchenIslandFactory: entry point; forces island=True (no upper cabinets, wide body, marble top).
+    knobs: (no direct knobs — inherits all from KitchenSpaceFactory)
+  KitchenSpaceFactory.__init__: overall island dimensions and layout.
+    knobs: dimensions x(uniform 0.7–1.0) -> body depth; y(uniform 1.7–5) -> body length; z(uniform 2.3–2.5) -> total height (unused for island); island x-multiplier(uniform 1.5–2) -> makes island wider; all sampled random.
+  KitchenSpaceFactory.sample_parameters: cabinet heights.
+    knobs: cabinet_bottom_height(uniform 0.8–1.0) -> body/counter height; cabinet_top_height(uniform 0.8–1.0) -> upper cabinet height (island ignores).
+  KitchenSpaceFactory.create_asset: builds body + worktop; for island only bottom cabinet is used.
+    knobs: cabinet_bottom dimensions=(x, y-0.15, cabinet_bottom_height) -> footprint; drawer_only=True -> bottom cabinet has drawers/doors only; (non-island) top_mid_width(uniform 1.0–1.3), cabinet_top_width, mid_style(choice(["cabinet"]) — 'range_hood' commented out).
+  KitchenSpaceFactory.create_placeholder: bounding placeholder; adds SupportSurface tag.
+    knobs: box x-padding(*1.08); bottom height offset(+0.13).
+  geometry_nodes_add_cabinet_top: generates the marble worktop slab.
+    knobs: Thickness value(0.0500) -> worktop thickness; Profile Width multiply(1.4140) -> top overhang scale; Fillet Ratio(0.0100), Fillet Radius Vertical(0.0100) -> edge rounding; N-gon(4) -> rectangular; shader_marble -> worktop material (swap for granite look).
+  nodegroup_tag_cube: tags face index 5 as SupportSurface for placement.
+
+FILE: assets/objects/shelves/kitchen_cabinet.py
+  KitchenCabinetFactory.sample_params: bottom cabinet frame dims & cell layout.
+    knobs: dimensions default(uniform depth 0.25–0.35, length 1.0–4.0, height 0.5–1.3) -> passed-in dims override; shelf_depth(dim0-0.01); cell height ~0.3 each; side_board_thickness(0.02); division_board_thickness(0.02); bottom_board_height(0.06); n_cells(dim1/0.45); interval widths(uniform 0.55–1.0, normalized).
+  KitchenCabinetBaseFactory.get_material_params: cabinet material.
+    knobs: frame_material choice(["white","black_wood","wood"] p=[0.4,0.3,0.3]) -> body finish (change palette for stone-clad look); board_material = frame_material.
+  KitchenCabinetBaseFactory.create_cabinet_components: per-cell attachment type.
+    knobs: attach_type drawer_only choice(["drawer","door"] p=[0.5,0.5]); else choice(["drawer","door","none"] p=[0.4,0.4,0.2]) -> open recesses ('none') vs doors/drawers.
+  KitchenCabinetBaseFactory.get_attach_params: door/drawer sizing & hinge positions.
+    knobs: door split threshold(shelf_width<=0.6 single vs double); edge_thickness_1(0.01); door_open_angle(0); drawer sizing derived from frame.
+
+FILE: assets/objects/shelves/large_shelf.py
+  LargeShelfBaseFactory.get_asset_params: frame board dimensions & screws.
+    knobs: shelf_depth(normal 0.26±0.03, clip 0.18–0.36); side_board_thickness(normal 0.02, clip 0.015–0.025); backboard_thickness(0.01); bottom_board_y_gap(uniform 0.01–0.05); bottom_board_height(normal 0.083, clip 0.05–0.11, 20% zeroed); division_board_thickness(normal 0.02); screw_depth_head(uniform 0.001–0.004); screw_head_radius(uniform 0.001–0.004); screw_width_gap(uniform 0–0.02); screw_depth_gap(uniform 0.025–0.06); attach_length/width/thickness/gap ranges; shelf_cell_width choice([0.76,0.36]); shelf_cell_height(0.3±); frame_material choice(["white","black_wood","wood"] p=[0.4,0.3,0.3]).
+  LargeShelfBaseFactory.get_material_func: maps material name->shader (white/black_wood/wood).
+  nodegroup_side_board/back_board/bottom_board/division_board/screw_head: frame board geometry & screw heads.
+    knobs: board sizes/translations driven by params above; screw cylinder placement gaps.
+
+FILE: assets/objects/shelves/doors.py
+  CabinetDoorBaseFactory.get_asset_params: door panel geometry & materials.
+    knobs: door_height(uniform 0.7–2.2); door_width(uniform 0.3–0.4); edge_thickness_1(uniform 0.01–0.018); edge_width(uniform 0.03–0.05); edge_thickness_2(uniform 0.005–0.008); edge_ramp_angle(uniform 0.6–0.8); knob_R(uniform 0.003–0.006); knob_length(uniform 0.018–0.035); attach_height gap(uniform 0.05–0.15); has_mid_ramp(choice True/False p=[0.6,0.4]); frame_material choice(["white","black_wood","wood"] p=[0.5,0.2,0.3]); panel_material may be glass (p up to 0.4).
+  geometry_door_nodes + nodegroup_ramped_edge/mid_board/knob_handle/panel_edge_frame: builds paneled door with ramped-edge frame and knob.
+
+FILE: assets/objects/shelves/drawers.py
+  CabinetDrawerBaseFactory.get_asset_params: drawer geometry & materials.
+    knobs: drawer_board_thickness(uniform 0.005–0.01); drawer_board_width(uniform 0.3–0.7); drawer_board_height(uniform 0.25–0.4); drawer_depth(uniform 0.3–0.4); drawer_side_height(uniform 0.05–0.2); side_tilt_width(uniform 0.02–0.03); knob_radius(uniform 0.003–0.006); knob_length(uniform 0.018–0.035); drawer_material choice(["white","black_wood","wood"] p=[0.5,0.2,0.3]); knob_material choice([drawer_material,"metal"] p=[0.5,0.5]).
+  geometry_nodes + nodegroup_kallax_drawer_frame/drawer_door_board/door_knob/board_rail: drawer box + front panel + knob.
+
+FILE: assets/objects/tables/table_top.py
+  nodegroup_generate_table_top: the worktop/slab generator used by kitchen_space.
+    knobs: Thickness, N-gon, Profile Width, Aspect Ratio, Fillet Ratio, Fillet Radius Vertical -> slab shape/edges (driven from caller).
+  TableTopFactory.sample_parameters: standalone defaults (not used by island).
+    knobs: Profile N-gon(4), Profile Width(1.0), Aspect Ratio(1.0), Fillet Ratio(0.2), Thickness(0.1), Vertical Fillet Ratio(0.2).
+
+FILE: assets/objects/tables/table_utils.py
+  nodegroup_n_gon_profile / n_gon_cylinder / generate_radius_curve / create_cap / create_legs_and_strechers / arc_top / bent / align_bottom_to_floor / merge_curve: reusable profile/loft/leg helpers for table-top and range-hood geometry.
+
+FILE: assets/objects/table_decorations/utils.py
+  nodegroup_star_profile / cylinder_side / shifted_circle / lofting / lofting_poly / warp_around_curve / flip_index: lofting utilities used by range_hood (and available for cladding forms).
+
+FILE: assets/objects/wall_decorations/range_hood.py
+  RangeHoodFactory: alternative center element (currently disabled by mid_style=choice(["cabinet"])).
+    knobs: dimensions default x=0.55,y=0.75,z=1.0; height_1(uniform 0.05–0.07); height_2(uniform 0.1–0.3); scale_2(uniform 0.25–0.4); SOLIDIFY thickness(0.002); metal material via weighted_sample(material_assignments.metals); scratch/edge_wear via wear_tear_prob.
+  geometry_range_hood: lofted hood shell geometry.
+
+EDITABLE (also present but not on island path):
+FILE: assets/objects/shelves/__init__.py, assets/objects/tables/__init__.py, assets/objects/wall_decorations/__init__.py
+  package exports only; edit to expose/rename factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/ceramic/marble.py -> shader_marble used for the worktop slab (marble/granite look).
+  assets/materials/wood/plywood.py -> shader_shelves_white/wood/black_wood(_z), get_shelf_material for cabinet/door/drawer finishes.
+  assets/materials/ceramic/__init__.py, assets/materials/__init__.py, assets/materials/utils/* -> material shader registry/helpers.
+  assets/composition/material_assignments.py -> metals palette + wear_tear probabilities (range hood).
+  assets/utils/object.py -> new_bbox for placeholders.
+  assets/utils/decorate.py -> mesh decoration helpers.
+  core/placement/factory.py -> AssetFactory base class + create_asset contract.
+  core/placement/detail.py -> detail/placeholder machinery.
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry-node graph construction (nw.new_node, to_nodegroup).
+  core/surface.py -> add_geomod, shaderfunc_to_material, assign_material.
+  core/tagging.py, core/tags.py -> tag_system, tag_nodegroup, Subpart.SupportSurface tagging.
+  core/util/blender.py -> join_objects, apply_transform, delete, modify_mesh.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> weighted_s

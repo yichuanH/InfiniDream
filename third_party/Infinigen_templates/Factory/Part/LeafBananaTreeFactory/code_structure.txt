@@ -1,0 +1,80 @@
+SUMMARY: This factory builds procedural banana/tropical plants. LeafBananaTreeFactory generates a single large arching banana leaf (broad blade with central midrib, split/jigsaw edges, and waves) from a subdivided plane using geometry-node groups; PlantBananaTreeFactory adds a curved thick pseudostem and instances leaves at its top to form the whole plant. leaf_banana_tree.py holds the factory logic, leaf/stem/plant geometry graphs, and the leaf shader; tropic_plant_utils.py provides the reusable node groups (midrib, veins, leaf shape, jigsaw edges, sub-vein, shaders) that the leaf generator composes. Note: the current output is a leaf/plant only — no hanging banana bunch is generated.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tropic_plants/leaf_banana_tree.py
+
+  nodegroup_nodegroup_apply_wave (leaf waviness deformation):
+    knobs: colorramp.elements[1].position(uniform 0.3-0.5, random) -> width of edge-wave falloff across blade; leaf_h_wave_control_points (5 pts) -> lengthwise arching of blade; leaf_w_wave_control_points (4 pts) -> crosswise fold/wing curl; leaf_edge_wave_control_points (9 pts) -> rippling of leaf margin; normal(0.0,0.02) jitter on width-wave points (random)
+
+  shader_leaf_material (leaf color/appearance):
+    knobs: noise Scale(6.8)/Detail(10.0)/Roughness(0.7) -> mottling of green tone; main_leaf_hsv=(hue uniform 0.26-0.37, sat 0.8-1.0, val 0.15-0.55, random) -> base green leaf color; main_leaf_hsv_2 hue jitter normal(0,0.02) (random) -> secondary green variation; map_range val 0.8-1.2 / 0.48-0.52 -> value/hue spread; mix uses vein attribute + stem_color_hsv for midrib color
+
+  nodegroup_round_tropical_leaf (blade construction):
+    knobs: SubdivideMesh Level(10 then +default) -> mesh resolution/smoothness; Vein Asymmetry(0.3023) -> vein tilt; Jigsaw Scale(uniform 5-20, random) -> number of edge splits; Jigsaw Depth(param) -> depth of split notches; Vein Angle(0.3); Midrib Length(0.333); Stem Length(0.6); Midrib Width(uniform 0.8-1.4, random) -> thickness of central rib; sub_vein multiply(0.0005) -> sub-vein relief height
+
+  nodegroup_leaf_on_stem (leaf placement on stem):
+    knobs: End Size(0) endpoint selection -> leaf sits at stem tip; rotate_instances (-1.5708,0,0) -> leaf orientation; Scale (from leaf_scale) -> leaf size
+
+  nodegroup_stem_curvature (pseudostem bending):
+    knobs: ResampleCurve Count(100) -> stem smoothness; To Min1/To Min2 (from stem_x/y_curvature) -> lean/arch of stem; VectorRotate Center(0,0,2.0) -> pivot height
+
+  nodegroup_stem_geometry (pseudostem thickness):
+    knobs: MapRange radius 0.4-0.8 SMOOTHSTEP -> taper of stem thickness top→bottom; CurveCircle Radius(0.02) -> overall stem thickness/scale factor; Fill Caps(True)
+
+  geometry_leaf_nodes / geometry_plant_nodes (assemble leaf-only vs full plant):
+    knobs: curve_line_1 Start(0,0,2.0)/End(0,0,0) -> stem height; stem_y_curvature(uniform -0.5..0.5, random); stem_x_curvature(=-leaf_x_curvature); leaf_scale(normal 1.0,0.3, random) -> per-leaf size; plant_translation/plant_z_rotate/plant_scale from params
+
+  LeafBananaTreeFactory (leaf contour/wave/param presets):
+    get_leaf_contour: "oval"[0.13,0.275,0.35,0.365,0.32,0.21] / "pear"[0.30,0.46,0.46,0.43,0.37,0.23] -> overall blade outline
+    get_h_wave_contour: modes "flat"/"s"/"w" -> lengthwise wave profile
+    get_w_wave_contour: "fold"(scale uniform 0.1-0.3) / "wing"(scale uniform 0.0-0.3) -> cross-fold shape
+    get_e_wave_contour: "wavy"(scale 10) / "flat"(scale 0) -> edge ripple
+    update_params knobs (all sampled if unset):
+      contour mode p=[oval 0.5, pear 0.5]; h_wave p=[flat0.4,w0.3,s0.3]; w_wave p=[fold0.2,wing0.8]; e_wave p=[wavy1.0,flat0.0]; jigsaw on/off p=[0.4,0.6] depth uniform 0.8-1.7; leaf_width(uniform 0.5-0.85) -> blade broadness; leaf_h_wave_scale(uniform 0.02-0.2); leaf_w_wave_scale(uniform 0.05-0.25); leaf_x_curvature(uniform 0.0-0.1) -> downward arch; stem_color_hsv(hue 0.25-0.32, sat 0.8-1.0, val 0.8-1.0, random) -> midrib/stem color
+
+  PlantBananaTreeFactory (full-plant wrapper):
+    knobs: plant_translation(0,0,0 fixed); plant_z_rotate(uniform -0.4..0.4, random); plant_scale(uniform 0.8-1.5 isotropic, random) -> overall plant size
+
+FILE: assets/objects/tropic_plants/tropic_plant_utils.py
+
+  nodegroup_nodegroup_midrib (central rib shape):
+    knobs: stem_shape curve pts -> midrib centerline; noise multiply(0.01) -> rib jitter; map_range_4 (0.001-0.03) -> rib width falloff; Midrib Length/Width/Stem Length driven by caller
+
+  nodegroup_nodegroup_shape (blade outline via contour points):
+    knobs: Y clamp(-0.6..0.6) -> blade extent; leaf_contour_control_points curve -> blade silhouette (falls back to fixed default if None)
+
+  nodegroup_nodegroup_shape_with_jigsaw (split edges):
+    knobs: colorramp positions(0.4795/0.5545) -> sharpness of edge cuts; Jigsaw Scale/Depth driven by caller; less_than 0.5 threshold deletes outside geometry
+
+  nodegroup_nodegroup_sub_vein (fine vein relief):
+    knobs: voronoi Scale(30.0) coarse veins, Scale(150.0) fine veins; map_range spreads -> sub-vein density/contrast
+
+  nodegroup_node_group / vein_coord_00x (vein pattern/direction):
+    knobs: Voronoi Randomness(0.2); vein_shape FloatCurve pts -> vein curvature; Random Scale Seed values(3.57,1.08) -> secondary vein variation
+
+  nodegroup_nodegroup_apply_vein_midrib (vein displacement combine):
+    knobs: noise Scale(20.0), multiply(0.02) -> vein bumpiness; map_range spreads -> vein prominence
+
+  nodegroup_nodegroup_leaf_shader (leaf BSDF mix):
+    knobs: glossy Roughness(0.3); mix_shader Fac diffuse/glossy(0.2); mix_shader translucent Fac(0.3) -> sheen vs translucency of leaf
+
+  shader_stem_material (pseudostem material):
+    knobs: stem_color_hsv (default hue 0.25-0.32, sat 0.6-0.9, val 0.2-0.6, random) -> stem base color
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/nodes/node_wrangler.py -> NodeWrangler + Nodes enum for building geometry/shader node graphs
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve helper for FloatCurve control points
+  core/nodes/node_info.py -> node type/socket metadata
+  core/nodes/compatibility.py -> Blender-version node compatibility shims
+  core/nodes/utils.py -> misc node graph helpers
+  core/surface.py -> add_geomod / add_material / shaderfunc_to_material to apply node groups to objects
+  core/placement/factory.py -> AssetFactory base class (seeding, create_asset lifecycle)
+  core/placement/detail.py -> level-of-detail / resolution handling
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/random.py, core/util/math.py -> sampling/math utilities
+  core/util/blender.py -> Blender object/scene helpers
+  assets/utils/object.py -> object creation utilities
+  core/util/logging.py -> logging
+  assets/__init__.py, core/__init__.py, core/nodes/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package init/exports

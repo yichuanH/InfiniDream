@@ -1,0 +1,66 @@
+SUMMARY: This factory builds procedural bushes/shrubs via BushFactory (a GenericTreeFactory subclass): a space-colonization skeleton is skinned into a woody trunk/branches, then twig collections carrying leaves (and optionally flowers/berries) are distributed along it. The upper-level files define the tree skeleton/skinning configs (treeconfigs.shrub), the twig/branch geometry-node builders (tree.py, branch.py), and the leaf/flower/fruit asset factories that populate the branches. To match "hanging curtain of cave vines" you would need to override the shrub skeleton to trail stems straight downward, raise stem count, thin/lengthen radii, and swap the leaf type to small oval leaves — none of the current knobs produce downward-trailing vines, so shrub()/skeleton configs are the primary edit targets.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/trees/generate.py
+  BushFactory: entry factory; picks shrub skeleton shape, trunk bark material, leaf type, builds twig collection.
+    knobs: n_leaf(3) -> number of distinct leaf meshes per twig collection; n_twig(3) -> number of twig variants distributed on branches; max_distance(50) -> LOD cull distance; shrub_shape(randint(0,2)) -> att-volume shape (0 ball,1 cone,2 cube) controlling foliage envelope; leaf_type(np.random.choice(["leaf_v2","flower","berry"], p=[0.5,0.5,0])) -> whether foliage is leaves or flowers (berry currently p=0)
+  GenericTreeFactory: shared skeleton→skin→children pipeline for all trees/bushes.
+    knobs: scale(0.35) -> global size (units→meters) of skeleton; adapt_mesh_method("remesh") -> meshing; decimate_placeholder_levels(0) -> subsurf smoothing level
+  random_season(weights): samples season string.
+    knobs: default weights([autumn .25, summer .3, spring .4, winter .1]) -> leaf color/density regime
+  random_tree_child_factory / make_twig_collection / make_leaf_collection: map leaf_type strings to leaf/fruit factories; decimate_rate(0.97 for twigs) -> leaf mesh simplification
+  TreeFactory: (full trees, not used by bush) leaf/fruit type probability tables.
+    knobs: get_leaf_type p=[leaf_v2 0, broadleaf .70, ginko .15, maple .15]; get_fruit_type p over apple/coconut/durian/starfruit/compositional; fruit_chance(1.0)
+
+FILE: assets/objects/trees/treeconfigs.py
+  shrub(init_pos, shrub_shape): defines the bush skeleton/twig/leaf params — THE key file for changing bush structure.
+    knobs: scale(0.2) -> overall bush size; att_fn_ball/cone/cube scaling([7,7,7]*scale etc) -> foliage volume shape/extent; tree_config n_pts(3) & sz(0.8-1.0) & std(0.1-1) & momentum(0.7) -> trunk straightness/length; branch_config n(5), n_pts(5), sz(0.4), std(1.4), momentum(0.4) -> branch count/length/waviness; trunk_spacecol D(0.3)/s(0.4)/d(10) -> space-colonization step size & attractor spacing (branch density); child_placement Density(0.7), Min/Max scale(1.2-1.4*scale), Multi inst(3), depth_range(0,2.7), Pitch/Yaw variance(2.0) -> leaf density/size/orientation spread; skinning Min radius(0.005)/Max radius(0.025)/Exponent(2) -> trunk/branch thickness taper. (To make trailing vines: set pull_dir downward, increase branch n, raise n_pts/sz, thin radii.)
+  shrubtwig_config / subtwig_config: recursive twig skeleton (path_kargs n_pts, sz, std, momentum; spawn_kargs ang_min/ang_max ~pi/4) -> twig branching geometry that leaves attach to. NOTE: no downward pull here — add pull_dir/pull_factor for hanging stems.
+  generate_tree_config / random_tree / pine_tree etc: full-tree configs (not used by bush) with analogous knobs.
+  calc_height(min_ht,max_ht,bias,uniform): maps genome→height for full trees.
+
+FILE: assets/objects/trees/tree.py
+  tree_skeleton / recursive_path / space_colonization / rand_path: engine that turns configs into skeleton vertices.
+    knobs: rand_path std/momentum/pull_dir/pull_factor/sz_decay -> per-path straightness & directional bias (set pull_dir=[0,0,-1] for downward stems); space_colonization D/d/s/dir_rand/mag_rand/n_steps -> growth step, attractor removal radius, randomness, iterations; get_spawn_pt ang_min/ang_max -> branch emergence angles
+  skin_tree / add_tree_children: geo-node wrappers exposing set_tree_radius / coll_distribute params (radius, density, scale, pitch/yaw variance).
+
+FILE: assets/objects/trees/branch.py
+  BranchFactory.sample_branch_params: (used by full TreeFactory, not bush) branch mesh with twigs/leaves/fruit.
+    knobs: main branch noise amount(0.2-0.4)/scale(0.9-1.3) -> branch waviness; overall radius(0.015-0.025) -> branch thickness; twig density(5-15)/rotation(30-60)/scale(3-7)/noise(0.2-0.4); leaf density(5-25)/scale(0.25-0.35)/rot(30-60); fruit scale(0.15-0.25)/density(clipped)
+  generate_branch / nodegroup_* : geometry-node graph placing instances along a curve (trim_top, keep probability 0.3 fixed).
+
+FILE: assets/objects/leaves/leaf_v2.py
+  LeafFactoryV2 (default bush leaf): broad leaf shape/vein/color.
+    knobs: scale(0.5); sample_geo_genome midrib_length(0-0.8), midrib_width(0.5-1), vein_angle(0.2-2), vein_density(5-20), jigsaw_scale/depth; leaf_shape_control_points (uniform widths) -> leaf outline (narrow these for oval/small leaves); blade color via colors.plant_green/yellow/red (t<0.8 green); blight_weight/dotted_blight_weight(binomial p=0.1) -> spotting
+  Other leaf factories (leaf.py LeafFactory: leaf_width 0.5/alpha 0.3/z_scaling; leaf_broadleaf, leaf_ginko, leaf_maple, leaf_pine): alternate leaf shapes selectable via leaf_type; each has scale + seasonal hsv color knobs.
+
+FILE: assets/objects/trees/tree_flower.py
+  TreeFlowerFactory (bush flower option): petal/center flower.
+    knobs: rad(uniform 0.15-0.25) -> flower size; diversity_fac(0.25); get_flower_params Center Rad, Petal Dims, Seed Size(0.005-0.01), Min/Max Petal Angle, Wrinkle(0.003-0.02), Curl(normal 30±50 deg); petal color via colors.tree_petal_hsv; shader_petal specular/roughness/translucent randoms
+
+FILE: assets/objects/fruits/*.py (apple, blackberry, coconutgreen, coconuthairy, durian, pineapple, starfruit, strawberry, compositional_fruit)
+  Fruit factories (used by full TreeFactory, not bush by default): per-fruit cross-section/shape/surface/stem params.
+    knobs: sample_shape_params radius_control_points -> silhouette; sample_surface_params base/alt colors (hsv, sampled with normal noise); scale_multiplier per fruit; stem params (cross_radius, quad_mid/end)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class + make_asset_collection
+  core/surface.py -> add_geomod/add_material/shaderfunc_to_material geo-node & material application
+  core/nodes/node_wrangler.py -> NodeWrangler/Nodes node-graph construction API
+  core/nodes/node_utils.py -> to_nodegroup/to_material decorators, assign_curve helpers
+  core/nodes/node_info.py -> node type registry
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer node groups
+  core/placement/detail.py -> target_face_size / adapt_mesh_resolution LOD control
+  core/placement/split_in_view.py -> camera-based mesh splitting for LOD
+  core/placement/camera.py, core/util/camera.py -> camera utilities
+  core/tagging.py, core/tags.py -> tag_object/tag_nodegroup semantic labeling
+  core/util/blender.py -> object/mesh/modifier helpers (spawn, parent, apply, collections)
+  core/util/math.py -> FixedSeed, dict_lerp
+  core/util/color.py -> hsv2rgba
+  core/util/random.py -> weighted_sample
+  core/util/logging.py -> Suppress logging
+  assets/colors.py -> plant_green/yellow/red, tree_petal_hsv palettes
+  assets/composition/material_assignments.py -> material_assignments.bark trunk material pool
+  assets/materials/wood/__init__.py, ceramic/, plant/, metal/, etc. -> shader material libraries
+  assets/utils/object.py, misc.py -> data2mesh/mesh2obj, toggle_show/hide
+  assets/objects/cloud/__init__.py -> CloudFactory (leaf_type "cloud" option)

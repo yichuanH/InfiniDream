@@ -1,0 +1,48 @@
+SUMMARY: This factory procedurally builds a single spider plant as a set of nested circular leaf rosettes (bases), each populated with instanced arching narrow leaves generated from bezier curves with per-leaf contour, rotation, and scale variation. The upper-level file defines all Geometry Node groups for leaf shape/placement, the top-level plant assembly, and the AssetFactory that samples parameters and applies the geometry + material. Note: despite the request, the current implementation only generates the concentric leaf rosette — it does NOT produce trailing runners or plantlets/aerial roots (those would need to be added).
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/small_plants/spider_plant.py
+
+  nodegroup_set_leaf_countour: controls each leaf's width profile along its length (cream-striped narrow leaf shape).
+    knobs: k = uniform(0, 0.05) (random) -> width bulge/taper amount along leaf; FloatCurve points [(0,0.1)...(1,0.0)] -> base width profile & pointed tip; multiply factor uniform(0.8,1.3) (random) -> overall extrusion/thickness scale
+
+  nodegroup_leaf_z_rotation: twists leaf around its length axis (Z).
+    knobs: MapRange input 4 = abs(normal(0,0.6)) (random) -> max Z twist angle; VectorRotate Center (0,0,0.5) -> pivot along leaf
+
+  nodegroup_leaf_x_rotation: bends/arches leaf along its length (X).
+    knobs: MapRange input 4 = abs(normal(0,1.2)) (random) -> max arch/curl angle; Center (0,0,0.5) -> bend pivot
+
+  nodegroup_leaf_rotate_on_base(x_R): sets each instanced leaf's outward tilt on its rosette.
+    knobs: x_R (passed per base, see leaf_x_R) -> base outward tilt angle; RandomValue X jitter (-0.3,0.3) (random) -> per-leaf X tilt variation; RandomValue Y (-0.6,0.6) (random) -> per-leaf Y tilt; NoiseTexture->MapRange Z (-0.5,0.5) (random) -> per-leaf Z spin
+
+  nodegroup_leaf_scale_align: aligns leaf to surface normal and randomizes size.
+    knobs: AlignEulerToVector axis "Y" -> leaf orientation axis; MapRange scale (0.6,1.1) (random) -> per-leaf size variation
+
+  nodegroup_leaf_geometry: builds one leaf mesh from a bezier curve, applies contour/rotation, extrudes to 3D.
+    knobs: QuadraticBezier Resolution 100 -> leaf smoothness/length subdivision; Start/Middle/End (0,0,0)->(0,0,1) -> straight leaf spine before deform; SplineParameter/CurveToMesh Fill Caps True -> capped leaf ends
+
+  geometry_spider_plant_nodes: assembles all rosette bases, instances leaves, joins, shades smooth, assigns material.
+    knobs: ResampleCurve Count = randint(20,40) per base (random) -> leaves per rosette ring; CurveCircle Radius = base_radius[i] -> ring size per layer; RandomValue offsets ±0.3*base_radius (random) -> ring point jitter/irregularity; SubdivisionSurface -> leaf smoothing; ScaleInstances value = leaf_x_S[i] -> leaf size per layer; SetMaterial -> spider_plant.shader_spider_plant (green cream-striped shader)
+
+  SpiderPlantFactory.get_params: samples the plant's overall structure parameters.
+    knobs: num_leaf_versions = randint(4,8) (random) -> distinct leaf mesh variants; num_plant_bases = randint(5,12) (random) -> number of concentric rosette rings; init_base_radius = uniform(0.10,0.20) (random) -> outermost ring radius; diff_base_radius = init-0.04 -> ring radius shrink per layer; init_x_R = uniform(1.2,1.5), diff_x_R = uniform(0.7,1.1) (random) -> outer/inner leaf tilt (arch openness); init_x_S = uniform(1.4,2.0), diff_x_S = uniform(0.2,0.6) (random) -> outer/inner leaf size gradient
+
+  SpiderPlantFactory.create_asset: creates base plane, applies geomod + material, rescales.
+    knobs: obj.scale = (0.1,0.1,0.1) -> final plant size; tag_object name "spider_plant"
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/plant/spider_plant.py -> shader_spider_plant: the green/cream-striped leaf material
+  assets/materials/plant/__init__.py -> plant material package exports
+  assets/materials/__init__.py -> material registry
+  assets/utils/object.py -> mesh/object helper utilities
+  core/nodes/node_wrangler.py -> NodeWrangler / Nodes API for building geometry node trees
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve, node group helpers
+  core/nodes/node_info.py, utils.py, compatibility.py -> node type metadata & version compatibility
+  core/surface.py -> add_geomod / add_material / shaderfunc_to_material glue
+  core/placement/factory.py -> AssetFactory base class (seeding, asset lifecycle)
+  core/placement/detail.py -> level-of-detail placement support
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> apply_modifiers/apply_transform and Blender helpers
+  core/util/random.py, math.py, color.py -> random sampling, math, color utilities
+  core/util/logging.py -> logging
+  assets/__init__.py, core/__init__.py (+ submodule __init__) -> package initialization

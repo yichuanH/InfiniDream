@@ -1,0 +1,28 @@
+SUMMARY: HardwareFactory builds a single wall-mounted bathroom hardware piece (a hook, towel/paper holder, bar, or ring) attached to a base plate via a rod, finished with a neutral metal material plus optional wear. Each create_asset() produces exactly one coherent assembly whose type and dimensions are randomly sampled per factory seed. The upper-level file fully defines the geometry-building logic and material assignment; all materials, utilities, and engine hooks come from infra.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/bathroom/hardware.py
+  HardwareFactory.__init__: samples all shape/type/material parameters under FixedSeed
+    knobs: attachment_radius(uniform 0.02-0.03) -> base plate size; attachment_depth(uniform 0.01-0.015) -> base plate thickness/protrusion; radius(uniform 0.01-0.015) -> rod & bar/hook thickness; depth(uniform 0.06-0.1) -> rod length off wall; is_circular(uniform<0.5, bool) -> cylindrical vs square cross-section; hardware_type(np.random.choice [hook,holder,bar,ring]) -> which fixture shape; hook_length(attachment_radius*uniform 2-4) -> hook extent; holder_length(uniform 0.15-0.25) -> holder arm length; bar_length(uniform 0.4-0.8) -> bar span (double-attachment); extension_length(attachment_radius*uniform 2-3) -> holder/bar overhang; ring_radius(log_uniform 2-6 * attachment_radius) -> ring size; surface_material_gen(weighted_sample metal_neutral) -> metal finish; scratch/edge_wear(prob-gated from wear_tear) -> surface aging
+  make_attachment: builds base plate + rod stub (cylinder or cube). knobs: base scale=(attachment_radius,attachment_radius,attachment_depth/2); rod scale=(radius,radius,depth/2)
+  make_hook: single stub. knobs: scale=(radius,radius,hook_length/2)
+  make_holder: perpendicular arm. knobs: scale z=(holder_length+extension_length)/2; offset=(holder_length-extension_length)/2
+  make_bar: long horizontal bar. knobs: scale z=bar_length/2+extension_length; offset=bar_length/2; second attachment placed at location.x=bar_length
+  make_ring: torus fixture. knobs: major_segments(128 fixed); major_radius=ring_radius; minor_radius=radius*uniform(0.4-0.7); subsurf level(2)
+  create_asset: assembles attachment + type-specific part, extra offset location.y=-depth, extra scale 1+1e-3, final rotation +90° about Z; adds 2nd attachment for bar type
+  finalize_assets: applies surface with metal_color="plain", then optional scratch and edge_wear
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> metal_neutral material list, wear_tear generators and probabilities
+  assets/materials/metal/__init__.py -> chrome/metal shader implementations
+  assets/materials/wear_tear/scratches.py -> scratch surface effect
+  assets/materials/wear_tear/edge_wear.py -> edge-wear surface effect
+  assets/utils/object.py -> new_base_cylinder, new_cube, join_objects primitives
+  assets/utils/decorate.py -> subsurf smoothing
+  core/placement/factory.py -> AssetFactory base class / create_asset contract
+  core/placement/detail.py -> LOD/detail handling
+  core/util/blender.py -> apply_transform and blender helpers
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform, weighted_sample samplers
+  core/surface.py, core/nodes/* -> shader graph / material application engine
+  assets/materials/* (ceramic, wood, plastic, fabric, etc.) -> other material libraries (unused here)

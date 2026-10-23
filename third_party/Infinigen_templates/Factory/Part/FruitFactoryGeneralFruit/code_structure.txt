@@ -1,0 +1,96 @@
+SUMMARY: This factory builds procedural fruits from a composable genome of four parts — cross-section (2D profile), shape (quadratic sweep spine), surface (skin geometry + shader), and stem — joined and aligned in general_fruit.py via geometry nodes. The base class FruitFactoryGeneralFruit orchestrates sampling and assembly but leaves the sample_*_params methods abstract, meaning a concrete pumpkin subclass (not present) would supply the parameter dicts; the editable libraries here define all reusable node groups for profiles, deformation, surfaces, stems, and seeds. To produce a giant ribbed pumpkin you would author a subclass selecting a many-forked/rot-symmetric cross-section, squat shape spine, an orange mottled surface with deep vertical grooves (via add_dent along cross-section symmetry), and a thick curved woody stem, then tune the knobs below.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/fruits/general_fruit.py
+  general_fruit_geometry_nodes(): assembles cross_section→shape→surface+stem, joins, realizes, aligns top to horizon.
+    knobs: crosssectionlib/shapelib/surfacelib/stemlib dict keys -> which node group each genome part uses (select "star_cross_section"/"coconut_cross_section" for ribs, "shape_quadratic" for spine).
+  FruitFactoryGeneralFruit.__init__: base factory.
+    knobs: scale(1.0) -> overall fruit size (multiply large for a giant pumpkin).
+  create_asset(): builds mesh, applies random scale.
+    knobs: obj.scale *= normal(1,0.1)*scale*scale_multiplier -> final size, jitter (std 0.1, random); scale_multiplier read from surface_params.
+  NOTE: sample_cross_section_params/sample_shape_params/sample_surface_params/sample_stem_params are NotImplementedError — a pumpkin subclass must define these dicts (cross_section_name, cross_section_func_args, *_input_args, surface_resolution, scale_multiplier).
+
+FILE: assets/objects/fruits/cross_section_lib.py
+  nodegroup_circle_cross_section: smooth round profile.
+    knobs: noise scale(0.5), noise amount(0.1), Resolution(256), radius -> surface bumpiness/roundness.
+  nodegroup_star_cross_section: 5-lobed star profile (ridged).
+    knobs: N(5 fixed in rotsemmetry) -> number of lobes; float_curve pts [(0,0.4156),(0.65,0.8125),(1,1)] -> lobe sharpness; noise scale(2.4), noise amount(0.2), radius.
+  nodegroup_cylax_cross_section: many-forked calyx/ribbed profile — best base for pumpkin grooves.
+    knobs: fork number(10) -> number of vertical ribs/grooves; bottom radius(0.0) -> groove depth; float_curve [(0,0),(0.65,0.8125),(1,1)] -> rib shape; noise amount(0.4), noise scale(2.4 fixed), radius(1.0).
+  nodegroup_coconut_cross_section: 3-fold profile.
+    knobs: N(3 fixed); control_points [(0,0.7156),(0.1023,0.7156),(1,0.7594)] -> lobe shape; noise scale(2.4), noise amount(0.2), radius.
+
+FILE: assets/objects/fruits/fruit_utils.py
+  nodegroup_shape_quadratic(radius_control_points=[(0,0.5),(1,0.5)]): sweeps profile along a bezier spine to make the body.
+    knobs: radius_control_points -> body silhouette (make bulged/squat for pumpkin, e.g. fat middle); Start(0,0,-1.5)/Middle(0,0,0)/End(0,0,1.5) -> height & curvature (shorten Z for squat); noise scale/amount tilt & pos -> irregularity; Resolution(256).
+  nodegroup_add_dent(dent_control_points): pushes surface along tangent to carve grooves/dents.
+    knobs: dent_control_points -> groove profile; intensity(1.0), max radius(1.0), bottom(False) -> which end and depth.
+  nodegroup_surface_bump: normal-direction noise displacement.
+    knobs: Displacement(0.02), Scale(50.0) -> skin bump amount/frequency (subtle mottling relief).
+  nodegroup_add_crater: proximity-based dimples + subdivision (used for seeds/craters).
+    knobs: Strength(1.5), map_range 0.08/-0.04 -> crater depth.
+  nodegroup_random_rotation_scale: per-instance rot/scale jitter.
+    knobs: noise scale(10), rot mean/std, scale mean(0.35)/std(0.1).
+  nodegroup_point_on_mesh: poisson scatter with spline-param masking.
+    knobs: Distance Min(0.2), Density Max(10000 fixed), parameter min/max, noise amount(1.0)/scale(5.0).
+  nodegroup_hair, nodegroup_instance_on_points, nodegroup_mix_vector, nodegroup_add_noise_scalar, nodegroup_attach_to_nearest, nodegroup_manhattan, nodegroup_rot_semmetry(N -> symmetry count), nodegroup_scale_mesh, nodegroup_align_top_to_horizon: helper utilities.
+
+FILE: assets/objects/fruits/stem_lib.py
+  nodegroup_basic_stem(stem_color=(0.179,0.836,0.318,1)): quadratic-bezier tube stem — use for the woody pumpkin stem.
+    knobs: stem_color -> hue (set brown for woody); quad_start/mid(0,-0.05,0.2)/end(-0.1,0,0.4) -> curve of stem; cross_radius(0.08) -> thickness; quad_res(128)/cross_res(128); Translation(0,0,1)/Scale(1,1,2) -> placement & elongation; surface_bump Displacement 0.01/Scale 2.9 & 20 -> woody texture.
+  shader_basic_stem_shader: stem material via HSV over noise.
+    knobs: noise Scale(0.8)/Detail(10)/Roughness(0.7); map_range hue 0.48-0.55, value 0.4; Specular(0.1205), Roughness(0.5068).
+  nodegroup_calyx_stem / shader_calyx_shader: strawberry calyx.
+    knobs: fork number(10), outer/inner radius, noise amounts, stem_color.
+  nodegroup_coconut_stem / nodegroup_coconut_calyx / nodegroup_jigsaw / shader_coconut_calyx_shader: coconut fibrous calyx.
+    knobs: basic_color, edge_color, Count(6), base/top scale, jigsaw noise scale(30).
+  nodegroup_pineapple_stem / _crown / _leaf / shader_leaf: pineapple leaf crown.
+    knobs: number of leaves(75), scale base(0.5), rot z base/top, leaf bezier pts.
+  nodegroup_empty_stem: no stem (0 points).
+
+FILE: assets/objects/fruits/surfaces/apple_surface.py
+  nodegroup_apple_surface: top+bottom dent + smooth skin; closest template for a squat gourd body with dimples.
+    knobs: color1(0.288,0.611,0.071)/color2(0.745,0.617,0.030) -> skin colors (set both to bright orange for pumpkin); random_seed(0); dent_control_points -> top/bottom indentation; dent intensity 1.5 (top) / -1.0 (bottom), max radius 1.5.
+  shader_apple_shader: musgrave-blended two-color skin with hue mottle.
+    knobs: musgrave Scale 10/0.6, Dimension 0.3, Lacunarity 3/1; hue 0.55 -> mottling character.
+
+FILE: assets/objects/fruits/surfaces/durian_surface.py
+  nodegroup_durian_surface: spiky thorn skin.
+    knobs: thorn_control_points, peak_color, base_color, displacement(1.0), distance Min(0.1), noise amount(0.3).
+FILE: assets/objects/fruits/surfaces/starfruit_surface.py
+  nodegroup_starfruit_surface: dent + ridge-colored skin.
+    knobs: dent_control_points, base_color, ridge_color, dent intensity(1.0), surface_bump Displacement 0.03/Scale 10.
+FILE: assets/objects/fruits/surfaces/coconutgreen_surface.py
+  nodegroup_coconutgreen_surface: bump + bottom dent + stripe/color-ramp skin.
+    knobs: basic_color, bottom_color, surface_bump 0.2/0.5, add_dent max radius 3.0, stripe pattern seeds.
+FILE: assets/objects/fruits/surfaces/coconuthairy_surface.py
+  nodegroup_coconuthairy_surface: dense hair instances on skin.
+    knobs: basic_color, hair Distance Min 0.03/0.06, scale, Radius 0.03.
+FILE: assets/objects/fruits/surfaces/blackberry_surface.py
+  nodegroup_blackberry_surface: druplet spheres scattered on surface.
+    knobs: berry_color, Distance Min 0.4, sphere Segments 32/Rings 16.
+FILE: assets/objects/fruits/surfaces/strawberry_surface.py
+  nodegroup_strawberry_surface: crater dimples + seeds.
+    knobs: top_pos(0.9), main_color, top_color, Distance Min(0.12), Strength(0.74).
+FILE: assets/objects/fruits/surfaces/pineapple_surface.py
+  nodegroup_pineapple_surface / _cell_body / shader_cell / shader_needle: hexagonal cell skin.
+    knobs: color_bottom/mid/top/center, point distance(0.22), cell scale(0.2).
+
+FILE: assets/objects/fruits/surfaces/surface_utils.py
+  nodegroup_stripe_pattern: shader stripe/hue modulation.
+    knobs: voronoi scale(50)/randomness(1), noise scale(10)/amount(1.4), hue min(0.6)/max(1.085).
+
+FILE: assets/objects/fruits/seed_lib.py
+  nodegroup_strawberry_seed / shader_seed_shader: individual seed geometry + material.
+    knobs: seed radius curve pts, mix colors (0.807,0.624,0.070)/(0.347,0.262,0.030), noise Scale 7.8.
+
+FILE: assets/objects/fruits/__init__.py
+  registry of concrete fruit factories.
+    knobs: add a FruitFactoryPumpkin import/export here for a new pumpkin subclass.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/nodes/node_wrangler.py -> NodeWrangler + Nodes enum for building geometry/shader node trees.
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve helper.
+  core/nodes/node_info.py, core/nodes/utils.py, core/nodes/compatibility.py -> node metadata/socket resolution/version compat.
+  core/surface.py -> add_geomod, shaderfunc_to_material bridging sha

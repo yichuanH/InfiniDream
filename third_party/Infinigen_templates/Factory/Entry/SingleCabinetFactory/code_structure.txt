@@ -1,0 +1,72 @@
+SUMMARY: The SingleCabinetFactory builds one coherent cabinet assembly: a shelf frame (from LargeShelfBaseFactory) plus one or two hinged doors with rounded knob pulls and hinge attachments, joined into a single object per create_asset() call. single_cabinet.py orchestrates sampling of overall dimensions, derives shelf/door/hinge parameters, and welds the sub-factory outputs together via geometry nodes. doors.py generates the ramped-edge door panels + knobs (with optional glass mid-panels), large_shelf.py generates the box frame/divisions, and utils.py provides tagging/nodegroup helpers.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/shelves/single_cabinet.py
+  SingleCabinetFactory.sample_params: overall cabinet size and shelf cell layout (top-level entry for this factory)
+    knobs: Dimensions[0] depth(uniform 0.25-0.35) -> cabinet depth; Dimensions[1] width(uniform 0.3-0.7) -> cabinet width; Dimensions[2] height(uniform 0.9-1.8) -> cabinet height; bottom_board_height(fixed 0.083) -> plinth/base gap under first shelf; shelf_depth(=Dim[0]-0.01) -> interior depth; num_h(=(height-0.083)/0.3, ~0.3m per cell) -> vertical shelf count; shelf_cell_width([Dim[1]], single cell) -> one column
+  SingleCabinetFactory.create_placeholder: bounding box used for placement
+    knobs: bbox scale(1.2 x/y, 1.02 z) -> placeholder padding
+  SingleCabinetBaseFactory.get_material_params: cabinet-wide material choice
+    knobs: frame_material(random choice white/black_wood/wood p=[0.5,0.2,0.3]) -> overall finish
+  SingleCabinetBaseFactory.get_shelf_params: shelf-only overrides when used as base class
+    knobs: shelf_cell_width(random 0.76 or 0.36 x normal(1,0.1) clip 0.75-1.25) -> shelf column width; num_v_cells(randint 3-7) -> shelf rows; shelf_cell_height(0.3 x normal(1,0.06) clip 0.75-1.25) -> row height
+  SingleCabinetBaseFactory.get_door_params: derives door count/size from shelf
+    knobs: door split threshold(shelf_width<0.55 -> 1 door else 2, width/2-0.0005) -> single vs double doors; door_height(derived from division board z-range) -> door span; tall-cabinet half-height door option(p=[0.5,0.5] when >5 divisions) -> partial-height doors
+  SingleCabinetBaseFactory.get_cabinet_params: hinge and hinge-attachment placement
+    knobs: door_hinge_pos offsets(+0.0025 single, +0.008 double in depth) -> door standoff; door_open_angle(fixed 0) -> doors closed vs ajar (set radians to open); attach_pos(derived from attach_height) -> hinge bracket locations
+  geometry_cabinet_nodes: assembles doors + hinge brackets + shelf into one mesh
+    knobs: hinge bracket cube sizes((0.0006,0.02,0.045),(0.0005,0.034,0.02)) -> hinge/attach plate dimensions; bracket translations(Y -0.01, (0,-0.017,0)) -> bracket offset; bracket rotation(-1.5708) -> bracket orientation
+
+FILE: assets/objects/shelves/doors.py
+  CabinetDoorBaseFactory.get_asset_params: samples all door geometry + material params
+    knobs: door_height(uniform 0.7-2.2, usually overridden) ; door_width(uniform 0.3-0.4, usually overridden) ; edge_thickness_1(uniform 0.01-0.018) -> outer frame depth; edge_width(uniform 0.03-0.05) -> frame border width; edge_thickness_2(uniform 0.005-0.008) -> ramp lip thickness; edge_ramp_angle(uniform 0.6-0.8 rad) -> bevel steepness; board_thickness(=edge_thickness_1-0.005) -> center panel thickness; knob_R(uniform 0.003-0.006) -> pull radius; knob_length(uniform 0.018-0.035) -> pull length; attach_height([gap, door_height-gap], gap uniform 0.05-0.15) -> hinge z positions; has_mid_ramp(choice True/False p=[0.6,0.4]) -> stacked two-panel vs single panel; door_left_hinge(default False) -> mirror/flip; frame_material(choice white/black_wood/wood p=[0.5,0.2,0.3]); panel_material(when mid_ramp: lower glass p=0.3, upper glass p=0.4) -> transparent-panel probability (raise for acrylic look)
+  CabinetDoorBaseFactory.get_material_func: maps material names to shaders (white/black_wood/wood/glass)
+    knobs: material->shader mapping -> swap finishes; add "glass" everywhere for clear-acrylic appearance
+  geometry_door_nodes: builds ramped frame, mid board(s), and knob handle
+    knobs: knob_mid_height multiply factor(default 0.5*door_height, currently blank multiply=implicit) -> knob vertical position; mid_board upper/lower z offsets (multiply factors 0.5/1.5) -> stacked panel spacing
+  nodegroup_knob_handle: rounded cylindrical pull geometry
+    knobs: cylinder Vertices(64) -> pull smoothness; knob x-offset add(-0.005) -> pull inset
+  nodegroup_ramped_edge / nodegroup_double_rampled_edge: beveled glossy edge profile
+    knobs: CurveCircle Radius(0.01) -> corner round; SubdivideMesh Level(4) -> edge smoothness; MergeByDistance(0.0001)
+  nodegroup_mid_board / _001: center panel (two-tier vs single)
+    knobs: material[0]/[1] assignment -> per-tier panel material (set glass for transparent drawers)
+
+FILE: assets/objects/shelves/large_shelf.py
+  LargeShelfBaseFactory.get_asset_params: samples all shelf/frame geometry
+    knobs: shelf_depth(normal 0.26,0.03 clip 0.18-0.36); side_board_thickness(normal 0.02,0.002 clip 0.015-0.025) -> side wall thickness; backboard_thickness(fixed 0.01); bottom_board_y_gap(uniform 0.01-0.05); bottom_board_height(normal 0.083 clip 0.05-0.11, x0 with p=0.2 -> sometimes no plinth); division_board_thickness(normal 0.02,0.002 clip 0.015-0.025) -> shelf thickness; screw_depth_head(uniform 0.001-0.004); screw_head_radius(uniform 0.001-0.004); screw_width_gap(uniform 0-0.02); screw_depth_gap(uniform 0.025-0.06); attach_length(uniform 0.05-0.1); attach_width(uniform 0.01-0.025); attach_thickness(uniform 0.002-0.005); attach_gap(uniform 0-0.05); shelf_cell_width(num randint 1-4, each 0.76/0.36 x normal) -> columns; shelf_cell_height(num randint 3-8, 0.3 x normal) -> rows; frame_material(choice white/black_wood/wood p=[0.4,0.3,0.3]); board_material(=frame_material)
+  LargeShelfBaseFactory.update_translation_params: computes derived widths/heights and board positions (no direct knobs)
+  LargeShelfFactory.sample_params: standalone large-shelf sizing (not used by cabinet)
+    knobs: Dimensions(uniform 0.25-0.35, 0.3-2.0, 0.9-2.0); per-cell 0.3m/0.5m spacing
+  geometry_nodes: assembles side/back/bottom/division boards + screw heads
+    knobs: side depth pad(+0.004), height pads(+0.002/-0.001), cell gap(0.001)
+  nodegroup_screw_head: decorative screw caps on divisions
+    knobs: cylinder fill(TRIANGLE_FAN); depth/radius from params
+  nodegroup_side_board / back_board / bottom_board / division_board: individual board geometry (dims from params)
+
+FILE: assets/objects/shelves/utils.py
+  nodegroup_tagged_cube: cube with SupportSurface tag on top face (for placement of objects on shelves)
+    knobs: tagged face index(==2) -> which face is a support surface
+  blender_rotate: coordinate-frame rotation helper (fixed matrices)
+  get_nodegroup_assets: extracts geometry outputs from a nodegroup into meshes
+
+FILE: assets/objects/shelves/__init__.py
+  module exports: registers SingleCabinetFactory and sibling shelf factories (no tunables)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/ceramic/glass.py -> shader_glass: clear glass/acrylic material for transparent panels
+  assets/materials/wood/plywood.py -> shelf wood/white/black shaders (shader_shelves_white, _wood, _wood_z, _black_wood, _black_wood_z)
+  assets/utils/object.py -> new_bbox and object helpers for placeholders
+  assets/utils/decorate.py -> mesh decoration utilities
+  assets/utils/extract_nodegroup_parts.py (via utils) -> extract_nodegroup_geo mesh extraction
+  core/nodes/node_wrangler.py -> NodeWrangler/Nodes geometry-node graph builder
+  core/nodes/node_utils.py -> to_nodegroup decorator, node grouping
+  core/nodes/node_info.py, compatibility.py, utils.py -> node type definitions/compat
+  core/surface.py -> add_geomod, shaderfunc_to_material (apply geo nodes/materials)
+  core/tagging.py, core/tags.py -> tag_system relabeling and Subpart.SupportSurface tags
+  core/placement/factory.py -> AssetFactory base class (create_asset/create_placeholder contract)
+  core/placement/detail.py -> detail/LOD placement support
+  core/util/blender.py -> butil join/delete/TemporaryObject helpers
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> random sampling utilities
+  core/util/logging.py -> logging

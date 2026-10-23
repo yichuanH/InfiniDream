@@ -1,0 +1,84 @@
+SUMMARY: This factory builds procedural reptiles (snake, lizard, frog, chameleon) from a genome of parts assembled, joined, rigged, and animated as a creature. The entry `reptile.py` defines per-species genomes (part factories + attachment joints), animation parameter samplers, material postprocessing, and the AssetFactory classes; `SnakeFactory` in particular generates a long body that slithers along a bezier path. The util files under `animation/` and the joining/rigging/creature/genome modules turn the genome into meshed, textured, animated geometry. To produce a flat-ribbon Moebius-loop snake (wide flat cross-section, one half-twist, head merged to tail with no free ends) you would edit `snake_genome()` body proportions and the curve/slither logic in `curve_slither.py`, plus the joining step to close the loop.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/reptile.py
+  snake_genome(): builds the snake creature tree (body + head + jaw + eyes + teeth)
+    knobs: w_mod (N(1,0.05), random width scale) -> body/head cross-section width; h_mod (N(1,0.05), random height scale) -> body/head cross-section height. For a FLAT RIBBON body set w_mod large and h_mod tiny (fixed, e.g. w_mod=6, h_mod=0.1).
+    knobs: ReptileBody(type="snake", n_bones=15, shoulder_ik_ts=[0,0.3,0.6,1.0], mod=(1,w_mod,h_mod)) -> body length segmentation and taper; increase n_bones for smoother long loop.
+    knobs: head attach coord=(0.01,0,0.2), Joint(rest=(180,180,0)), bridge_rad=0.2, smooth_rad=0.1 -> where/how head grafts to body; to merge head into tail, re-attach head at body tail end (coord u≈0.99) instead of head end.
+    knobs: head_size scale_x(0.8+N(0,0.02)), scale_y(0.3+N(0,0.02)) -> head proportions.
+    knobs: eye_fac Radius(N(0.03,0.005)); eye placement t=U(0.7,0.7), splay=100/180, r=1 -> eye size/position.
+    knobs: horn_fac (teeth) length U(0.2,0.3), rad1 0.4, rad2 0.3, thickness U(0.04,0.08); teeth placement t=U(0.67,0.7), splay=60/180 -> fang geometry (remove for closed-loop look).
+    knobs: jaw attach coord=(0.01,0,0.15); mouth_open_deg (0, fixed) -> jaw open angle.
+  snake_swim_params(): samples slither animation magnitudes
+    knobs: swim_freq(2*clip_gaussian(1,0.3,0.1,2)), swim_mag(N(200,3)), flipper_freq/mag/var -> body wiggle speed/amplitude.
+  animate_snake_swim(): applies sinusoidal wiggle to "Body" bones
+    knobs: off(1/2), mag_deg=swim_mag, freq=swim_freq, wavelength=U(0.2,0.4) -> undulation wave shape (unused since SnakeFactory rigging=False).
+  reptile_postprocessing(): assigns materials
+    knobs: main_template = weighted_sample(material_assignments.reptile) (random skin) -> body texture; Tongue/Bone(horn)/Eyeball(coord="X")/Nose sub-materials per named extra.
+  SnakeFactory: the entry AssetFactory
+    knobs: max_distance(40) -> cull distance; snake_length(("uniform",0.5,3) random) -> overall length; policy speed=min(len,2)*U(0.5,1), step_range=(0.2,0.2), yaw_dist=("uniform",-7,7) -> path wander; real-unit scale s=snake_length/20 (fixed divisor).
+    create_placeholder: builds bezier path + slither curve then follows it. For a CLOSED MOEBIUS LOOP, replace the open bezier path with a cyclic closed loop and set curve twist to add one half-twist (see curve_slither/slither_along_path twist_mode).
+    create_asset: genome→mesh, join, scale, slither_along_path. rigging=False (fixed).
+  LizardFactory / FrogFactory / ChameleonFactory: sibling species (max_distance=40); not used for snake.
+  lizard_genome/frog_genome/chameleon_genome + *_params/*animate_* fns: other species knobs (mostly commented-out attachments).
+
+FILE: assets/objects/creatures/util/animation/curve_slither.py
+  nodegroup_wiggles / nodegroup_add_wiggles / nodegroup_add_loopbacks: geometry-node curve deformer adding lateral wiggles + loops
+    knobs: Wavelength, Magnitude, MagRandom, Loopyness, LoopRandom, AltitudeOffset, Up(0,0,1) -> S-curve shape; modulo 4 / less_than 2 sets wiggle period; SubdivisionSurface Level(3) smoothing.
+  add_curve_slithers(): sets those inputs from snake_length
+    knobs: Wavelength(snake_length/U(2,4)), Magnitude(snake_length*0.05*N(1,0.2)), MagRandom(U(0,0.7)), Loopyness(0), LoopRandom(0), AltitudeOffset(0.02) -> resting slither amplitude/frequency.
+  slither_along_path(): keyframes obj sliding along curve
+    knobs: curve.data.twist_mode="Z_UP" (SET TO "TANGENT"/manual twist + cyclic spline to inject the Moebius half-twist), zoff_pct(0.7), rotation_euler=(0,0,pi) -> ground offset and facing; speed from policy.
+  snap_curve_to_floor(): raycasts curve points onto terrain
+    knobs: step_height(1) -> how far above ground to cast (disable for a free-floating closed loop).
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  foot_path/body_path: cyclic NURBS gait paths; knobs length,height,upturn,down_stroke,curve_resolution(8).
+  follow_path/follow_gait_path/follow_body_path: attach FOLLOW_PATH constraints (used to make placeholder track the snake path).
+  animate_run/animate_wiggle_body_iks/animate_wiggle_bones/animate_running_*_leg: bone-driver animation (quadruped species); sinusoid mag/freq/off/wavelength knobs. Not on snake path (rigging=False).
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts(): joins body parts, remeshes, rigs, applies materials
+    knobs: face_size, adaptive_resolution, adapt_mode("remesh"), min_remesh_size(0.01), smooth_joins, smooth_attrs, rigging, roll("GLOBAL_POS_Y"), SUBSURF levels(1), remove_doubles thresholds(0.01/0.001) -> mesh resolution/quality. To close head-to-tail into one seamless loop, weld the head and tail ends here (extra remove_doubles/bridge between the two end loops).
+  compute_joining_effects(): builds bevel/smoothing at attachments; bevel segments(5).
+  select_large_component(): thresh(0.95/0.9), tries(5) -> drops stray islands after remesh.
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature(): instantiates parts, attaches, writes attributes.
+  raycast_surface/apply_attach_transform/attach(): compute where child parts graft onto parent surface; rotation_basis ("global"/"normal"/"tangent") from Joint.rest -> attachment orientation. Key for re-routing head onto tail.
+  write_local/global_attributes: skeleton_rad, tags, local_pos used by shaders/rig.
+
+FILE: assets/objects/creatures/util/creature_util.py
+  euler/interp_dict/polar_skeleton/offset_center: math helpers; polar_skeleton(rads,eulers) builds curved skeletons (usable to author a looping body skeleton).
+
+FILE: assets/objects/creatures/util/genome.py
+  Joint(rest,pose,bounds,stiffness,stretch), Attachment(coord,joint,bridge,side,rotation_basis,bridge_rad,smooth_rad), part()/attach() sugar, CreatureGenome, interp_* (genome blending). Controls part tree topology and joint limits.
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig/create_bones/create_ik_targets/constrain_bones/pose_bones/create_ragdoll: full armature build (snake uses rigging=False so inert here); knobs shoulder_auto_stiffness(0.85), col_radius(0.07), min_col_length(0.1) for ragdoll physics.
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  compute_intersection_curve/create_bevel_connection/smooth_around_line: geometry for smooth part joins; knobs width, segments(9/5), close_caps, simplify_thresh(1.5e-2), smooth iters(30)/factor(0.9) -> blend quality at head/body/tail seams.
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree + iter/map/fold/tzip helpers: the data structure holding the part hierarchy (no direct visual knobs).
+
+FILE: assets/objects/creatures/util/__init__.py, util/animation/__init__.py: empty package markers.
+FILE: assets/objects/creatures/__init__.py, parts/__init__.py: registry imports; parts.reptile_detail (ReptileBody, ReptileUpperHead, ReptileLowerHead), parts.eye.MammalEye, parts.horn.Horn, parts.chameleon.Chameleon are the part factories referenced (their internals live in parts/, edit there to change body cross-section shape into a flat ribbon).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class (spawn/create_asset lifecycle).
+  core/placement/animation_policy.py -> AnimPolicyRandomForwardWalk + bezier path creation for placeholder motion.
+  core/placement/detail.py -> adapt_mesh_resolution (remesh/subdivide to face_size).
+  core/placement/path_finding.py -> path planning helpers.
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py -> geometry-node graph building (to_nodegroup, Nodes enum).
+  core/surface.py -> write_attribute / smooth_attribute on meshes.
+  core/util/blender.py -> object/mesh ops (spawn, join, modify_mesh, modes, transforms).
+  core/util/math.py -> lerp, clip_gaussian, homogenize, lerp_sample, FixedSeed.
+  core/util/random.py -> random_general, weighted_sample distribution samplers.
+  core/util/logging.py -> Suppress/Timer logging utilities.
+  assets/composition/material_assignments.py -> `reptile` weighted material template list.
+  assets/materials/creature/{bone,eyeball,nose,tongue}.py -> shader materials for horn/eye/nose/tongue extras.
+  assets/mater

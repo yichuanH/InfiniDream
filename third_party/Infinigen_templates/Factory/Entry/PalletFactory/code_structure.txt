@@ -1,0 +1,35 @@
+SUMMARY: PalletFactory builds a single wooden shipping pallet as one coherent assembly of deck boards (top/bottom horizontal + vertical tile boards) and central stringer/support blocks, all joined into one object and given a procedural wood material. The upper-level file `pallet.py` defines all geometry dimensions and board layout; the request's "seven-high misaligned stack" would require adding a stacking loop (currently only a single pallet is produced per call). The `__init__.py` files simply re-export the factory.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/elements/warehouses/pallet.py
+  PalletFactory.__init__: sets overall pallet dimensions and material (all sampled per-seed).
+    knobs: depth(uniform 1.2-1.4) -> pallet Y size; width(uniform 1.2-1.4) -> pallet X size; thickness(uniform 0.01-0.015) -> deck board thickness; tile_width(uniform 0.06-0.1) -> width of each board/support block; tile_slackness(uniform 1.5-2) -> gap spacing between boards (higher=fewer boards, larger gaps); height(uniform 0.2-0.25) -> total pallet height (stringer height); surface(wood.Wood()) -> procedural wood material assigned in finalize
+  PalletFactory.create_placeholder: builds bbox and tags top face as SupportSurface.
+    knobs: bbox extents (0..width, 0..depth, 0..height) -> placeholder collision volume; normal>0.5 threshold -> which faces marked support surface
+  PalletFactory.create_asset: assembles two horizontal decks, two vertical decks, and support blocks; joins into ONE object.
+    knobs: vertical.location z=thickness -> lower vertical deck height; vertical_ z=height-thickness -> upper vertical deck height; horizontal_ z=height-2*thickness -> upper horizontal deck; support z=2*thickness -> support block base offset; (NOTE: single pallet only — to make a 7-high misaligned stack, loop this 7x with per-pallet z offset ≈ height and small random XY misalignment)
+  PalletFactory.make_vertical: array of X-running board tiles across width.
+    knobs: scale=(tile_width/2, depth/2, thickness/2) -> individual board dims; count = floor((width-tile_width)/tile_width/tile_slackness/2)*2 (forced even) -> number of vertical boards; constant_offset_displace X spacing -> board pitch
+  PalletFactory.make_horizontal: array of Y-running board tiles across depth.
+    knobs: scale=(width/2, tile_width/2, thickness/2) -> board dims; count = floor((depth-tile_width)/tile_width/tile_slackness/2)*2 -> number of horizontal boards; offset Y spacing -> pitch
+  PalletFactory.make_support: 3x3 grid of central stringer blocks.
+    knobs: scale z=height/2-2*thickness -> block height; count=3 (X) and count=3 (Y) -> 9 support blocks; offset (width-tile_width)/2 and (depth-tile_width)/2 -> block placement at corners/center
+  PalletFactory.finalize_assets: assigns wood material to all joined elements.
+    knobs: self.surface (swap to another material factory to change appearance)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/wood/wood.py -> procedural weathered wood material (color/grain) used for boards
+  assets/materials/wood/__init__.py -> wood material module export
+  assets/materials/utils/common.py -> shared material node helpers
+  assets/colors.py, core/util/color.py -> color palette sampling for materials
+  assets/utils/object.py -> new_cube/new_bbox/join_objects mesh construction utilities
+  assets/utils/decorate.py -> read_normal and mesh attribute helpers
+  core/placement/factory.py -> AssetFactory base class (seeding, placeholder/asset pipeline)
+  core/placement/detail.py -> level-of-detail / spawn integration
+  core/surface.py -> assign_material and write_attr_data
+  core/tagging.py, core/tags.py -> face tagging (SupportSurface) and PREFIX constants
+  core/nodes/* -> shader/geometry node graph construction backend
+  core/util/blender.py -> modify_mesh (ARRAY modifier), apply_transform, deep_clone_obj, butil helpers
+  core/util/math.py, core/util/random.py -> numeric/random sampling utilities
+  core/util/logging.py -> logging
+  assets/__init__.py, assets/materials/__init__.py, core/__init__.py, etc. -> package init/exports

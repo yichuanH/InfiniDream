@@ -1,0 +1,27 @@
+SUMMARY: This factory file defines three particle asset factories (RaindropFactory, DustMoteFactory, SnowflakeFactory); RaindropFactory is the selected one. RaindropFactory builds a small ico-sphere, deforms it with a geometry-node curve to form a teardrop shape, and applies a glass BSDF shader. NOTE: the current code produces a smooth glass raindrop, NOT the requested angular ice-crystal cluster — meaningful edits are needed to match that prompt (faceting, hexagonal prisms, pale-blue translucent material, multiple heights).
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/particles/particles.py
+  shader_raindrop(nw): defines the surface material (glass BSDF).
+    knobs: IOR(1.33 fixed) -> refraction/how much light bends (1.31 ≈ ice); add Base Color to ShaderNodeBsdfGlass for pale-blue translucent look (currently absent, colorless); swap to a Principled BSDF with Transmission for internal-fracture/volume effects.
+  geo_raindrop(nw): geometry-node deformation of the base sphere into a teardrop via VectorCurve on position.
+    knobs: X curve points [(-1,-1),(1,1)] -> horizontal profile (linear = no change); Y curve points [(-1,-1),(1,1)] -> depth profile (linear = no change); Z curve points [(-1, -0.15*N(1,0.15)) (RANDOM, mean -0.15 std 15%), (-0.6091,-0.0938), (1.0,1.0)] -> vertical taper forming the pointed tip; to make angular crystals replace ico-sphere with hexagonal prism geometry and add faceting.
+  RaindropFactory.create_asset(): builds the base mesh.
+    knobs: primitive_ico_sphere_add radius(1 fixed) -> overall size; subdivisions(5 fixed) -> surface smoothness/poly count (raise for detail, lower or switch to cylinder for hard hexagonal facets); location/scale(fixed at origin/1); tag "raindrop".
+  RaindropFactory.finalize_assets(): assigns shader_raindrop to all instances.
+  DustMoteFactory (not selected): ico-sphere subdivisions(2), dirt material.
+  SnowflakeFactory (not selected): 6-vertex TRIFAN circle, snow material subsurface(0).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class (create_asset/finalize_assets lifecycle).
+  core/surface.py -> add_geomod (apply geometry-node modifier) and add_material helpers.
+  core/nodes/node_wrangler.py -> node graph builder (nw.new_node, Nodes enum).
+  core/nodes/node_utils.py -> assign_curve and other node-graph utilities.
+  core/nodes/node_info.py, core/nodes/utils.py, core/nodes/compatibility.py -> node type registry / version compatibility.
+  core/tagging.py, core/tags.py -> tag_object for semantic labeling.
+  assets/materials/terrain/dirt.py -> dirt shader (used by DustMoteFactory).
+  infinigen_gpl/surfaces/snow.py -> snow shader (used by SnowflakeFactory).
+  assets/materials/terrain/mountain.py, assets/materials/utils/surface_utils.py -> supporting material utilities.
+  assets/utils/object.py, core/util/blender.py -> Blender object/mesh helpers.
+  core/util/{color,math,random,organization,logging}.py -> sampling, color, math utilities (e.g. numpy normal N used for randomized taper).
+  core/placement/detail.py -> LOD/detail management.

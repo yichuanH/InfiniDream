@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-12",
+  "catalog_status": "controlled_world_motion_v3+catalog_local_inherit_v1",
+  "integration": {
+    "local_animation_director": true,
+    "local_animation_executor": true,
+    "world_motion_director": true,
+    "world_motion_executor": true,
+    "world_motion_validator": true
+  },
+  "purpose": "A deterministic capability catalog. A single user-verified local Factory mode may be inherited automatically; controlled world motion v3 remains independent. Particle-system motion remains unavailable for add.",
+  "evidence_levels": {
+    "user_verified_success": "The user previously rendered or otherwise tested this mode successfully.",
+    "user_reported_failure": "The user reports that the mode crashes or is unusable; keep it unavailable until retested.",
+    "source_declared_only": "The upstream Factory accepts the mode in source, but it is not approved for Director selection.",
+    "asset_specific_validation_required": "The base Factory can animate, but generated geometry may break or hide the deformation. Validate the generated asset before enabling it."
+  },
+  "motion_contract": {
+    "local_animation": {
+      "meaning": "Rig, bone, driver, or deformation cycle local to the asset, such as idle swimming, running in place, or a beetle walk cycle.",
+      "future_fields": {
+        "policy": [
+          "none",
+          "explicit",
+          "inherit"
+        ],
+        "mode": "A mode enabled for the selected Factory in this catalog, or null."
+      },
+      "does_not_imply": "World-space displacement. A run cycle alone runs in place."
+    },
+    "movement": {
+      "meaning": "World-space/root displacement independent of local_animation, such as hovering, bounded swimming, terrain-following walking, or BOIDS movement.",
+      "future_fields": {
+        "preset": "One movement_presets key or none.",
+        "intensity": [
+          "subtle",
+          "normal",
+          "strong"
+        ],
+        "params": "Optional bounded overrides validated by the executor."
+      },
+      "composition_rule": "When both are requested, build and validate local animation first, then apply movement to a stable asset root, placeholder anchor, or particle system without baking away rig deformation."
+    }
+  },
+  "factories": {
+    "FishFactory": {
+      "source_fqn": "infinigen.assets.objects.creatures.fish.FishFactory",
+      "source_declared_modes": [
+        "idle",
+        "roam"
+      ],
+      "director_selectable_modes": [
+        "idle"
+      ],
+      "modes": {
+        "idle": {
+          "status": "user_verified_success",
+          "constructor_kwargs": {
+            "animation_mode": "idle"
+          },
+          "local_only": true,
+          "notes": "Verified on the compatible clownfish replacement. Generated assets still require armature/modifier/driver and visible-deformation validation."
+        },
+        "roam": {
+          "status": "source_declared_only",
+          "director_enabled": false,
+          "constructor_kwargs": {
+            "animation_mode": "roam"
+          },
+          "notes": "Accepted by upstream source but not included in the user-approved tested list."
+        }
+      },
+      "recommended_movement_presets": [
+        "official_fish_boids",
+        "aquatic_wander",
+        "aquatic_hover"
+      ],
+      "local_animation_kind": "constructor_mode"
+    },
+    "CarnivoreFactory": {
+      "source_fqn": "infinigen.assets.objects.creatures.carnivore.CarnivoreFactory",
+      "source_declared_modes": [
+        "run",
+        "idle",
+        "tpose"
+      ],
+      "director_selectable_modes": [
+        "run"
+      ],
+      "modes": {
+        "run": {
+          "status": "user_verified_success",
+          "constructor_kwargs": {
+            "animation_mode": "run",
+            "hair": false
+          },
+          "local_only": true,
+          "appearance_tradeoff": "Infinigen particle hair must be disabled, so a furry generated asset may look smoother."
+        },
+        "idle": {
+          "status": "source_declared_only",
+          "director_enabled": false,
+          "constructor_kwargs": {
+            "animation_mode": "idle",
+            "hair": false
+          }
+        },
+        "tpose": {
+          "status": "source_declared_only",
+          "director_enabled": false,
+          "notes": "The upstream branch is effectively a no-op and is not a useful rendered animation."
+        }
+      },
+      "recommended_movement_presets": [
+        "terrain_wander"
+      ],
+      "local_animation_kind": "constructor_mode"
+    },
+    "HerbivoreFactory": {
+      "source_fqn": "infinigen.assets.objects.creatures.herbivore.HerbivoreFactory",
+      "source_declared_modes": [
+        "run",
+        "idle"
+      ],
+      "director_selectable_modes": [
+        "run"
+      ],
+      "modes": {
+        "run": {
+          "status": "user_verified_success",
+          "constructor_kwargs": {
+            "animation_mode": "run",
+            "hair": false
+          },
+          "local_only": true,
+          "appearance_tradeoff": "Infinigen particle hair must be disabled, so a furry generated asset may look smoother."
+        },
+        "idle": {
+          "status": "source_declared_only",
+          "director_enabled": false,
+          "constructor_kwargs": {
+            "animation_mode": "idle",
+            "hair": false
+          }
+        }
+      },
+      "recommended_movement_presets": [
+        "terrain_wander"
+      ],
+      "local_animation_kind": "constructor_mode"
+    },
+    "BirdFactory": {
+      "source_fqn": "infinigen.assets.objects.creatures.bird.BirdFactory",
+      "source_declared_modes": [
+        "run",
+        "idle",
+        "swim"
+      ],
+      "director_selectable_modes": [],
+      "modes": {
+        "run": {
+          "status": "user_reported_failure",
+          "director_enabled": false
+        },
+        "idle": {
+          "status": "user_reported_failure",
+          "director_enabled": false
+        },
+        "swim": {
+          "status": "user_reported_failure",
+          "director_enabled": false
+        }
+      },
+      "notes": "The user reports BirdFactory animation attempts crash. Do not select any mode until a reproducible retest records the exact failure and a verified fix."
+    },
+    "FlyingBirdFactory": {
+      "source_fqn": "infinigen.assets.objects.creatures.bird.FlyingBirdFactory",
+      "aliases": [
+        "FlyBirdFactory"
+      ],
+      "source_declared_modes": [
+        "idle"
+      ],
+      "director_selectable_modes": [],
+      "modes": {
+        "idle": {
+          "status": "user_reported_failure",
+          "director_enabled": false
+        }
+      },
+      "notes": "The user reports FlyingBirdFactory animation attempts crash. Its upstream path movement does not make its local rig mode safe."
+    },
+    "BeetleFactory": {
+      "source_fqn": "infinigen.assets.objects.creatures.beetle.BeetleFactory",
+      "source_declared_modes": [
+        "walk_cycle"
+      ],
+      "director_selectable_modes": [
+        "walk_cycle"
+      ],
+      "modes": {
+        "walk_cycle": {
+          "status": "user_verified_success",
+          "constructor_kwargs": {
+            "animation_mode": "walk_cycle"
+          },
+          "local_only": true
+        }
+      },
+      "recommended_movement_presets": [
+        "terrain_wander"
+      ],
+      "local_animation_kind": "constructor_mode"
+    },
+    "DragonflyFactory": {
+      "source_fqn": "infinigen.assets.objects.creatures.insects.dragonfly.DragonflyFactory",
+      "source_declared_modes": [],
+      "director_selectable_modes": [],
+      "modes": {},
+      "recommended_movement_presets": [
+        "air_glide",
+        "air_hover"
+      ],
+      "notes": "Two separate mechanisms, do not confuse them. (1) NO animation_mode: __init__(factory_seed, coarse, bvh, **_) has no such parameter, so a constructor kwarg is silently swallowed and there is no armature -- this catalog therefore lists no selectable mode. (2) The wings DO animate natively: geometry_dragonfly contains a Scene Time node driving wing roll, but generated variants come out with flap magnitude 0.0 at ~20Hz, i.e. invisible. The 0820 idle-adapter PoC normalised it (1.0 Hz, magnitude 0.22) and rendered glowing_blue_butterfly, luna_moth_r3 and mecha_dragonfly successfully (experiments/agent_rigging_poc, strategy native_scene_time, results under output/_test/animation/library_idle_agent_batch). That adapter is NOT wired into the production pipeline yet. Until it is, insect motion in scenes comes from world_motion air_glide / air_hover (anchoring=airborne), which is also how official dragonflies fly (animate_trajectory on the placeholder when bvh is given).",
+      "native_wing_driver": {
+        "node_group": "geometry_dragonfly",
+        "driver": "GeometryNodeInputSceneTime -> wing roll",
+        "generated_variant_default": {
+          "flap_magnitude": 0.0,
+          "frequency_hz": 20.6
+        },
+        "poc_normalised": {
+          "flap_magnitude": 0.22,
+          "frequency_hz": 1.0
+        },
+        "poc_status": "user_verified_success (0820, 3 variants rendered)",
+        "poc_adapter": "experiments/agent_rigging_poc/apply_idle_template.py (normalized_native_scene_time_v1)",
+        "wired_into_pipeline": false
+      },
+      "local_animation_kind": "gn_scene_time",
+      "gn_scene_time": {
+        "status": "user_verified_success",
+        "director_enabled": true,
+        "frequency_hz": 1.6,
+        "flap_magnitude": 0.6,
+        "node_signature": "GeometryNodeInputSceneTime.Seconds -> MATH MULTIPLY -> MATH SINE -> MATH MULTIPLY (amplitude)",
+        "evidence": "0820 idle-adapter PoC rendered glowing_blue_butterfly / luna_moth_r3 / mecha_dragonfly; anim_robustness tier-1 measured mecha_dragonfly local_deform=11.26% vs blue_morpho_butterfly 0.00% (amplitude zeroed) | 2026-09-12 使用者：1Hz/0.22 在 48 幀影片裡看不出拍翅 → 4Hz/0.6 | 2026-09-12 晚：使用者要再慢 0.4 倍 → 1.6Hz"
+      }
+    }
+  },
+  "movement_presets": {
+    "none": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Keep the placed anchor fixed. A local animation may still play in place."
+    },
+    "aquatic_hover": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Small, bounded vertical bob plus very small horizontal drift around the placed anchor; intended for pufferfish and other hovering aquatic animals.",
+      "motion_owner": "placeholder_or_asset_root",
+      "proposed_defaults": {
+        "horizontal_radius_m": [
+          0.1,
+          0.5
+        ],
+        "vertical_amplitude_m": [
+          0.1,
+          0.35
+        ],
+        "period_seconds": [
+          2.5,
+          6.0
+        ]
+      },
+      "required_validations": [
+        "remain inside water volume",
+        "remain near the requested screen placement",
+        "avoid terrain and coral collision",
+        "preserve any local rig deformation"
+      ]
+    },
+    "aquatic_wander": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Slow bounded 3D wandering for individually added fish, with heading aligned to velocity.",
+      "motion_owner": "placeholder_or_asset_root",
+      "proposed_defaults": {
+        "radius_m": [
+          1.0,
+          4.0
+        ],
+        "speed_m_per_s": [
+          0.2,
+          0.8
+        ]
+      },
+      "required_validations": [
+        "remain inside water volume",
+        "avoid terrain and coral collision",
+        "stay visible for a configured fraction of frames",
+        "face movement direction",
+        "preserve any local rig deformation"
+      ]
+    },
+    "official_fish_boids": {
+      "executor_status": "upstream_available_not_wired_for_add",
+      "description": "Reuse Infinigen's official FishSchoolFactory BOIDS displacement for a school. This is particle-system movement, not an individual FishFactory root trajectory.",
+      "motion_owner": "particle_system",
+      "compatible_deployment": "FishSchoolFactory or an existing compatible fish-school particle system",
+      "required_validations": [
+        "particle counts and baked cache remain unchanged during a master replacement",
+        "particle instances consume the intended animated master",
+        "water-volume and collision settings remain valid"
+      ]
+    },
+    "terrain_wander": {
+      "executor_status": "implemented_controlled_v3",
+      "description": "Bounded terrain-following movement for running/walking carnivores, herbivores, and beetles. The local run or walk cycle is selected separately.",
+      "motion_owner": "placeholder_or_asset_root",
+      "required_validations": [
+        "raycast or BVH terrain following",
+        "slope limit",
+        "heading aligned to path",
+        "collision and non-intersection",
+        "camera visibility",
+        "gait speed approximately matches world speed to reduce foot sliding (future local-animation composition check)"
+      ],
+      "current_limits": "Root follows raycast terrain at every path key and audits slope/contact. Local gait remains a separate capability, and obstacle avoidance is not implemented."
+    },
+    "directed_ground_traverse": {
+      "executor_status": "implemented_controlled_v3",
+      "description": "Short one-way terrain-following traverse for a conform-anchored grounded subject.",
+      "motion_owner": "placeholder_or_asset_root",
+      "required_validations": [
+        "raycast terrain following at every path key",
+        "slope <= 35 degrees",
+        "absolute terrain contact gap <= 0.30m",
+        "local gait is reported independently"
+      ]
+    },
+    "airborne_wander": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Closed bounded 3D wandering around an airborne anchor. This only moves the root; it does not imply that BirdFactory or FlyingBirdFactory local wing animation works.",
+      "motion_owner": "placeholder_or_asset_root",
+      "required_validations": [
+        "anchoring is airborne",
+        "closed loop returns to the start",
+        "local rig animation is reported independently"
+      ]
+    },
+    "directed_traverse": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Move from a chosen start region toward an end region, such as crossing the camera from left to right; useful for running animals or a single fish passing through the shot.",
+      "motion_owner": "placeholder_or_asset_root",
+      "required_validations": [
+        "start and end remain in the valid habitat",
+        "collision-free path",
+        "camera visibility window",
+        "heading aligned to velocity"
+      ]
+    },
+    "airborne_glide": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Smooth forward movement with gentle altitude and banking changes for airborne subjects; local wing motion remains a separate capability.",
+      "motion_owner": "placeholder_or_asset_root"
+    },
+    "orbit": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Circle a target object or point of interest while facing inward or following the tangent.",
+      "motion_owner": "placeholder_or_asset_root",
+      "required_validations": [
+        "target exists",
+        "orbit radius is collision-free",
+        "habitat and visibility constraints"
+      ]
+    },
+    "stationary_bob": {
+      "executor_status": "implemented_controlled_v2",
+      "description": "Generic small vertical world-space oscillation without aquatic assumptions; useful for balloons, floating lanterns, or stylized hovering props.",
+      "motion_owner": "placeholder_or_asset_root"
+    }
+  },
+  "semantic_asset_profiles": {
+    "pufferfish": {
+      "base_factory": "FishFactory",
+      "operation": "add",
+      "recommended_local_animation": {
+        "mode": "idle",
+        "policy": "explicit",
+        "status": "asset_specific_validation_required",
+        "known_issue": "The previously generated pufferfish overlay had a moving skinned body hidden by a static unweighted spike shell, so a technically active idle rig looked static. Do not claim success without visible-deformation validation."
+      },
+      "recommended_movement": {
+        "preset": "aquatic_hover",
+        "reason": "A subtle root-space hover remains visible even if the generated asset cannot safely inherit FishFactory body deformation."
+      },
+      "future_fallback": "If local idle validation fails, keep local_animation=none but still allow aquatic_hover; report the fallback explicitly."
+    }
+  },
+  "future_director_example": {
+    "animation": {
+      "policy": "explicit",
+      "mode": "idle"
+    },
+    "movement": {
+      "preset": "aquatic_hover",
+      "intensity": "subtle",
+      "params": {}
+    }
+  },
+  "local_animation_kinds": {
+    "constructor_mode": "Factory accepts animation_mode; placer passes it as a constructor kwarg and the Factory builds its own rig.",
+    "gn_scene_time": "No constructor mode and no armature: the Factory's geometry nodes already drive motion from a Scene Time node, but generated variants can ship with the amplitude zeroed. placer normalises the instantiated sockets after populate (stage_exec/gn_scene_time.py)."
+  }
+}

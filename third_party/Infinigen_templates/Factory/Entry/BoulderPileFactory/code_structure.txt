@@ -1,0 +1,44 @@
+SUMMARY: The BoulderPileFactory builds a small pile of procedurally-generated boulders by dropping several scaled copies of a BoulderFactory rock onto a bowl-shaped floor using physics simulation, then joining them into one mesh. The BoulderFactory generates each individual rock from a jittered convex hull, extrudes/scales faces to create bumps, remeshes, adds voronoi surface detail, and applies a randomly-selected rock material. To satisfy a single balanced hoodoo (slender waisted column + wide flat caprock), the two editable files control rock silhouette, slab-vs-boulder shape, banded material, and how many rocks form the pile.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/rocks/pile.py
+  BoulderPileFactory.__init__: wraps a single BoulderFactory (shares factory_seed).
+  BoulderPileFactory.create_floor: bowl-shaped SDF floor rocks fall into.
+    knobs: r(4, fixed) -> radius of flat floor before curved rim; alpha(0.01, fixed) -> slope steepness of outer rim; surface_from_func grid(32,32,12,12) -> floor resolution/extent.
+  BoulderPileFactory.place_boulder: initial drop position per boulder.
+    knobs: location xy(uniform(-3,3,2)) -> horizontal spread of pile; rotation_euler z(uniform(0,2pi)) -> random spin; return height stacks next boulder above previous.
+  BoulderPileFactory.create_placeholder: builds the set of rocks to drop.
+    knobs: n(randint(3,5)) -> number of distinct base boulders; scale list([1, log_uniform(0.4,0.6), log_uniform(0.2,0.4)x3, log_uniform(0.1,0.2)]) -> relative sizes of the 6 copies per boulder (shrink these / reduce n to a single rock for a lone hoodoo); free_fall(...) simulates settling.
+  BoulderPileFactory.create_asset: meshes each placeholder, clones/scales copies, joins, remeshes.
+    knobs: face_size(0.01) -> final mesh resolution.
+
+FILE: assets/objects/rocks/boulder.py
+  BoulderFactory.__init__: chooses rock shape mode and material.
+    knobs: weights([0.8,0.2]) -> prob of "boulder" vs "slab" (raise slab weight for flat caprock look); config_mappings sets has_horizontal_cut/is_slab; rock_surface(weighted_sample(material_assignments.rock)) -> randomly-sampled rock material (swap for a banded ochre/cream layered material for hoodoo bands); octree_depth(3) -> remesh detail; do_voronoi(True) -> surface bumpiness.
+  BoulderFactory.create_placeholder: base silhouette from convex hull.
+    knobs: vertices(uniform(-1,1,(32,3))) -> random hull shape (32 pts); SUBSURF levels(2) -> smoothing; slab scale(log_uniform(0.5,2.0,2) xy, log_uniform(0.1,0.15) z) -> wide flat slab proportions (caprock); boulder scale(log_uniform(0.4,1.2,2) xy, log_uniform(0.4,0.8) z) -> column proportions (lower xy / raise z for slender waisted column); boulder_scale(1) -> overall size; rotation_euler x(uniform(-pi/24,pi/24)) tilt, z(uniform(0,2pi)) spin; BEVEL width_pct(10) -> edge rounding except top; voronoi noise_scale(log_uniform(0.2,0.5) & log_uniform(0.05,0.1)), DISPLACE strength(0.01) -> fine surface erosion.
+  BoulderFactory.geo_extrusion: adds protruding bumps by extruding top faces.
+    knobs: extrude_configs([(uniform(0.2,0.3),0.8,0.4),(0.6,0.2,0.6)]) -> (probability, extrude amount, taper scale) per pass; top_facing angle(pi*2/3) -> which faces qualify; extrude/scale ranges (uniform of half-to-full) sampled randomly -> lumpiness (reduce to keep a smooth eroded column).
+  BoulderFactory.create_asset: adaptive remesh + tagging.
+    knobs: face_size(0.01) -> resolution; cam_meshing_max_dist(1e7); vis_margin(0.15) camera split.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> pool of rock materials sampled for surface (edit choice here, not the file).
+  assets/utils/decorate.py -> geo_extension displacement, multi_res subdivision helpers.
+  assets/utils/draw.py -> surface_from_func builds mesh from SDF (floor).
+  assets/utils/physics.py -> free_fall rigid-body settling of dropped boulders.
+  assets/utils/object.py -> trimesh2obj, join_objects conversions.
+  assets/utils/mesh.py -> mesh utility ops.
+  assets/utils/misc.py -> toggle_hide and misc helpers.
+  core/nodes/node_wrangler.py, node_info.py -> geometry-node graph construction (extrusion).
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer node groups.
+  core/placement/detail.py -> adapt_mesh_resolution, remesh_with_attrs, target_face_size.
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle.
+  core/placement/split_in_view.py -> camera-based mesh detail culling.
+  core/surface.py -> add_geomod, material application plumbing.
+  core/tagging.py, core/tags.py -> tag_object semantic labels.
+  core/util/blender.py -> Blender mesh/modifier/object utilities.
+  core/util/math.py -> FixedSeed deterministic seeding.
+  core/util/random.py -> log_uniform, weighted_sample sampling helpers.
+  core/util/logging.py -> logging setup.

@@ -1,0 +1,62 @@
+# Overrides for underwater scenes (coral_reef / under_water / kelp_forest).
+# Apply AFTER the biome gin and rrt_cam_nature.gin so these values win.
+#
+# Two independent problems this fixes:
+#   (1) creatures were mostly rolled off by the official biome defaults
+#   (2) RRT camera trajectory search fails 100% of the time underwater
+#       because the water volume mesh counts as a solid obstacle
+
+# ---------------------------------------------------------------
+# (1) creature probabilities: official defaults roll these mostly off
+#     under_water.gin ships fish_school_chance = 0.3 (so ~70% of seeds
+#     have no fish at all) while corals/kelp/seaweed sit at 0.8-1.0.
+# ---------------------------------------------------------------
+compose_nature.fish_school_chance = 1.0
+compose_nature.ground_creatures_chance = 1.0
+compose_nature.creatures_chance = 1.0
+
+# official under_water.gin explicitly zeroes jellyfish; re-enable at moderate rate
+compose_nature.jellyfish_chance = 0.5
+
+# ---------------------------------------------------------------
+# (2) RRT trajectory search
+#
+# Root cause: validate_node_nature() (infinigen/core/util/rrt.py:25) tests
+# "is this node inside an object" by ray casting UP and counting hits --
+# odd hit count == inside == invalid. generate_nature.py hands RRT *every*
+# non-hidden MESH object as an obstacle, and in an underwater scene the water
+# volume is such a mesh. Every camera node is legitimately inside the water,
+# so the parity test returns False everywhere and the whole search space is
+# considered solid.
+#
+# THE ACTUAL FIX IS IN CODE, NOT HERE:
+#   infinigen_examples/generate_nature.py, animate_cameras() -- the obj list
+#   now also excludes objects whose name contains "liquid". See the MODIFIED
+#   comment there. Without that edit the settings below cannot help, since
+#   more retries just re-hit the same always-false parity test.
+#
+# The values below are supporting relaxations only.
+# ---------------------------------------------------------------
+
+# more retries per base view, and far more base views to try
+animate_trajectory.max_full_retries = 12
+animate_trajectory.max_step_tries = 60
+compute_trajectories.min_candidates_ratio = 1
+compute_poses.min_base_views_ratio = 24
+
+# shorter strides are far likelier to find a collision-free segment in the
+# cluttered coral/kelp geometry than the official (100, 200)
+RRT.stride_range = (30, 80)
+RRT.step_range = (2, 5)
+
+# official min_obj_dist = 1.0 rejects poses with anything within 1m; underwater
+# foliage is dense so allow closer approach
+rrt/validate_cam_pose_rrt.min_obj_dist = 0.3
+
+# underwater has essentially no sky, so the sky test is not the binding
+# constraint, but keep it permissive; loosen proximity instead
+cam/validate_cam_pose_rrt.max_sky_percent = 0.8
+cam/validate_cam_pose_rrt.max_proxim_percent = 0.95
+
+# slower camera so 96 frames covers less distance -> shorter path needed
+rrt/AnimPolicyRRT.speed = ('uniform', 2, 5)

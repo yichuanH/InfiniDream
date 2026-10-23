@@ -1,0 +1,17 @@
+# grass_only —— 在 no_assets 全關的基礎上，只把「貼地草層」重新打開。
+#
+# 用法（順序重要，此檔要放在 no_assets 之後才能覆蓋它）:
+#   -g <biome> disable_assets/no_assets disable_assets/grass_only
+#
+# 設計理由:
+#   草 (grass/monocots/ferns/flowers) 走 grass.Grass().apply(target, selection=...)
+#   —— 直接貼地表的 surface scatter，不經 placeholder，快，是「貼著地面的草」。
+#   樹/灌木/石頭/雲/動物 走 scatter_placeholders_mesh + populate_* (placeholder 機制)
+#   —— 這些維持 no_assets 的 0，全部不生。
+#
+# 只重開草類，其餘一律沿用 no_assets 的 0。
+compose_nature.grass_chance = 1.0
+compose_nature.monocots_chance = 1.0
+# 若只要最單純的「草皮」、不要蕨與花，把下面兩行維持註解即可（沿用 no_assets=0）。
+# compose_nature.ferns_chance = 1.0
+# compose_nature.flowers_chance = 1.0

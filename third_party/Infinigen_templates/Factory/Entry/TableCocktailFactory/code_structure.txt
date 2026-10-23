@@ -1,0 +1,55 @@
+SUMMARY: The TableCocktailFactory procedurally builds a single round (or square) table assembly: a filleted N-gon table top on top of legs (single central pedestal stand, straight legs with optional strechers, or wheeled legs). The upper-level files define the assembly geometry-node graph, per-part leg nodegroups, and reusable table-top/strecher/utility nodegroups, plus the factory that samples all dimensional parameters and assigns materials. For the requested "round marble cocktail table with single turned pedestal on a stepped base," the key knobs live in `cocktail_table.py`'s `sample_parameters` (force round + single_stand) and `single_stand.py`'s curve control points.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tables/cocktail_table.py
+  TableCocktailFactory.sample_parameters: samples all table dimensions/style (random unless noted)
+    knobs: x width(uniform 0.5-0.8) -> table diameter; z height(uniform 1.0-1.5) -> total table height; NGon(choice[4,32]) -> square vs round top (32=round); leg_style(choice["straight","single_stand"]) -> multi-leg vs single central pedestal (choose "single_stand" for the requested pedestal); leg_diameter single_stand(uniform 0.7x-0.9x) -> thickness of central column; leg_diameter straight(uniform 0.05-0.07) -> thin leg thickness; leg_number straight round(choice[3,4]) -> number of legs; top_thickness(uniform 0.02-0.05) -> table top slab thickness
+    knobs: "Top Profile Fillet Ratio"(0.499 round / uniform 0.0-0.05 square) -> edge rounding of top; "Top Vertical Fillet Ratio"(uniform 0.1-0.3) -> top edge vertical bevel; "Leg NGon"(choice[4,32]) -> cross-section shape of straight legs; "Leg Placement Top Relative Scale"(fixed 0.7) -> leg ring radius vs top; "Leg Placement Bottom Relative Scale"(uniform 1.1-1.3) -> leg splay at floor (stepped-base flare); "Leg Height"(fixed 1.0) -> normalized leg height (scaled to Top Height); "Strecher Relative Pos"(uniform 0.2-0.6) -> strecher height between legs; "Strecher Increament"(choice[0,1,2]) -> which legs connected by strechers
+  geometry_assemble_table: builds top + legs + solid placeholder; joins tabletop and legs, extrudes fill curve for placeholder switch
+    knobs: Translation Top Height -> vertical placement of top; is_placeholder switch -> coarse solid vs full mesh
+  geometry_create_legs: dispatches leg nodegroup by "Leg Style"; sets LegMaterial; single_stand Resolution(fixed 64), straight Resolution(32)/Fillet Ratio(0.1); strecher Profile Width(=Leg Diameter*0.5)
+  TableCocktailFactory.get_material_params: picks materials
+    knobs: TopMaterial(weighted_sample material_assignments.table_top) -> top surface look (marble comes from this pool); LegMaterial(weighted_sample material_assignments.tableware) -> pedestal/leg look; scratch/edge_wear(prob from material_assignments.wear_tear_prob, currently disabled in finalize_assets) -> surface wear
+
+FILE: assets/objects/tables/legs/single_stand.py
+  nodegroup_generate_single_stand: the turned central pedestal column; radius profile from "Leg Curve Control Points" (set in sample_parameters: (0,0.1-0.2),(0.5,0.1-0.2),(0.9,0.2-0.3),(1.0,1.0)) -> defines the bulged/turned silhouette and flared base; Resolution 64 -> smoothness/roundness
+
+FILE: assets/objects/tables/legs/straight.py
+  nodegroup_generate_leg_straight: straight tapered leg; uses "Leg Curve Control Points", N-gon, Fillet Ratio -> leg taper and cross-section
+
+FILE: assets/objects/tables/legs/wheeled.py
+  nodegroup_wheeled_leg / nodegroup_chair_wheel: office-chair-style wheeled base (unused by default cocktail sampling)
+    knobs: Arc Sweep Angle(240), Wheel Width(0.13), Wheel Rotation(0.5), Pole Length(1.8), Leg Number(5), internal cap radius/scale values -> wheel base geometry
+
+FILE: assets/objects/tables/strechers.py
+  nodegroup_strecher: cylindrical crossbar between legs; Profile Width -> strecher thickness; N-gon -> cross-section
+
+FILE: assets/objects/tables/table_top.py
+  nodegroup_generate_table_top: the top slab; Thickness, N-gon, Profile Width, Aspect Ratio, Fillet Ratio, Fillet Radius Vertical -> shape/edge profile of top; internal arc Resolution 4/512 profile resolution -> smoothness
+  nodegroup_capped_cylinder: capped cylinder primitive (used by wheels); Thickness, Radius, Cap Flatness, Cap Relative Scale/Z Offset -> capped shape
+  TableTopFactory.sample_parameters: standalone top asset defaults (Profile N-gon 4, Width 1.0, Fillet 0.2, Thickness 0.1) -> not used by cocktail table
+
+FILE: assets/objects/tables/table_utils.py
+  nodegroup_n_gon_profile: builds filleted N-gon cross-section (Profile N-gon/Width/Aspect Ratio/Fillet Ratio)
+  nodegroup_n_gon_cylinder: sweeps a radius curve into a cylinder mesh with caps; core shape engine for legs/top/strechers
+  nodegroup_generate_radius_curve: converts control points into a radius profile curve (turned-column silhouette)
+  nodegroup_create_anchors: places leg anchor points on an N-gon ring (N=1 single center point)
+  nodegroup_create_legs_and_strechers: instances legs on anchors, applies bottom scale/rotation, generates strechers; Keep Odd/Even Strechers, Strecher Index Increment, Align Leg X rot
+  nodegroup_create_cap / nodegroup_arc_top / nodegroup_align_bottom_to_floor / nodegroup_bent / nodegroup_merge_curve: helper geometry ops (spherical cap, arc, floor alignment, bending, curve cleanup)
+
+FILE: assets/objects/tables/__init__.py
+  module exports: registers TableCocktailFactory and sibling table factories
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material pools (table_top, tableware) and wear_tear probabilities sampled by the factory
+  assets/materials/** -> concrete shader definitions (marble/ceramic/metal/wood/plastic/glass, scratches, edge_wear)
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry-node graph construction API (Nodes, NodeWrangler, to_nodegroup, assign_curve)
+  core/surface.py -> add_geomod / NoApply mechanism to apply geometry nodes to objects
+  core/tagging.py, core/tags.py -> semantic part tagging (SupportSurface, tag_system.relabel_obj)
+  core/placement/factory.py -> AssetFactory base class and placeholder/asset lifecycle
+  core/placement/detail.py -> LOD/detail handling for placeholders
+  core/util/math.py -> FixedSeed for deterministic sampling
+  core/util/random.py -> weighted_sample for material selection
+  core/util/blender.py, object.py, color.py, logging.py -> blender object helpers and utilities
+  assets/utils/object.py -> object creation utilities

@@ -1,0 +1,34 @@
+SUMMARY: MonitorFactory builds a single monitor/display asset by subclassing TVFactory, which procedurally constructs a thin beveled screen panel (with optional depth extrusion), a graphic-design screen surface, and either two thin legs or a single-legged stand. All parts are joined into one coherent object with metal-neutral surfaces on frame/support and a graphic screen material. The upper-level tv.py defines all geometry, dimensions, leg types, and material selections; MonitorFactory narrows TVFactory to a smaller single-legged display.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/appliances/tv.py
+  TVFactory.__init__: samples all geometry & material params (FixedSeed).
+    knobs: aspect_ratio(choice[9/16, 3/4]) -> screen shape (widescreen vs 4:3); width(uniform 0.6-2.1) -> screen width; screen_bevel_width(uniform 0-0.01) -> rounded panel edges; side_margin(log_uniform 0.005-0.01) -> bezel thickness sides/top; bottom_margin(uniform 0.005-0.03) -> bottom bezel; depth(uniform 0.02-0.04) -> panel thickness; has_depth_extrude(prob 0.4) -> whether a rear bulge is added; depth_extrude(depth*uniform 2-5 if extrude else depth*1.5) -> rear protrusion length; leg_type(choice two-legged/single-legged) -> stand style; leg_length(uniform 0.1-0.2) -> stand height; leg_length_y(uniform 0.1-0.15) -> stand foot depth; leg_radius(uniform 0.008-0.015) -> leg thickness; leg_width(uniform 0.5-0.8) -> two-leg spread; leg_bevel_width(uniform 0.01-0.02) -> leg edge rounding.
+    surfaces: surface & support_surface(weighted from material_assignments.metal_neutral) -> frame/leg look; screen_surface(weighted from material_assignments.graphicdesign) -> displayed image; if Text: emission(0.01 at prob 0.1 else uniform 2-3) -> screen glow brightness.
+  TVFactory.height / total_width / total_height: derived dims from width, aspect_ratio, margins.
+  TVFactory.create_placeholder: computes bounding box from leg_type, depth_extrude, margins.
+  TVFactory.create_asset: builds base+screen+legs, joins, assigns materials by selection ("leg","screen"), rotates 90° about Z. Change material assignment order/selection here.
+  TVFactory.make_screen: boolean-cuts screen recess; picks largest front-facing face as screen; UV-unwraps for screen material. knobs: cutter location offset 1e-3 -> recess depth.
+  TVFactory.make_base: builds panel cube + bevel; if extrude, bridges rear plane. knobs: height_min(total_height*uniform 0.1-0.3), height_max(*uniform 0.5-0.7) -> rear bulge vertical span; width(total_width*uniform 0.3-0.6) -> bulge width; profile_shape_factor(-uniform 0.0-0.4) -> bulge curvature; number_cuts(32) -> bridge smoothness.
+  TVFactory.add_two_legs: builds V-shaped tubular legs via geo_radius. knobs: leg top offset (uniform 0-0.6 * leg_width), attach height(total_height*uniform 0.3-0.5), z-clamp(leg_radius*uniform 0-0.6), radius resolution(16).
+  TVFactory.add_single_leg: builds vertical post + flat base cube. knobs: post width(total_width*uniform 0.05-0.1), post height factor(total_height*uniform 0.3-0.5), base width(total_width*uniform 0.15-0.3), bevel segments(8).
+  MonitorFactory.__init__: overrides for monitor variant. knobs: width(log_uniform 0.4-0.8) -> smaller display; leg_type(fixed "single-legged") -> always single stand. (To make the requested triple-monitor array, extend create_asset to instantiate/angle three panels on a shared base.)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material pools (metal_neutral, graphicdesign).
+  assets/materials/text.py -> Text screen material with emission control.
+  assets/materials/metal/__init__.py -> metal shaders for frame/legs.
+  assets/materials/{art,ceramic,fabric,plastic,wood,...}/__init__.py -> alternate material shaders.
+  assets/materials/wear_tear/{edge_wear,scratches}.py -> surface wear effects.
+  assets/utils/decorate.py -> mirror, read_area/co/normal, write_attribute/co helpers.
+  assets/utils/nodegroup.py -> geo_radius geometry-node tube builder for legs.
+  assets/utils/object.py -> data2mesh, join_objects, mesh2obj, new_bbox/cube/plane primitives.
+  assets/utils/uv.py -> UV unwrap & direction utilities for screen texturing.
+  core/placement/factory.py -> AssetFactory base class (seeding, placeholder/asset lifecycle).
+  core/surface.py -> assign_material, add_geomod, write_attr_data.
+  core/util/blender.py -> mesh ops, modifiers, transforms, ViewportMode, deep_clone_obj.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> log_uniform, weighted_sample.
+  core/nodes/* -> node graph infrastructure used by geo_radius/materials.
+  core/tags.py -> semantic face/part tagging support.

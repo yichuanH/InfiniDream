@@ -1,0 +1,85 @@
+SUMMARY: BeetleFactory procedurally generates insect/beetle creatures by assembling a NURBS body, radial pairs of insect legs, a NURBS head, and optional mandibles into a genome tree, then joins, rigs, materials, and optionally hairs/animates the mesh. AntSwarmFactory reuses BeetleFactory as a walk-cycle-animated boid particle. The upper-level files define the genome/proportions, part attachment coords/joints, hair grooming, animation gaits, and the boid-swarm settings; the util modules provide the creature assembly/rigging/joining engine. To satisfy "forking antler mandibles" you edit beetle_genome() (mandible attachment and its recursive forking) — note the current mandible is a single non-forking InsectMandible part.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/beetle.py
+  insect_hair_params(): controls fur/hair look applied to beetle body.
+    knobs: mat_roughness(U(0.7,1)) -> hair shininess; length(U(0.01,0.04)) -> hair strand length; puff(U(0.7,1)) -> hair fluffiness; density(4000 fixed) -> hairs per area; clump_n(1) -> tuft grouping; avoid_features_dist(0.01) -> bald margin near eyes/teeth; "Length MinMaxScale"(length, length*N(2,0.5), U(15,60)) -> length variation+noise scale; "Puff MinMaxScale"(puff, puff*N(3,0.5), U(15,60)) -> puff variation; "Combing"(U(0,0.2)) -> comb strength; "Strand Perlin Scale"(U(15,45)) -> perlin noise scale; "Root Radius"(0.001) -> strand thickness; "Hair Length Pct Min"(U(0.7,1)) -> min length fraction; material "IOR"(1.55 fixed).
+  beetle_genome(): builds the whole creature part tree — the main file to edit for mandible forking.
+    knobs: body factory(NurbsBody prefix "body_insect", var=2) -> body shape; proportion-noise chance(U()<0.5) with noise=U(1,3,n) applied to first 2/3 of segments -> body length distortion (randomly sampled); n_leg_pairs(clip(body_length*clip_gaussian(3,2,2,6),2,15)) -> leg pair count (random); leg length div(/= n_leg_pairs/1.8) -> per-leg length scaling; splay(U(30,60)) -> leg sideways spread angle; leg attach t range(np.linspace(0.15,0.6,n)) -> where legs sit along body; xrot(lerp(70,-100,t)) -> leg pitch front-to-back; leg Joint((xrot,5,90)) -> leg orientation; head Joint((0,-15,0)) attach coord=(1,0,0) -> head tilt/placement; mandible presence(U()<0.7) -> whether mandibles exist (random); mandible rot(np.array((120,20,80))*N(1,0.15)) -> jaw orientation (random); mandible attach coord=(0.75,0.5,0.1) -> jaw position on head; mandible sides([-1,1]) -> left/right pair. NOTE: to make forking antler mandibles spanning body length, replace single parts.head_detail.InsectMandible() with a recursive genome.attach chain (jaw->2 branches->2 tines) and scale mandible length toward body_length.
+  BeetleFactory.__init__: seeds and picks body material.
+    knobs: body_material(weighted_sample(material_assignments.beetle)) -> random beetle material/color; animation_mode(None/"walk_cycle") -> whether rigged+animated.
+  BeetleFactory.create_asset(): assembly entry.
+    knobs: hair chance(hair and U()<0.5) -> whether hair applied (random); walk_cycle steps_per_sec(N(2,0.2)) -> gait speed (random).
+  AntSwarmFactory.ant_swarm_settings(): boid swarm behavior for beetle particles.
+    knobs: mode(random choice queues/goal_swarm/random_swarm); land_speed_max(U(0.5,2)); land_acc_max(U(0.7,1)); land_personal_space(0.05); land_jump_speed(U(0,0.05)); rule_fuzzy(U(0.6,0.9)); particle_size(U(0.02,0.1)); size_random(U(0.3,0.7)); mass(2); queue_count(100 for queues); emit_from("VOLUME").
+  AntSwarmFactory.__init__: swarm volume.
+    knobs: volume(N(0.1,0.015)) -> total swarm density/count; child count n=1.
+
+FILE: assets/objects/creatures/parts/__init__.py
+  module list: registers which part factories are importable (beak, body, head_detail, horn, leg, etc.). Add/remove to expose part types for genome use (e.g. horn for antler-like forks).
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  animate_run(): walk-cycle IK/gait animation.
+    knobs: steps_per_sec(passed in) -> stride frequency; stride_length(0.7*clip_gaussian(0.4,0.3,0.3,0.6)*dim) -> step length (random); spread(clip_gaussian(0.15,0.1,0,0.5)) -> leg phase spread; stride_height(U(0.15,0.4)) -> foot lift; body_height(stride_height*clip_gaussian(0.6,0.4,0.3,1.2)) -> body bob; base_offset(U(0,1)), offset(U(0.5,0.7)) -> gait phasing; flap_height(U(0.3,1)) -> wingtip flap; squash_gait_pct(0.1) -> body-to-foot squash coupling.
+  animate_wiggle_body_iks/animate_wiggle_bones/animate_running_front|back_leg: alternate motion styles.
+    knobs: compression_ratio(1.01), cycles_per_bodylen(1.5), mag_deg, freq, wavelength -> amplitude/frequency/wave count of body/leg oscillation.
+  foot_path/body_path(): NURBS gait loop shape (length,height,upturn,down_stroke,curve_resolution=8).
+
+FILE: assets/objects/creatures/util/boid_swarm.py
+  BoidSwarmFactory.create_placeholder(): swarm walk trajectory.
+    knobs: step_size_range(speed*3*N(1,0.1)*[0.5,1.5]); yaw_dist(("normal",0,70)) -> turn randomness; cube size(4).
+  create_asset(): computes particle count from target volume vs child mesh volume.
+
+EDITABLE support (rarely changed but tunable):
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts(): mesh finalization.
+    knobs: min_remesh_size(0.01) -> mesh detail floor; adapt_mode("remesh"); remove_doubles threshold(0.01); smooth_joins(True); roll("GLOBAL_POS_Y"); select_large_component thresh(0.9).
+  compute_joining_effects(): bridge/smoothing between parts (driven by att.bridge_rad/smooth_rad).
+
+FILE: assets/objects/creatures/util/genome.py
+  Joint/Attachment/attach(): the part-graph primitives — edit coord/joint/side/rotation_basis/bridge_rad/smooth_rad when adding forking mandible parts.
+  IKParams: chain_parts, rotation_weight, target_size for rig control.
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig()/constrain_bones(): auto-armature.
+    knobs: shoulder_auto_stiffness(0.85); create_ragdoll col_radius(0.07), col_joint_margin(0.2), mass(5).
+
+FILE: assets/objects/creatures/util/creature_util.py
+  offset_center(): centers/floors the creature (x/z toggles).
+  polar_skeleton()/interp_dict(): skeleton + genome interpolation helpers.
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature(): converts genome tree to posed meshes (attachment raycasting, attribute writing). Engine glue; edit only for new attachment/tagging behavior.
+
+FILE: assets/objects/creatures/util/hair.py
+  configure_hair()/nodegroup_hair_grooming(): applies grooming node graph using insect_hair_params. Tune via insect_hair_params rather than here.
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  create_bevel_connection()/smooth_around_line(): geometry for smooth part joins (segments, width, iters).
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree + iter/map/zip utilities used to build and traverse the genome. Pure infra-style helper.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides `beetle` material candidate list sampled for body color/finish.
+  assets/materials/creature/__init__.py -> creature skin/chitin shader materials.
+  assets/materials/{metal,ceramic,plastic,fabric,wood,plant,terrain,fluid}/__init__.py -> material shader libraries.
+  assets/materials/wear_tear/{edge_wear,scratches}.py -> surface wear overlays.
+  assets/materials/{art,text,lamp_shaders}.py -> misc procedural materials.
+  assets/utils/geometry/lofting.py -> skeleton-to-tangents and surface lofting used in raycast attachment.
+  assets/utils/geometry/__init__.py, nurbs helpers -> NURBS mesh construction (blender_mesh_from_pydata, cylinder topology).
+  assets/utils/nodegroups/hair.py -> low-level hair grooming node groups (comb, clump, snap-to-surface, length rescale).
+  assets/utils/object.py -> object creation utilities.
+  core/placement/factory.py -> AssetFactory base + make_asset_collection.
+  core/placement/particles.py -> particle_system creation and bake for swarms.
+  core/placement/animation_policy.py -> AnimPolicyRandomForwardWalk trajectory generation.
+  core/placement/detail.py -> adapt_mesh_resolution (remesh/subdivide to face_size).
+  core/nodes/node_wrangler.py, node_utils.py -> geometry/shader node graph construction (Nodes, NodeWrangler, to_nodegroup).
+  core/surface.py -> write_attribute, add_geomod, smooth_attribute.
+  core/tagging.py, core/tags.py -> tag_object semantic tagging.
+  core/util/blender.py -> Blender op wrappers (modifiers, selection, joining, collections, transforms).
+  core/util/math.py -> FixedSeed, clip_gaussian, lerp, lerp_sample, homogenize.
+  core/util/random.py -> weighted_sample, random_general.
+  core/util/logging.py -> Suppress, Timer logging utilities.

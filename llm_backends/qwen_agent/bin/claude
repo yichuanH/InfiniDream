@@ -1,0 +1,241 @@
+#!/usr/bin/env python3
+"""Claude-Code-CLI-compatible front for Qwen Code (the open-source coding agent).
+
+The asset generator drives its coding agent through the Claude Code CLI interface:
+
+    claude --print --model M --output-format json --allowedTools "Read,Glob,Grep,Write,Edit" -p PROMPT
+
+and expects ONE JSON object on stdout with {"type":"result","subtype":"success",
+"is_error":false,"result":"<final text>","num_turns":N,"usage":{...}}.
+
+This script accepts exactly those arguments, runs `qwen` headless against an
+OpenAI-compatible server, and prints the same JSON envelope — so `CLAUDE_BIN` can simply
+point here (config.sh does that when LLM_BACKEND=openai).
+
+Environment:
+  QWEN_BIN                 path to the `qwen` CLI            (default: "qwen" on PATH)
+  LLM_CODER_BASE_URL       endpoint serving the coder model  (default: LLM_OPENAI_BASE_URL)
+  LLM_OPENAI_BASE_URL      fallback endpoint                 (e.g. http://localhost:8000/v1)
+  LLM_OPENAI_API_KEY       key for that endpoint             (default "EMPTY")
+  LLM_CODER_MODEL          served coder model name           (required, e.g. Qwen/Qwen3-Coder-30B-A3B-Instruct)
+  QWEN_AGENT_MAX_TURNS     --max-session-turns               (default 120)
+  QWEN_AGENT_MAX_TOOLS     --max-tool-calls                  (default 300)
+  QWEN_AGENT_WALL_TIME     --max-wall-time                   (default 45m)
+"""
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+
+# Claude Code tool names -> Qwen Code tool identifiers.
+# (identifiers as sent by Qwen Code 0.25.3; older/newer names kept alongside)
+TOOL_MAP = {
+    "Read": ["read_file", "read_many_files"],
+    "Glob": ["glob"],
+    "Grep": ["grep_search", "grep"],
+    "Write": ["write_file"],
+    "Edit": ["edit", "replace", "notebook_edit"],
+    "Bash": ["run_shell_command", "shell"],
+}
+# Everything the asset generator must never get, whatever was allowed.
+ALWAYS_EXCLUDE = ["web_fetch", "web_search", "agent", "task", "memory", "skill",
+                  "run_shell_command", "shell", "save_memory", "todo_write"]
+
+
+def _parse_qwen_json(stdout: str):
+    """Return the list of event objects in `stdout`.
+
+    Accepts stream-json (NDJSON, one object per line — notice lines are skipped) and the
+    older single json array, tolerating leading/trailing plain-text lines.
+    """
+    events = []
+    for line in stdout.splitlines():
+        line = line.strip()
+        if line.startswith("{"):
+            try:
+                events.append(json.loads(line))
+            except ValueError:
+                continue
+    if events:
+        return events
+    try:
+        return json.loads(stdout)
+    except (ValueError, TypeError):
+        pass
+    lines = stdout.splitlines()
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith(("[", "{")):
+            chunk = "\n".join(lines[i:])
+            try:
+                return json.JSONDecoder().raw_decode(chunk.lstrip())[0]
+            except (ValueError, TypeError):
+                continue
+    # last resort: the final {"type":"result",...} object anywhere in the stream
+    key = '{"type":"result"'
+    pos = stdout.rfind(key)
+    if pos >= 0:
+        return [json.JSONDecoder().raw_decode(stdout[pos:])[0]]
+    raise ValueError("no JSON document in qwen output")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("--print", action="store_true")
+    ap.add_argument("-p", "--prompt", dest="prompt", default=None)
+    ap.add_argument("--model", default=None)
+    ap.add_argument("--output-format", default="json")
+    ap.add_argument("--allowedTools", default="")
+    ap.add_argument("--system-prompt", default=None)
+    ap.add_argument("--effort", default=None)            # accepted, ignored
+    ap.add_argument("--version", action="store_true")
+    args, _unknown = ap.parse_known_args()
+    if args.version:
+        print("qwen-agent shim for InfiniDream (wraps Qwen Code)")
+        return 0
+    prompt = args.prompt if args.prompt is not None else sys.stdin.read()
+
+    def fail(msg: str, code: int = 1) -> int:
+        print(json.dumps({"type": "result", "subtype": "error", "is_error": True,
+                          "result": msg, "num_turns": 0}), flush=True)
+        return code
+
+    base = (os.environ.get("LLM_CODER_BASE_URL", "").strip()
+            or os.environ.get("LLM_OPENAI_BASE_URL", "").strip())
+    model = os.environ.get("LLM_CODER_MODEL", "").strip() or os.environ.get("LLM_OPENAI_MODEL", "").strip()
+    if not base or not model:
+        return fail("LLM_OPENAI_BASE_URL and LLM_CODER_MODEL must be set for the Qwen coding agent")
+
+    # Tell Qwen Code the real context window so it auto-compacts the conversation instead
+    # of overflowing the server (it guesses the window from the model name; unknown names
+    # fall back to a constant, and a 4-bit community checkpoint is unknown). Source:
+    # QWEN_CONTEXT_WINDOW, else the server's /models max_model_len. Written as workspace
+    # settings (<cwd>/.qwen/settings.json) with 10% headroom for tokenizer differences.
+    ctx = os.environ.get("QWEN_CONTEXT_WINDOW", "").strip()
+    if not ctx:
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                base.rstrip("/") + "/models",
+                headers={"Authorization": "Bearer " + (os.environ.get("LLM_OPENAI_API_KEY") or "EMPTY")})
+            for m in json.load(urllib.request.urlopen(req, timeout=10)).get("data", []):
+                if m.get("id") == model and m.get("max_model_len"):
+                    ctx = str(m["max_model_len"])
+        except Exception:
+            ctx = ""
+    if ctx.isdigit():
+        try:
+            qdir = os.path.join(os.getcwd(), ".qwen")
+            os.makedirs(qdir, exist_ok=True)
+            sp = os.path.join(qdir, "settings.json")
+            cur = json.load(open(sp)) if os.path.isfile(sp) else {}
+            cur.setdefault("model", {}).setdefault("generationConfig", {})["contextWindowSize"] = int(int(ctx) * 0.9)
+            json.dump(cur, open(sp, "w"), indent=2)
+        except Exception:
+            pass
+
+    allowed = [t.strip() for t in args.allowedTools.split(",") if t.strip()]
+    allow_ids = [q for t in allowed for q in TOOL_MAP.get(t, [])]
+    exclude_ids = list(ALWAYS_EXCLUDE)
+    for tool, ids in TOOL_MAP.items():
+        if tool not in allowed:
+            exclude_ids += ids
+    # Read-only agents (planner) must not touch files at all.
+    writable = any(t in allowed for t in ("Write", "Edit", "Bash"))
+
+    # stream-json (NDJSON, one event per line) instead of json: Qwen Code 0.25 writes the
+    # final json array in one go and it is cut at exactly 64 KiB when stdout is a pipe,
+    # which silently destroyed every long agent run. NDJSON is flushed per event.
+    cmd = [os.environ.get("QWEN_BIN", "qwen"),
+           "--output-format", "stream-json",
+           "--auth-type", "openai",
+           "--openai-base-url", base,
+           "--openai-api-key", os.environ.get("LLM_OPENAI_API_KEY", "EMPTY") or "EMPTY",
+           "--model", model,
+           "--approval-mode", "yolo" if writable else "plan",
+           "--max-session-turns", os.environ.get("QWEN_AGENT_MAX_TURNS", "120"),
+           "--max-tool-calls", os.environ.get("QWEN_AGENT_MAX_TOOLS", "300"),
+           "--max-wall-time", os.environ.get("QWEN_AGENT_WALL_TIME", "45m"),
+           "--exclude-tools", ",".join(dict.fromkeys(exclude_ids))]
+    if allow_ids:
+        cmd += ["--allowed-tools", ",".join(dict.fromkeys(allow_ids))]
+    if args.system_prompt:
+        cmd += ["--system-prompt", args.system_prompt]
+    # Open-weight coders reliably "solve" the task by adding a subclass (ClownfishFactory)
+    # or renaming the entry class, which the pipeline never instantiates — it spawns the
+    # class named in <out_dir>/factory.txt. Spell that out as a hard rule for write roles.
+    if writable:
+        entry_cls = ""
+        for cand in (os.path.join(os.getcwd(), "..", "factory.txt"),
+                     os.path.join(os.getcwd(), "factory.txt")):
+            try:
+                for line in open(cand, encoding="utf-8"):
+                    if line.startswith("factory:"):
+                        entry_cls = line.split(":", 1)[1].strip()
+                        break
+            except OSError:
+                continue
+            if entry_cls:
+                break
+        if entry_cls:
+            cmd += ["--append-system-prompt",
+                    f"HARD RULE: the renderer instantiates the class named exactly `{entry_cls}` "
+                    f"from the entry file under src/. Put every change INSIDE that existing class "
+                    f"(its methods, its material/geometry calls). Do NOT rename it, do NOT add a "
+                    f"subclass or a new class and leave `{entry_cls}` unchanged — code outside "
+                    f"`{entry_cls}` is never executed. Verify at the end that `class {entry_cls}` "
+                    f"still exists and now contains your changes."]
+    cmd += ["-p", prompt]
+
+    env = os.environ.copy()
+    # Qwen Code's own OpenAI-compatible provider settings.
+    env["OPENAI_BASE_URL"] = base
+    env["OPENAI_API_KEY"] = os.environ.get("LLM_OPENAI_API_KEY", "EMPTY") or "EMPTY"
+    env["OPENAI_MODEL"] = model
+    env.setdefault("QWEN_CODE_SUPPRESS_YOLO_WARNING", "1")
+    env.setdefault("NO_COLOR", "1")
+    for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"):
+        env.pop(k, None)
+
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
+    except OSError as e:
+        return fail(f"could not launch qwen: {e}")
+
+    # Qwen Code json output = array of messages; the last one is {"type":"result",...}.
+    # Qwen Code may print plain-text notices BEFORE the array on stdout (e.g.
+    # "Retrying provider attempt (N buffered tool call(s) discarded)."), so parse from the
+    # first line that starts the JSON document instead of the whole stream.
+    result_text, usage, turns, is_error = "", {}, 0, False
+    debug_dir = os.environ.get("QWEN_AGENT_DEBUG_DIR")
+    if debug_dir:
+        os.makedirs(debug_dir, exist_ok=True)
+        stamp = time.strftime("%H%M%S")
+        open(os.path.join(debug_dir, f"qwen_{stamp}.stdout"), "w").write(r.stdout)
+        open(os.path.join(debug_dir, f"qwen_{stamp}.stderr"), "w").write(r.stderr)
+    try:
+        arr = _parse_qwen_json(r.stdout)
+        if isinstance(arr, dict):
+            arr = [arr]
+        last = arr[-1] if arr else {}
+        result_text = str(last.get("result") or "")
+        is_error = bool(last.get("is_error")) or last.get("subtype", "success") not in ("success", None)
+        usage = last.get("usage") or {}
+        turns = sum(1 for m in arr if m.get("type") == "assistant") or last.get("num_turns") or 0
+    except (ValueError, TypeError, IndexError):
+        is_error = True
+        result_text = (r.stderr or r.stdout or "").strip()[-2000:]
+
+    if r.returncode != 0 and not result_text:
+        is_error = True
+        result_text = f"qwen exit {r.returncode}: {(r.stderr or '').strip()[-1500:]}"
+    out = {"type": "result", "subtype": "error" if is_error else "success",
+           "is_error": is_error, "result": result_text, "num_turns": turns,
+           "usage": usage, "backend": "qwen-code", "served_model": model}
+    print(json.dumps(out, ensure_ascii=False), flush=True)
+    return 1 if is_error else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

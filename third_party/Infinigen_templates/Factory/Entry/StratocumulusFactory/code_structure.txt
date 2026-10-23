@@ -1,0 +1,74 @@
+SUMMARY: This factory procedurally generates volumetric clouds (StratocumulusFactory is the selected entry, producing flat, broken sheet-like stratocumulus clouds). The upper-level files define cloud shape classes (cloud.py), the AssetFactory subclasses that place/spawn clouds in a sky dome (generate.py), and the geometry-node + volume-shader networks that turn a 3D grid of points into a cloud mesh with density/noise/voronoi detail (node.py). NOTE: the selecting request describes a "miscanthus silvergrass clump" (a plant), but this codebase only builds clouds — there is no grass/blade/plume geometry here; the mapping below reflects the actual cloud factory.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/cloud/__init__.py
+  (module exports): Re-exports the five factory classes; no tunables.
+
+FILE: assets/objects/cloud/cloud.py
+  Cumulus (base cloud class): controls overall cloud density field, noise/voronoi detail, curve silhouette, and scale.
+    knobs: DENSITY_RANGE([1.0,1.0]) -> base volumetric density multiplier (sampled uniform); ANISOTROPY_RANGE([-0.5,0.5]) -> light scatter directionality (sampled); NOISE_SCALE_RANGE([8,16]) -> size of coarse cloud lumps (sampled); NOISE_DETAIL_RANGE([1,16]) -> fine wispy detail (sampled); VORONOI_SCALE_RANGE([2,6]) -> cellular/puffy cell count (sampled); MIX_FACTOR_RANGE([0.3,0.8]) -> blend of noise vs voronoi shaping (sampled); ANGLE_ROTATE_RANGE([0,pi/4]) -> random rotation of noise field (sampled); EMISSION_RANGE([0,0]) -> self-illumination (fixed off); PLACEHOLDER_DENSITY(32.0) -> placement placeholder density; MAX_EXPECTED_SCALE(128.0) -> placeholder bounding size; PLANE_SCALES([16,16,4]) -> aspect of base plane.
+    get_scale(): scale_z(uniform 16-32), scale_x(uniform 1.2-2.0*scale_z), scale_y(uniform 0.5-2.0*scale_x) -> per-cloud dimensions (sampled).
+    sample_curves(): 4 control points shaping vertical silhouette; first_pt_x(-0.95..-0.80), second_pt_y(0.80..0.85), third_pt_x(0.25..0.75)/third_pt_y(0.75..0.90), forth_pt_y(0.90..1.00) (all sampled) -> top/bottom profile of cloud.
+    update_shader_params(): density(uniform 0.05-0.25) -> render opacity of volume (sampled).
+    make_cloud(marching_cubes=False, resolution=128): resolution -> voxel/mesh fineness; marching_cubes toggles mesh export vs volume; distance_transform threshold(0.08) and cutoff(<0.01=0) -> surface extraction when marching cubes used.
+
+  Cumulonimbus (Cumulus subclass): tall storm cloud.
+    knobs: DENSITY_RANGE([1,1]); EMISSION_RANGE([0.01,0.01]) -> slight glow (fixed); PLACEHOLDER_DENSITY(8.0); MAX_EXPECTED_SCALE(2048.0); PLANE_SCALES([16,16,32]).
+    get_scale(): scale_x(uniform 512-1024), scale_y(0.5-2.0*x), scale_z(256-512) -> very large towering size (sampled).
+    sample_curves(): first_pt_x(-0.65..-0.50), second_pt_y(0.50..0.70), third_pt_x(0.25..0.75)/third_pt_y(0.80..0.95), forth_pt_y(-1.0..0.50) -> anvil-like top (sampled).
+    make_cloud(): doubles resolution (resolution*2).
+    update_shader_params(): density(uniform 0.1-0.3).
+
+  Stratocumulus (Cumulus subclass — the SELECTED factory's cloud): flat, broken horizontal sheet.
+    knobs: ANGLE_ROTATE_RANGE([0,pi/4]).
+    update_shader_params(): density(uniform 0.01-0.10) -> thin, wispy layer opacity (sampled).
+    get_scale(): scale_z(uniform 16-32) -> thin vertical; scale_x(uniform 128-256), scale_y(0.5-2.0*x) -> wide horizontal spread (sampled).
+    sample_y_curves(): n(randint 2-6) -> number of undulations across the sheet; alternating y peaks(uniform 0.8-1.0) / troughs(uniform -1.0..-0.8) -> lumpiness of the broken sheet (sampled).
+    get_curve_func(): applies y-curve (curves[1]) and z-curve (curves[2]) for 2-axis silhouette shaping.
+
+  Altocumulus (Cumulus subclass): field of many small scattered cloudlets.
+    knobs: SCATTER_VORONOI_SCALE_RANGE([1,4]) -> patchiness of scatter mask (sampled); SCATTER_GRID_VERTICES_RANGE([4,12]) -> grid resolution for instancing (randint); NUM_SUBCLOUDS(8) -> number of distinct cloudlet variants; get_scale multiplies base scale by 4.
+    update_shader_params(): per-subcloud density(uniform 0.05-0.25).
+
+  Module-level helpers (rarely changed): points_to_voxel/create_3d_grid(steps=64)/create_cube(steps=128) -> voxel grid resolution; initialize()/main()/single() -> standalone test-scene builders (cloud counts 6/6/6/7, render samples 128, GPU Cycles) — not used by the factory pipeline.
+
+FILE: assets/objects/cloud/generate.py
+  CloudFactory (base AssetFactory): builds the sky dome, samples cloud placements, and creates cloud assets by distance-based LOD.
+    knobs: max_distance(300) -> distance at which resolution hits minimum; steps(128) -> ref grid density; cloudy(("bool",0.01)) -> 1% chance to switch to overcast Cumulonimbus-only mode; resolutions dict per type (Cumulonimbus[16,128], Cumulus[16,128], Stratocumulus[32,256], Altocumulus[16,64]) then scale_resolution(4)x -> min/max mesh detail; min_distance(256 cloudy / 64) -> spacing between clouds; dome_radius(1024 / 256) -> sky dome size; dome_threshold(32 / 0) -> min Z cutoff for placement; density_range([1e-5,1e-4] cloudy / [1e-4,2e-4]) -> cloud count per area (sampled per placement).
+    create_asset(distance): resolution interpolated by distance -> fewer polys for far clouds.
+    geo_dome(): IcoSphere Subdivisions(8), Transform Scale(1.2,1.4,1.0) -> dome shape; DistributePointsOnFaces POISSON with Distance Min/Density Max -> placement points; combine_xyz Z = uniform(32, randint(64..1e5)) -> vertical spread of clouds (sampled).
+
+  CumulonimbusFactory / CumulusFactory / StratocumulusFactory / AltocumulusFactory: thin subclasses forcing a single cloud_types entry. StratocumulusFactory is the entry point; change its parent-passed max_distance/steps to alter LOD/spawn.
+
+FILE: assets/objects/cloud/node.py
+  cloud_geometry_func / geometry_func (single-cloud geometry nodes): converts grid points to volume mesh.
+    knobs: scale(1.5,1.5,2.0) multiply -> stretch of density field; noise_texture_1 Scale(2.0) & scale factor(0.1) -> low-freq warp; voronoi + noise mix via mix_factor (OVERLAY); map_range multiply_2(2.0)/divide(100.0) -> density falloff mapping; greater_than threshold(0.01) -> density cutoff defining cloud surface; PointsToVolume Radius(0.015) -> puffiness/blob merge; VolumeToMesh -> final mesh.
+  shader_material (volume shader): PrincipledVolume Color(white 1,1,1), Absorption Color(white), Temperature(0.0), Density(from map_range*density), Anisotropy(from param), Emission Strength(from param); mix_1 Fac(0.3 fixed) -> noise/voronoi blend in shader; noise scales(2.0,1.5) & detail(5.0) fixed -> shader-side wisp detail.
+  scatter_func (Altocumulus multi-cloud instancing): voronoi selection threshold(0.6); MeshGrid Size(2,2) with vertices_x/y; DistributePointsOnFaces Distance Min(0.3)/Density Max(64.0); per-instance random scale(0.1-0.4), random Z rotation(-45..45 deg), random Z translate -> spread/variation of scattered cloudlets (all sampled).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  __init__.py -> package init.
+  assets/__init__.py -> assets package init.
+  assets/lighting/__init__.py -> lighting package init.
+  assets/lighting/sky_lighting.py -> adds sun/sky HDRI lighting for standalone cloud scenes.
+  assets/utils/__init__.py -> utils package init.
+  assets/utils/decorate.py -> mesh decoration helpers.
+  assets/utils/object.py -> new_cube and object-creation helpers used for placement dome.
+  core/__init__.py -> core package init.
+  core/nodes/__init__.py -> nodes package init.
+  core/nodes/compatibility.py -> Blender version node compatibility shims.
+  core/nodes/node_info.py -> node type/socket metadata.
+  core/nodes/node_wrangler.py -> Nodes enum + NodeWrangler API used to build all geometry/shader graphs.
+  core/nodes/utils.py -> node graph helper utilities.
+  core/placement/__init__.py -> placement package init.
+  core/placement/detail.py -> LOD/detail management.
+  core/placement/factory.py -> AssetFactory base class (create_placeholder/create_asset lifecycle).
+  core/surface.py -> add_material/add_geomod/shaderfunc_to_material glue between Python funcs and Blender.
+  core/tagging.py -> tag_object semantic tagging ("cloud").
+  core/tags.py -> tag constants.
+  core/util/__init__.py -> util package init.
+  core/util/blender.py -> blender utilities (spawn_empty, delete, apply_transform, select).
+  core/util/logging.py -> Suppress logging context manager.
+  core/util/math.py -> FixedSeed and math helpers.
+  core/util/random.py -> random_general (rg) for weighted/typed sampling (e.g. cloudy bool).

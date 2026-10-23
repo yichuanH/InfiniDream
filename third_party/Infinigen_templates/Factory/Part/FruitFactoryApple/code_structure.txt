@@ -1,0 +1,58 @@
+SUMMARY: FruitFactoryApple procedurally generates a 3D apple asset using Blender geometry nodes. It inherits from FruitFactoryGeneralFruit, which orchestrates four modular stages: cross-section shape, body shape along a quadratic spine, surface material/denting, and stem geometry. Each stage is parameterized by a `sample_*_params()` method in apple.py, with the actual node-graph builders living in cross_section_lib.py, fruit_utils.py, stem_lib.py, and surfaces/apple_surface.py.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/fruits/apple.py
+  FruitFactoryApple.sample_cross_section_params: controls the circular cross-section profile swept along the spine
+    knobs: radius(normal(1.5,0.05)) -> overall apple girth/fatness; random seed(uniform(-100,100)) -> repeatable noise variation in cross-section outline; Resolution(surface_resolution=256) -> polygon count of cross-section ring
+
+  FruitFactoryApple.sample_shape_params: controls the quadratic spine that defines the apple silhouette
+    knobs: radius_control_points(fixed list [(0.0,0.0),(0.1227,0.4281),(0.4705,0.6625),(0.8886,0.4156),(1.0,0.0)]) -> apple outline profile curve (wide middle, tapered top/bottom); noise_amount_pos(0.1 fixed) -> lateral wobble of spine; noise_scale_pos(0.5 fixed) -> frequency of spine wobble; noise_amount_tilt(0.0 fixed) -> tilt noise along spine (0=none); Start Z(uniform(-0.9,-1.1)) -> bottom pole depth variation; Start X/Y(uniform(-0.1,0.1) each) -> bottom pole lateral offset (asymmetry); End(0.0,0.0,1.0 fixed) -> top pole position; Resolution(surface_resolution) -> longitudinal mesh density
+
+  FruitFactoryApple.sample_surface_params: controls apple skin color, texture, and dent geometry
+    knobs: base_color hue(uniform(-0.05,0.1)) -> base skin hue, negative=red, positive=yellow-green; base_color saturation(0.999+normal(0,0.05)) -> base color saturation; base_color value(0.799+normal(0,0.05)) -> base color brightness; alt_color hue offset(base_hue+normal(0.05,0.02)) -> secondary blotch hue shift (streaks/patches); alt_color saturation(+normal(0,0.05)) -> secondary color saturation variation; alt_color value(+normal(0,0.05)) -> secondary color brightness variation; random_seed(uniform(-100,100)) -> drives Musgrave texture variation on skin; surface_resolution(64 fixed) -> UV resolution for surface node; scale_multiplier(1.0 fixed) -> extra uniform scale applied after object creation
+
+  FruitFactoryApple.sample_stem_params: controls the stem geometry and color
+    knobs: stem_color hue(0.10+normal(0,0.02)) -> stem base hue (brownish-green); stem_color saturation(0.96+normal(0,0.05)) -> stem saturation; stem_color value(0.13+normal(0,0.05)) -> stem brightness (dark); quad_mid X/Y(uniform(-0.1,0.1) each) -> stem mid-point lateral bend; quad_mid Z(uniform(0.15,0.2)) -> stem mid-point height; quad_end X/Y(uniform(-0.2,0.2) each) -> stem tip lateral droop; quad_end Z(uniform(0.3,0.4)) -> stem tip height; cross_radius(uniform(0.025,0.035)) -> stem thickness; Translation(0.0,0.0,0.6 fixed) -> stem attachment offset on apple top
+
+FILE: assets/objects/fruits/surfaces/apple_surface.py
+  nodegroup_apple_surface: geometry node group; adds top/bottom dents and applies skin material
+    knobs: dent_control_points(fixed [(0.0045,0.3719),(0.0727,0.4532),(0.2273,0.4844),(0.5568,0.5125),(1.0,0.5)]) -> shape of the concave dimple at top and bottom (calyx dent profile); top dent intensity(1.5 fixed) -> depth of top (calyx) indentation; bottom dent intensity(-1.0 fixed) -> depth of bottom indentation (negative=push inward); top/bottom dent max_radius(1.5 fixed) -> radial extent of dent influence
+
+  shader_apple_shader: Cycles/EEVEE material for apple skin
+    knobs: color1(passed from sample_surface_params) -> base skin color (RGBA); color2(passed from sample_surface_params) -> secondary/blotch skin color (RGBA); random_seed(passed) -> offsets Object texture coordinates to vary per-instance pattern; Musgrave Scale stripe(0.6 fixed) -> scale of large color stripe pattern; Musgrave Lacunarity stripe(1.0 fixed) -> detail of stripe pattern; Musgrave Scale detail(10.0 fixed) -> scale of fine surface detail overlay; Musgrave Dimension detail(0.3 fixed) -> fractal dimension of fine detail; Musgrave Lacunarity detail(3.0 fixed) -> lacunarity of fine detail; Z multiply(0.2 fixed) -> compresses texture vertically, creating horizontal stripe bands; HueSaturation Hue shift(0.55 fixed) -> hue rotation applied to detail overlay color
+
+FILE: assets/objects/fruits/cross_section_lib.py
+  nodegroup_circle_cross_section: builds the circular cross-section profile for the apple
+    knobs: noise scale(0.5, passed via cross_section_input_args) -> frequency of outline noise bumps; noise amount(0.1, passed via cross_section_input_args) -> amplitude of outline irregularity; radius(normal(1.5,0.05), passed) -> cross-section radius scaling; Resolution(surface_resolution) -> vertex count of the circle
+
+FILE: assets/objects/fruits/fruit_utils.py
+  nodegroup_shape_quadratic: sweeps the cross-section along a quadratic bezier to form the body mesh
+    knobs: radius_control_points(list passed from apple.py) -> radial profile along height (apple silhouette curve); noise_amount_pos -> spine positional wobble amplitude; noise_scale_pos -> spine wobble frequency; noise_amount_tilt -> tilt variation along spine; Start/Middle/End vectors -> bezier spine endpoints controlling shape and asymmetry
+
+  nodegroup_add_dent: deforms mesh to create top/bottom dimples
+    knobs: dent_control_points(list) -> dimple falloff profile curve; intensity(float) -> dimple depth; max_radius(float) -> dimple width; bottom(bool) -> selects top vs bottom hemisphere for deformation
+
+  nodegroup_surface_bump (used in stem): adds high-frequency micro-bump displacement
+    knobs: Displacement(0.01 in stem) -> bump height; Scale(2.9 or 20.0 in stem) -> bump frequency
+
+FILE: assets/objects/fruits/stem_lib.py
+  nodegroup_basic_stem: builds the apple stem tube geometry
+    knobs: stem_color(RGBA, from sample_stem_params) -> stem material color; quad_res(32 fixed) -> longitudinal resolution of stem bezier; cross_res(32 fixed) -> radial resolution of stem tube; cross_radius(uniform(0.025,0.035)) -> stem tube radius; quad_mid/quad_end -> stem curve shape; Translation(0.0,0.0,0.6) -> places stem at apple top; Scale(1.0,1.0,2.0 fixed) -> stretches stem vertically
+
+  shader_basic_stem_shader: stem surface material
+    knobs: stem_color(RGBA) -> base stem color fed into HueSaturation node; Specular IOR Level(0.1205 fixed) -> stem specularity; Roughness(0.5068 fixed) -> stem roughness; noise Scale(0.8 fixed) -> scale of stem color variation; Detail(10.0 fixed) -> noise detail; Roughness noise(0.7 fixed) -> noise roughness
+
+FILE: assets/objects/fruits/general_fruit.py
+  FruitFactoryGeneralFruit.create_asset: top-level asset creation; applies geometry nodes then finalizes mesh
+    knobs: overall scale(normal(1,0.1)*self.scale*scale_multiplier) -> random uniform size variation ±10% around self.scale
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/nodes/node_wrangler.py -> NodeWrangler DSL: wraps Blender geometry/shader node creation and linking
+  core/placement/factory.py -> AssetFactory base class: seed management, create_asset interface
+  core/surface.py -> surface.add_geomod and shaderfunc_to_material: applies geometry node modifiers and converts shader functions to Blender materials
+  core/tagging.py -> tag_object: labels generated objects with semantic tags for scene querying
+  core/util/blender.py -> butil helpers: apply_transform, purge_empty_materials, and other Blender utility ops
+  core/util/color.py -> hsv2rgba: converts HSV tuples to linear RGBA for use in node color inputs
+  core/util/math.py -> FixedSeed: context manager that sets numpy random seed deterministically from factory_seed
+  core/nodes/node_utils.py -> to_nodegroup decorator and assign_curve: registers functions as reusable Blender node groups and sets float-curve control points

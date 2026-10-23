@@ -1,0 +1,73 @@
+SUMMARY:
+The CactusFactory builds procedural cacti in several morphologies (globular, columnar, pricky-pear, kalidium), each generated from geometry-node curves/meshes, then displaced with noise, shaded, and studded with instanced spike clusters. The upper-level files define per-morphology base shapes (base.py + columnar/globular/kalidium/pricky_pear), the spike generation and placement pipeline (spike.py), the top-level dispatcher/material (generate.py), and a shared radius-tree skeleton builder (trees/tree.py). To satisfy a request for spines arranged along a single continuous helix (one cluster per turn from base to tip), you must replace the current surface-scattered point sampling in `make_default_selections` (spike.py) with a helical point generator driven by the object's Z extent.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/cactus/base.py
+  BaseCactusFactory: shared spike/surface constants inherited by every morphology.
+    knobs: spike_distance(0.025) -> min spacing between spike clusters (larger=fewer, sparser spines); cap_percentage(0.1) -> fraction of top capped with denser spikes; noise_strength(0.02) -> surface bumpiness via DISPLACE modifier; base_radius(0.002) -> thickness of individual spikes; density(5e4) -> spikes scattered per unit area (set 0 to disable spikes)
+    note: constructs points_fn from make_default_selections — this is the spine placement rule to override for a helix.
+
+FILE: assets/objects/cactus/spike.py
+  make_default_selections(spike_distance, cap_percentage, density): builds the point-set where spikes are instanced.
+    knobs: DistributePointsOnFaces Density(=density) -> scatter count (currently surface-random, NOT helical); MergeByDistance(spike_distance) -> thins clusters; cap float_curve [(0,1),(cap_percentage,0.5),(1,0)] -> vertical falloff of cap spikes
+    HELIX CHANGE: replace the DistributePointsOnFaces/MergeByDistance block with points sampled at z = linspace(zmin,zmax, n_turns*clusters_per_turn) and angle = 2*pi*z/pitch, projected onto surface radius; expose n_turns/pitch/clusters_per_turn as new knobs.
+  build_spikes(base_radius): geometry of one spike cluster (radius-tree twig).
+    knobs: n_branch(4) -> spines per cluster; n_major(9) -> segments per spine; sz(uniform 0.005-0.01, random) -> spine length; init_vec=sample_direction(0.8) (random) -> splay direction; radius decay 0.5** -> taper
+  geo_spikes(nw, spikes, points_fn, realize): instances spike clusters onto points with normal-aligned + randomized rotation.
+    knobs: AlignEulerToVector factor(uniform 0.2-0.5, random) -> tilt toward Z; RotateEuler Angle(uniform 0-2pi, random) -> spin; add uniform(-0.05..0.05) -> jitter; Scale(uniform 0.5-1.0, random) -> per-cluster size; selection compare GREATER_THAN 0.8 -> which faces eligible
+  shader_spikes(nw): spike material.
+    knobs: roughness(0.8); specular(0.25); mix_ratio(0.9 principled vs translucent); color hsv2rgba(hue uniform 0.2-0.4, sat 0.1-0.3, val 0.8) (random); Subsurface Weight(0.1)
+  apply(obj, points_fn, base_radius, realize): clones mesh, makes 5-variant spike collection, applies geo_spikes.
+    knobs: make_asset_collection count(5) -> number of distinct spike prototypes
+
+FILE: assets/objects/cactus/generate.py
+  CactusFactory: dispatcher + material + assembly (noise displace, spikes, tagging).
+    knobs: factory_methods list [Globular,Columnar,PrickyPear] (Kalidium commented out) -> available shapes; weights(equal) -> selection probability (random choice); base_hue(uniform 0.2-0.4, random) -> overall green tint; DISPLACE texture choice(STUCCI/MARBLE random), noise_scale(log_uniform 0.1-0.15); spike gate face_size<=0.05 and density>0
+  shader_cactus(nw, base_hue): body material.
+    knobs: shift(uniform -0.15..0.15); bright_color(val 0.02), dark_color(sat 0.8 val 0.01), fresnel_color(val uniform 0.3-0.5); specular(0.25); musgrave scale(log_uniform 10-50); color_ramp stops [0,0.3,0.7,1]; roughness curve [(0,0.5),(1,0.8)]
+  Globular/Columnar/PrickyPear/KalidiumCactusFactory: thin wrappers forcing one morphology.
+
+FILE: assets/objects/cactus/columnar.py
+  ColumnarBaseCactusFactory: tall ribbed cactus via radius-tree + star profile.
+    knobs: spike_distance(0.08); radius_fn decays(uniform 0.5-0.8, 0.7-0.9), leaf_alpha(2-3); branch_config n_major(16), n_minor(randint 10-14), b_minor(randint 2-4, min angular gap pi/3); minor spawn ang(pi/2.5..pi/2), rng(0.2-0.6), pull_dir Z; base_radius(0.25); resolution(16); star_resolution(randint 5-8); perturb(0.1); ridge scale(uniform 1.15-1.25); align_tilt noise(pi/4..pi/2)
+  geo_star(nw): builds the fluted cross-section and extrudes along curve.
+
+FILE: assets/objects/cactus/globular.py
+  GlobularBaseCactusFactory: round barrel cactus from lofted star profile.
+    knobs: spike_distance(0.08); star_resolution(randint 6-12); resolution(64); frequency(uniform -0.2..0.2 -> rib twist); ridge scale(1.1-1.2); radius anchor curve (random control points); overall scale(uniform 0.8-1.5) and Z rotation(random)
+
+FILE: assets/objects/cactus/pricky_pear.py
+  PrickyPearBaseCactusFactory: pad/paddle cactus built recursively.
+    knobs: spike_distance(0.08); geo_leaf anchors(random), radius mult(log_uniform 0.5-1.5); leaf scale(x 0.8-1.2, y 0.2-0.25, z 0.8-1.2); build_leaves level(2), n children(randint 1-3), branch angles(±pi/3..pi/2), child scale(0.5-0.75), rotation(±pi/3)
+
+FILE: assets/objects/cactus/kalidium.py
+  KalidiumBaseCactusFactory: segmented twiggy cactus via voxel array + shortest-path skeleton (spikes disabled).
+    knobs: cap_percentage/noise_strength/density(=0); resolution(20); sphere cutoff (x²+y²+(z-1)²>1.1), removal prob(0.05); displace(±0.8/res); shortest-path end count(5), weight jitter(0.8-1); radius(0.006); twig count(5), twig density(2e3), perturb(0.4), scale(0.8-1.2)
+  build_twig / geo_twigs: small branch instances distributed on surface.
+
+FILE: assets/objects/trees/tree.py
+  build_radius_tree(radius_fn, branch_config, base_radius, resolution, fix_first): shared skeleton generator used by columnar/kalidium/spike bodies.
+    knobs (via branch_config passed by callers): n branches, path_kargs(n_pts,std,momentum,sz,pull_*), spawn_kargs(ang_min/max,rng,axis2,init_vec)
+  rand_path/get_spawn_pt/recursive_path/space_colonization: low-level growth math (momentum, std, pull_dir, D/d/s steps).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class and asset-collection helpers
+  core/placement/detail.py -> remesh_with_attrs for face-size control
+  core/surface.py -> add_geomod / shaderfunc_to_material / eval_argument node application
+  core/nodes/node_wrangler.py -> NodeWrangler DSL for building geometry/shader node graphs
+  core/nodes/node_info.py -> Nodes enum of Blender node types
+  core/nodes/node_utils.py -> build_color_ramp and node helpers
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer node groups
+  core/nodes/compatibility.py, core/nodes/utils.py -> node version compatibility utilities
+  core/tagging.py, core/tags.py -> tag_object / COMBINED_ATTR_NAME semantic tagging
+  core/util/blender.py -> modify_mesh, deep_clone_obj, ViewportMode, transform utilities
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/logging.py -> logging utilities
+  assets/utils/decorate.py -> geo_extension, displace_vertices, read_co, remove_vertices, subsurface2face_size
+  assets/utils/misc.py -> assign_material, sample_direction, toggle_show/hide
+  assets/utils/nodegroup.py -> geo_radius, align_tilt node groups
+  assets/utils/object.py -> new_cube, join_objects, mesh2obj, origin2lowest, separate_loose
+  assets/utils/shortest_path.py -> geo_shortest_path skeleton solver (kalidium)

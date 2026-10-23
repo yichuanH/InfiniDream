@@ -1,0 +1,75 @@
+SUMMARY: This factory builds procedural crustaceans (crab, lobster, spiny lobster) as rigged, animated, materialized creatures assembled from independently-generated parts (body, legs, claws, tail, fins, eyes, antennae) joined and skinned via a genome/skeleton pipeline. SpinyLobsterFactory selects the "spiny_lobster" species, which reuses lobster parameters but swaps in wide plate-like antennal shovels (SpinyLobsterAntennaFactory), leg-shaped "claws," and repositioned antennae. The upper-level files define per-species parameter dictionaries, individual part geometry/sampling, the shaders, and the assembly/animation glue; the infra files provide the node-graph, rigging, remeshing, and placement engine.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/crustacean.py
+  SpinyLobsterFactory / LobsterFactory / CrabFactory: thin subclasses forcing self.species; SpinyLobster inherits everything from lobster except overrides in spiny_lobster_params.
+  CrustaceanFactory.spiny_lobster_params: the spiny-lobster genome overrides (start here for this request)
+    knobs: antenna_fn(=SpinyLobsterAntennaFactory) -> the wide flat plate antennae; claw_fn(=LobsterLegFactory) -> claws become slender walking-leg shapes; claw_x_length(=leg_x_length) -> claw sizing tied to leg length; claw_angle(=leg_angle) -> claw attach pitch; claw_joint((uniform(10,40),uniform(0,10),leg_joint_z_min)) rand -> claw splay/orientation; x_antenna(uniform(0.7,0.75)) -> antenna forward attach position on head; antenna_angle(uniform(0.4,0.5)) -> how forward/spread the shovels project; leg_joint_z_min(min(leg_joint_z)+uniform(-10,-5)) rand -> lowered claw z-joint.
+  CrustaceanFactory.lobster_params: base params inherited by spiny lobster
+    knobs: leg_x_length(x_length*log_uniform(0.6,0.8)) -> walking leg length; claw_x_length(x_length*log_uniform(1.2,1.5)); tail_x_length(x_length*log_uniform(1.2,1.8)) -> tail fan reach; antenna_x_length(x_length*log_uniform(1.6,3.0)) -> antenna length (shortens shovels if reduced); fin_x_length(y_length*log_uniform(1.2,2.5)) -> tail-fan blade size; x_legs(linspace 0.05..uniform(0.2,0.25)) rand -> leg spacing along body; leg_angle(uniform(0.3,0.35)); leg_joint(x uniform(-5,5),y uniform(0,10),z sorted uniform(95,110)+uniform(-8,8)) rand -> leg pose; x_eye(uniform(0.8,0.88)) -> eye position between antennae; eye_angle(uniform(0.8,0.85)); eye_joint(0,uniform(-60,0),uniform(10,70)) rand -> stalked-eye tilt; x_fins(sorted uniform(0.85,0.95,2)); fin_joints rand -> side-fin fan spread; tail_curl((-π*0.6,0),0,0) -> tail flex; antenna_curl((π*0.1,π*0.3),0,(0,π*0.8)) -> antenna bend animation; base_hue(build_base_hue()) rand; freq(1/log_uniform(400,500)) -> animation speed.
+  CrustaceanFactory.crab_params: alternate species (tail/fin/antenna all None); analogous knobs.
+  CrustaceanFactory.__init__: self.species = np.random.choice(...) rand -> species selection (overridden in subclasses).
+  crustacean_genome(sp): builds the part tree; leg_x_lengths/fin_x_lengths = np.sort(uniform(0.6,1,4)) rand -> decreasing per-limb sizes.
+  build_base_hue: 60% chance uniform(0,0.05) reddish else uniform(0.4,0.45) teal -> overall body color family.
+  shader_crustacean: shell material
+    knobs: value_shift(log_uniform(2,10)); bright/dark/light_color from base_hue with sat uniform(0.8,1.0), val log_uniform(0.02,0.05)/(0.01,0.02)/(0.2,1.0); specular(uniform(0.6,0.8)); clearcoat(uniform(0.2,0.8)); roughness(uniform(0.1,0.3)); metallic(uniform(0.6,0.8)); MusgraveTexture Scale(log_uniform(5,8)) -> mottling frequency; color ramp stops [0,0.3,0.7,1.0].
+  shader_eye: fixed dark eye (Base Color (0.1,0.1,0.1), Specular 0).
+  crustacean_postprocessing / adapter: assigns body/claw/leg/eye materials by tag; edit tag_list/material mapping.
+  animate_crustacean_move: dispatches per-part animate_bones.
+  module constants: n_legs(4), n_limbs(5), n_side_fin(2) -> counts of legs/limbs/side fins.
+  CrustaceanFactory.max_expected_radius(1), max_distance(40) -> LOD/placement scale.
+
+FILE: assets/objects/creatures/parts/crustacean/antenna.py
+  SpinyLobsterAntennaFactory.sample_params: the plate-like shovel antennae
+    knobs: y_length(uniform(0.05,0.08)) rand -> shovel width (much wider than lobster's 0.01-0.015); z_length(y_length*log_uniform(1,1.2)) -> shovel thickness.
+  LobsterAntennaFactory (base): make_part applies antenna_bend curve at tip
+    knobs: y_length(uniform(0.01,0.015)); z_length; x_mid_first(uniform(0.1,0.15)); x_mid_second(uniform(0.25,0.3)) -> segment cuts; antenna_bend(uniform(2,5)) -> tip curl of the blade.
+
+FILE: assets/objects/creatures/parts/crustacean/body.py
+  LobsterBodyFactory.sample_params: the flattened armoured carapace
+    knobs: x_length(uniform(0.6,0.8)); y_length(uniform(0.15,0.2)) -> body width; z_length(y_length*uniform(1,1.2)) -> body height; midpoint_first/second -> profile shape; z_shift(uniform(0.4,0.6)); noise_strength(uniform(0.02,0.04)); noise_scale(uniform(5,8)); bottom_shift/cutoff -> underside flattening; mouth_z/x/noise -> mouth detail.
+  CrabBodyFactory: alternate crab carapace with spikes/head texture (not used by spiny lobster).
+    knobs: spike_height, spike_density(log_uniform(100,500)), has_sharp_tip(<0.4 prob), bend_angle, color_cutoff, etc.
+
+FILE: assets/objects/creatures/parts/crustacean/tail.py
+  CrustaceanTailFactory.sample_params: the broad segmented tail leading to the fan
+    knobs: x_length(uniform(1.0,1.5)); y_length(uniform(0.15,0.2)) -> tail width; n_segments(randint(6,10)) rand -> tail segment count; x_decay(log_uniform(0.2,0.3)) -> segment length falloff; shell_ratio(uniform(1.05,1.08)) -> overlapping shell flare; y_midpoint_first/second -> taper; fin_x_length(uniform(0.5,0.8)).
+
+FILE: assets/objects/creatures/parts/crustacean/fin.py
+  CrustaceanFinFactory.sample_params: the squared-off tail-fan blades
+    knobs: x_length(uniform(0.15,0.3)); y_length(x_length*uniform(0.3,0.4)) -> blade width; x_tip(uniform(0.7,0.8)); y_mid(uniform(0.6,0.8)) -> blade outline; SOLIDIFY thickness(0.01).
+
+FILE: assets/objects/creatures/parts/crustacean/leg.py
+  LobsterLegFactory.sample_params: short stout walking legs (also used as spiny-lobster claws)
+    knobs: y_length(uniform(0.01,0.015)); z_length(y_length*log_uniform(1,1.2)).
+  CrabLegFactory (base): make_segments profile
+    knobs: x_length(uniform(0.8,1.2)); x_mid_first/second, y_mid_first/second, y_expand -> per-segment taper; noise_strength/scale; bottom/top shift/cutoff; leg_curl/leg_rot animation via animate_bones.
+
+FILE: assets/objects/creatures/parts/crustacean/claw.py
+  LobsterClawFactory / CrabClawFactory.sample_params: pincer geometry (NOT used by spiny lobster, whose claw_fn is a leg)
+    knobs: claw_y_first/second, claw_x_depth, claw_z_width, claw_spike_strength/distance, lower_scale/z_scale/z_offset -> pincer proportions and movable finger.
+
+FILE: assets/objects/creatures/parts/crustacean/eye.py
+  CrustaceanEyeFactory.sample_params: small stalked eyes
+    knobs: radius(uniform(0.015,0.02)) -> eyeball size; length(radius*uniform(1,1.5)) -> stalk length.
+
+FILE: assets/objects/creatures/parts/utils/draw.py
+  make_segments/decorate_segment/geo_symmetric_texture: shared spun-segment builder + symmetric noise displacement used by legs/claws/tail/antenna. Edit noise curve/float-curve ramps to change surface bumpiness and segment blending.
+
+FILE: assets/objects/creatures/util/animation/driver_repeated.py
+  repeated_driver: procedural cyclic motion expression
+    knobs: phase(uniform(0.2,0.8)), u/v scaling(uniform(0.8,1.0)) -> gait waveform shape.
+  bend_bones_lerp: distributes bend across bones; ratio(uniform(1,2)) -> per-bone bend weighting.
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature / attach / PartFactory / Part: part instantiation, attachment raycasting, local/global attribute writing. Edit ALL_TAGS or attachment logic to change how parts connect.
+
+FILE: assets/objects/creatures/util/genome.py
+  Joint / Attachment / CreatureNode / part / attach: genome data classes and interpolation; controls joint bounds, attachment coords, cross-genome morphing.
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts: master assembly — remesh (min_remesh_size=0.005), join, rig, smooth, apply materials via postprocess_func, roll="GLOBAL_POS_Z". Edit remesh/face_size/smoothing behavior here.
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig / create_bones / constrain_bones / create_ik_targets / create_ragdoll: armature construction, IK, joint constraints, optional physics ragdoll. Edit

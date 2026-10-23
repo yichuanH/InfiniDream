@@ -1,0 +1,40 @@
+SUMMARY: This factory builds a flat framed rectangular panel — a plane wrapped with a surface material, surrounded by an extruded/solidified frame. WallArtFactory produces framed wall art; MirrorFactory subclasses it and only swaps the panel material to a mirror surface. The upper-level files control panel dimensions, frame geometry, and material selection; despite the "solar heliostat" request, no pivot yoke, pedestal, counterweight, or facet grid geometry exists here — only the flat mirror panel and frame are generated.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/wall_decorations/__init__.py
+  module exports: registers BalloonFactory, RangeHoodFactory, MirrorFactory, WallArtFactory, WallShelfFactory
+    knobs: (none tunable; import list only)
+
+FILE: assets/objects/wall_decorations/wall_art.py
+  WallArtFactory.__init__: samples all panel/frame dimensions (under FixedSeed)
+    knobs: width(log_uniform 0.4-2, random) -> panel horizontal size; height(log_uniform 0.4-2, random) -> panel vertical size; thickness(uniform 0.02-0.05, random) -> frame border thickness; depth(uniform 0.01-0.02, random) -> frame protrusion depth; frame_bevel_segments(choice [0,1,4], random) -> frame edge roundness (0=sharp); frame_bevel_width(uniform depth/4-depth/2, random) -> bevel size
+  WallArtFactory.assign_materials: picks panel + frame materials
+    knobs: surface_gen_class(weighted_sample from material_assignments.abstract_art) -> panel surface look; frame_surface_gen(weighted_sample from material_assignments.frame) -> frame material; scratch(prob material_assignments.wear_tear_prob[0]) -> scratch wear on/off; edge_wear(prob material_assignments.wear_tear_prob[1]) -> edge wear on/off
+  WallArtFactory.create_placeholder: bounding box for placement
+    knobs: bbox depth range (-0.01,0.15 fixed) -> placeholder thickness; xy extent = width/2+thickness, height/2+thickness
+  WallArtFactory.create_asset: builds plane + frame geometry
+    knobs: plane rotation_euler(pi/2,0,pi/2 fixed) -> panel orientation; SOLIDIFY thickness/offset(=self.thickness/self.depth) -> frame build; wrap_sides axes ("x","y","z") -> UV mapping of panel material
+  WallArtFactory.finalize_assets: applies wear materials to final asset
+    knobs: conditional scratch.apply / edge_wear.apply
+  MirrorFactory.assign_materials: overrides panel material to mirror
+    knobs: surface_gen_class(weighted_sample from material_assignments.mirrors) -> reflective mirror surface; frame/scratch/edge_wear same as parent
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material category pools (mirrors, abstract_art, frame, wear_tear, wear_tear_prob)
+  assets/materials/art.py -> Art procedural surface (seeded panel graphic)
+  assets/materials/metal/__init__.py -> metal frame material generators
+  assets/materials/wear_tear/scratches.py, edge_wear.py -> surface wear shaders
+  assets/materials/*/ (ceramic, fabric, wood, plastic, plant, etc.) -> candidate surface material generators
+  assets/materials/lamp_shaders.py, text.py -> additional shader generators
+  assets/utils/object.py -> new_plane, new_bbox, join_objects helpers
+  assets/utils/uv.py -> wrap_sides UV wrapping of panel
+  assets/utils/decorate.py -> mesh decoration utilities
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle
+  core/placement/detail.py -> level-of-detail handling
+  core/surface.py -> assign_material and surface application
+  core/nodes/* -> shader node graph construction
+  core/util/blender.py -> modify_mesh, ViewportMode, apply_transform, deep_clone_obj, mesh ops
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform, weighted_sample samplers
+  core/tags.py, core/util/logging.py -> tagging and logging infrastructure

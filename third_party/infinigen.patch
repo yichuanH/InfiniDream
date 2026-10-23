@@ -1,0 +1,810 @@
+diff --git a/infinigen/__init__.py b/infinigen/__init__.py
+index 5133e2d2..18d5d3c4 100644
+--- a/infinigen/__init__.py
++++ b/infinigen/__init__.py
+@@ -6,7 +6,7 @@
+ import logging
+ from pathlib import Path
+ 
+-__version__ = "1.19.0"
++__version__ = "1.19.1"
+ 
+ 
+ def repo_root():
+diff --git a/infinigen/assets/materials/creature/fish_body.py b/infinigen/assets/materials/creature/fish_body.py
+index 73e10441..66527d64 100644
+--- a/infinigen/assets/materials/creature/fish_body.py
++++ b/infinigen/assets/materials/creature/fish_body.py
+@@ -793,11 +793,11 @@ def shader_fish_body_regular(nw: NodeWrangler, rand=True, **input_kwargs):
+     colorramp_9 = nw.new_node(Nodes.ColorRamp, input_kwargs={"Fac": mix_10})
+     colorramp_9.color_ramp.elements.new(0)
+     colorramp_9.color_ramp.elements[0].position = 0.0
+-    colorramp_9.color_ramp.elements[0].color = (0.0179, 0.0119, 0.0, 1.0)
++    colorramp_9.color_ramp.elements[0].color = (0.14, 0.13, 0.06, 1.0)
+     colorramp_9.color_ramp.elements[1].position = 0.2318
+-    colorramp_9.color_ramp.elements[1].color = (0.1972, 0.1213, 0.0148, 1.0)
++    colorramp_9.color_ramp.elements[1].color = (0.42, 0.40, 0.19, 1.0)
+     colorramp_9.color_ramp.elements[2].position = 1.0
+-    colorramp_9.color_ramp.elements[2].color = (0.0, 0.0, 0.0, 1.0)
++    colorramp_9.color_ramp.elements[2].color = (0.05, 0.06, 0.02, 1.0)
+     if rand:
+         sample_color(colorramp_9.color_ramp.elements[1].color)
+         colorramp_9.color_ramp.elements[1].position = sample_range(0.1, 0.9)
+@@ -862,7 +862,7 @@ def shader_fish_body_regular(nw: NodeWrangler, rand=True, **input_kwargs):
+         Nodes.MixRGB,
+         input_kwargs={
+             "Fac": colorramp_14.outputs["Color"],
+-            "Color1": (0.4072, 0.4072, 0.4072, 1.0),
++            "Color1": (0.62, 0.58, 0.40, 1.0),
+             "Color2": mix_5,
+         },
+     )
+@@ -899,9 +899,9 @@ def shader_fish_body_regular(nw: NodeWrangler, rand=True, **input_kwargs):
+             "Base Color": mix_12,
+             "Subsurface Radius": (0.36, 0.46, 0.6),
+             "Subsurface Color": (1.0, 0.9405, 0.7747, 1.0),
+-            "Metallic": 0.8,
+-            "Specular IOR Level": 0.9,
+-            "Roughness": 0.3,
++            "Metallic": 0.0,
++            "Specular IOR Level": 0.4,
++            "Roughness": 0.6,
+             "IOR": 1.69,
+         },
+         attrs={"subsurface_method": "BURLEY"},
+diff --git a/infinigen/assets/objects/creatures/crustacean.py b/infinigen/assets/objects/creatures/crustacean.py
+index 97d3f7a8..857bf7ca 100644
+--- a/infinigen/assets/objects/creatures/crustacean.py
++++ b/infinigen/assets/objects/creatures/crustacean.py
+@@ -298,11 +298,37 @@ class CrustaceanFactory(AssetFactory):
+         for p in parts:
+             if p.obj.name.split("=")[-1] == "CrustaceanEyeFactor":
+                 assign_material(p.obj, shaderfunc_to_material(shader_eye))
++        # MODIFIED (BeyondInfinigen, 2026-07-22): was
++        #     postprocess_func=crustacean_postprocessing
++        # but join_and_rig_parts calls postprocess_func(root) with a single
++        # argument, while crustacean_postprocessing(body_parts, extras, params)
++        # needs three -> TypeError: missing 2 required positional arguments.
++        # The missing `params` is not even in the caller's scope, so this path
++        # could never have run. Adapt it here instead, mirroring how fish.py
++        # wraps its own postprocess in a closure.
++        # `root` arrives as the parent; body parts are its MESH descendants.
++        # Walk the whole tree because rig() may already have reparented the
++        # meshes onto the armature (see the fish.py note on the same issue).
++        def crustacean_postprocess_adapter(root_obj):
++            # Only objects still linked into the scene can be selected; the
++            # join has already consumed some of the original part objects.
++            scene_objs = set(bpy.context.scene.objects)
++            meshes = [
++                o
++                for o in butil.iter_object_tree(root_obj)
++                if o.type == "MESH" and o in scene_objs
++            ]
++            if not meshes:
++                return
++            # crustacean_postprocessing indexes params["material"] itself,
++            # so hand it the whole postprocess_params dict, not the sub-dict.
++            crustacean_postprocessing(meshes, [], genome.postprocess_params)
++
+         joined, extras, arma, ik_targets = join_and_rig_parts(
+             root,
+             parts,
+             genome,
+-            postprocess_func=crustacean_postprocessing,
++            postprocess_func=crustacean_postprocess_adapter,
+             rigging=rigging,
+             min_remesh_size=0.005,
+             face_size=kwargs["face_size"],
+diff --git a/infinigen/assets/objects/creatures/fish.py b/infinigen/assets/objects/creatures/fish.py
+index 5507bec4..8b89842b 100644
+--- a/infinigen/assets/objects/creatures/fish.py
++++ b/infinigen/assets/objects/creatures/fish.py
+@@ -296,7 +296,20 @@ class FishFactory(AssetFactory):
+ 
+         surface.assign_material(obj, self.body_material())
+ 
+-        mat = joining.get_parts(obj)[0].active_material
++        # MODIFIED (BeyondInfinigen, 2026-07-22): was
++        #     mat = joining.get_parts(obj)[0].active_material
++        # which raises IndexError whenever the fish is rigged. get_parts()
++        # defaults to main_body=True, i.e. only direct MESH children of root --
++        # but join_and_rig_parts() runs rig() before postprocess_func when
++        # rig_before_subdiv=True (fish passes exactly that), and rig()'s
++        # parent_set(type="ARMATURE_AUTO") reparents the joined mesh onto the
++        # armature. By the time this runs root.children holds only the armature,
++        # so the list is empty. FishSchoolFactory defaults to animation_mode
++        # "idle" => rigging=True, so every fish school hit this.
++        # Walk the whole object tree instead (main_body=False), matching how the
++        # Fin/Eyeball lookups just below already call get_parts.
++        parts = joining.get_parts(obj, False)
++        mat = parts[0].active_material if parts else None
+         gold = mat is not None and "gold" in mat.name.lower()
+         self.fin_material.apply(
+             joining.get_parts(obj, False, "Fin"), shader_kwargs={"goldfish": gold}
+diff --git a/infinigen/assets/objects/creatures/jellyfish.py b/infinigen/assets/objects/creatures/jellyfish.py
+index dab5cc95..4fcbfd81 100644
+--- a/infinigen/assets/objects/creatures/jellyfish.py
++++ b/infinigen/assets/objects/creatures/jellyfish.py
+@@ -264,8 +264,28 @@ class JellyfishFactory(AssetFactory):
+         for i, axis in enumerate("XY"):
+             obj.active_shape_key_index = 0
+             key_block_r = obj.shape_key_add(name=f"Arm_{i}")
+-            temp = deep_clone_obj(obj)
+-            temp.shape_key_clear()
++            # MODIFIED (BeyondInfinigen, 2026-07-22): was
++            #     temp = deep_clone_obj(obj)
++            #     temp.shape_key_clear()
++            # deep_clone_obj does obj.data.copy(), which copies the shapekey
++            # datablock too. shape_key_clear() then unlinks it from the object,
++            # and butil.delete(temp) leaves that copied Key behind with a null
++            # 'from' pointer -- so SAVING the .blend raises
++            #     RuntimeError: Shapekey KEKey.001 has an invalid 'from' pointer
++            # That aborts the save after scene.blend is written but BEFORE
++            # MaskTag.json is emitted, and populate needs MaskTag.json, so the
++            # whole populate stage then dies. Measured: 1 jellyfish = 2 orphaned
++            # shapekeys; a coral_reef scene = 24 errors and no populate.
++            # This is why every official underwater config ships
++            # jellyfish_chance = 0.0.
++            # Build the temp mesh with new_from_object instead: it evaluates the
++            # object without copying the shapekey block, so nothing is orphaned.
++            temp_mesh = bpy.data.meshes.new_from_object(
++                obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
++            )
++            temp = bpy.data.objects.new(f"{obj.name}.armtmp", temp_mesh)
++            bpy.context.collection.objects.link(temp)
++            temp.matrix_world = obj.matrix_world.copy()
+             surface.add_geomod(
+                 temp, geo_musgrave_texture, apply=True, input_args=[axis]
+             )
+diff --git a/infinigen/assets/objects/creatures/parts/chameleon.py b/infinigen/assets/objects/creatures/parts/chameleon.py
+index e2063289..a7140113 100644
+--- a/infinigen/assets/objects/creatures/parts/chameleon.py
++++ b/infinigen/assets/objects/creatures/parts/chameleon.py
+@@ -1969,8 +1969,8 @@ def nodegroup_curve_sculpt(nw: NodeWrangler):
+         Nodes.Switch,
+         input_kwargs={
+             0: group_input_1.outputs["Switch"],
+-            2: float_curve_1,
+-            3: float_curve,
++            1: float_curve_1,
++            2: float_curve,
+         },
+         attrs={"input_type": "FLOAT"},
+     )
+diff --git a/infinigen/assets/objects/creatures/reptile.py b/infinigen/assets/objects/creatures/reptile.py
+index 9b6fe96f..f72cd151 100644
+--- a/infinigen/assets/objects/creatures/reptile.py
++++ b/infinigen/assets/objects/creatures/reptile.py
+@@ -424,18 +424,46 @@ def animate_lizard_run(root, arma, params, ik_targets):
+     # creature_animation.animate_run(root, arma, ik_targets)
+ 
+ 
+-def reptile_postprocessing(body_parts, extras, params):
++def reptile_postprocessing(body_parts, extras=None, params=None):
++    # MODIFIED (BeyondInfinigen, 2026-07-22): `extras` and `params` were
++    # required positional args, but join_and_rig_parts calls
++    # postprocess_func(root) with a single argument -> TypeError for every
++    # reptile (Lizard / Snake / Chameleon). Snake is the only ground creature
++    # registered by forest.gin / desert.gin / canyon.gin, so desert
++    # (ground_creatures_chance = 1.0) crashed every time.
++    # params is never read in this function, and when called with just the root
++    # we derive body/extras from the object tree ourselves.
++    if extras is None:
++        root_obj = body_parts
++        scene_objs = set(bpy.context.scene.objects)
++        meshes = [
++            o
++            for o in butil.iter_object_tree(root_obj)
++            if o.type == "MESH" and o in scene_objs
++        ]
++        # Named sub-parts (Tongue/Horn/Eyeball/Nose) are matched by name below,
++        # so hand the same list in as both body and extras.
++        body_parts, extras = meshes, meshes
++
+     def get_extras(k):
+         return [o for o in extras if k in o.name]
+ 
+-    main_template = weighted_sample(material_assignments.reptile)
++    # MODIFIED (BeyondInfinigen, 2026-07-22): weighted_sample returns the
++    # material *class* (material_assignments.reptile holds (SnakeScale, 1)),
++    # so calling .apply() on it is an unbound call missing self ->
++    # "SnakeScale.apply() missing 1 required positional argument: 'obj'".
++    # Instantiate it first, the same way fish.py does with body_material_fac().
++    main_template = weighted_sample(material_assignments.reptile)()
+     body = body_parts + get_extras("BodyExtra")
+     main_template.apply(body)
+ 
+-    tongue.apply(get_extras("Tongue"))
+-    bone.apply(get_extras("Horn"))
+-    eyeball.apply(get_extras("Eyeball"), shader_kwargs={"coord": "X"})
+-    nose.apply(get_extras("Nose"))
++    # MODIFIED (BeyondInfinigen, 2026-07-22): `tongue`/`bone`/`eyeball`/`nose`
++    # are imported as MODULES, which have no .apply(); the material classes
++    # inside them do. Instantiate those instead.
++    tongue.Tongue().apply(get_extras("Tongue"))
++    bone.Bone().apply(get_extras("Horn"))
++    eyeball.Eyeball().apply(get_extras("Eyeball"), shader_kwargs={"coord": "X"})
++    nose.Nose().apply(get_extras("Nose"))
+ 
+ 
+ def chameleon_postprocessing(body_parts, extras, params):
+diff --git a/infinigen/core/execute_tasks.py b/infinigen/core/execute_tasks.py
+index ba0a5417..c992495a 100644
+--- a/infinigen/core/execute_tasks.py
++++ b/infinigen/core/execute_tasks.py
+@@ -285,6 +285,20 @@ def execute_tasks(
+             ) and not os.path.islink(output_folder / mesh):
+                 os.symlink(input_folder / mesh, output_folder / mesh)
+     if Task.Coarse in task or Task.Populate in task or Task.FineTerrain in task:
++        # BeyondInfinigen generated roots are parented to reviewed placeholders.
++        # Saving while ``unique_assets`` is viewport-hidden can serialize a stale
++        # identity world-matrix cache; after reopen the roots then appear near
++        # world origin instead of at their placeholders.  This file previously
++        # made only the child collections evaluable *after* save, which was too
++        # late for fine_terrain outputs.  Keep the render state unchanged, but
++        # make the whole generated hierarchy evaluable and refresh it before
++        # writing any coarse/populate/fine blend.
++        unique_assets = bpy.data.collections.get("unique_assets")
++        if unique_assets is not None:
++            unique_assets.hide_viewport = False
++            for col in unique_assets.children_recursive:
++                col.hide_viewport = False
++            bpy.context.view_layer.update()
+         with Timer("Writing output blendfile"):
+             logging.info(
+                 f"Writing output blendfile to {output_folder / output_blend_name}"
+@@ -306,9 +320,6 @@ def execute_tasks(
+         with (output_folder / "polycounts.txt").open("w") as f:
+             save_polycounts(f)
+ 
+-    for col in bpy.data.collections["unique_assets"].children:
+-        col.hide_viewport = False
+-
+     if need_terrain_processing and (
+         Task.Render in task
+         or Task.GroundTruth in task
+diff --git a/infinigen/core/placement/camera.py b/infinigen/core/placement/camera.py
+index 3f75ca77..1ba9ac8d 100644
+--- a/infinigen/core/placement/camera.py
++++ b/infinigen/core/placement/camera.py
+@@ -717,7 +717,7 @@ def configure_cameras(
+     for cam_rig in cam_rigs:
+         views = compute_base_views(
+             cam_rig,
+-            n_views=1,
++            n_views=5,
+             location_sample=location_sample,
+             center_coordinate=center_coordinate,
+             radius=mvs_radius,
+diff --git a/infinigen_examples/generate_individual_assets.py b/infinigen_examples/generate_individual_assets.py
+index 1e427827..788fe0da 100644
+--- a/infinigen_examples/generate_individual_assets.py
++++ b/infinigen_examples/generate_individual_assets.py
+@@ -120,6 +120,36 @@ def unified_asset_import(name):
+     )
+ 
+ 
++def _overexposed_ratio(image_path: Path) -> float:
++    """Return fraction of non-transparent pixels where all RGB channels >= 250."""
++    img = Image.open(image_path).convert("RGBA")
++    arr = np.array(img, dtype=np.float32)
++    alpha_mask = arr[:, :, 3] > 10
++    if alpha_mask.sum() == 0:
++        return 0.0
++    rgb = arr[:, :, :3][alpha_mask]
++    return float((rgb >= 250).all(axis=1).sum()) / len(rgb)
++
++
++def _auto_adjust_exposure(image_path: Path, scene, step: float = 0.5,
++                          threshold: float = 0.40, max_retries: int = 3):
++    """After a render, lower exposure and re-render if overexposed. Saves final value to exposure.txt."""
++    for attempt in range(max_retries):
++        ratio = _overexposed_ratio(image_path)
++        print(f"[exposure] Overexposed pixels: {ratio:.1%} (threshold {threshold:.0%})")
++        if ratio <= threshold:
++            break
++        new_exp = scene.view_settings.exposure - step
++        print(f"[exposure] Too bright — lowering exposure {scene.view_settings.exposure:.2f} → {new_exp:.2f}")
++        scene.view_settings.exposure = new_exp
++        bpy.ops.render.render(write_still=True)
++    else:
++        print(f"[exposure] Max retries reached, keeping current exposure {scene.view_settings.exposure:.2f}")
++    final_exp = scene.view_settings.exposure
++    (image_path.parent / "exposure.txt").write_text(f"{final_exp:.4f}\n")
++    print(f"[exposure] Final exposure: {final_exp:.2f} → saved to exposure.txt")
++
++
+ def _strip_modifiers(args, asset, parent):
+     """Helper function to strip modifiers and center asset."""
+     if args.no_mod:
+@@ -153,7 +183,18 @@ def build_scene_asset(args, cls, idx):
+     factory = cls
+     logger.info(f"Using factory {factory}")
+ 
+-    fac = factory(idx)
++    # Generic auto-capture of __init__ locals (season, leaf_type, etc. for any
++    # factory) — recorded as a 'note' entry in state.json. Falls back to raw
++    # factory(idx) if the random_trace import path isn't set up.
++    try:
++        import sys as _sys
++        from pathlib import Path as _P
++        _sys.path.insert(0, str(_P(__file__).parent.parent.parent))
++        from core.random_trace import tracer as _tracer
++        with _tracer.capture_init_locals(factory):
++            fac = factory(idx)
++    except Exception:
++        fac = factory(idx)
+     try:
+         if args.spawn_placeholder:
+             ph = fac.spawn_placeholder(idx, (0, 0, 0), (0, 0, 0))
+@@ -294,6 +335,8 @@ def build_and_save_asset(payload: dict):
+         int, args.resolution.split("x")
+     )
+     scene.cycles.samples = args.samples
++    scene.view_settings.view_transform = "Standard"
++    scene.view_settings.exposure = -1.5
+     butil.clear_scene()
+ 
+     if not args.fire:
+@@ -302,6 +345,7 @@ def build_and_save_asset(payload: dict):
+         bg.inputs[0].default_value[-1] = 0
+     if args.white_background:
+         # make the background environment a pure white environment
++        bpy.context.scene.render.film_transparent = False  # transparent → black in mp4
+         scene = bpy.context.scene
+         if scene.world is None:
+             scene.world = bpy.data.worlds.new("World")
+@@ -316,7 +360,7 @@ def build_and_save_asset(payload: dict):
+         bg.inputs["Color"].default_value = (1, 1, 1, 1)
+         bg.inputs["Strength"].default_value = 1
+ 
+-        out = nodes.new("ShaderNodeOutputMaterial")
++        out = nodes.new("ShaderNodeOutputWorld")
+         links.new(bg.outputs["Background"], out.inputs["Surface"])
+ 
+     camera, center = setup_camera(args)
+@@ -325,18 +369,47 @@ def build_and_save_asset(payload: dict):
+     with gin.unlock_config():
+         cls, asset_type = unified_asset_import(factory_name)
+ 
+-    with FixedSeed(idx):
+-        match asset_type:
+-            case "object":
+-                asset = build_scene_asset(args, cls, idx)
+-            case "sim_object":
+-                asset = build_scene_asset(args, cls, idx)
+-            case "scatter":
+-                asset = build_scene_scatter(args, cls, idx)
+-            case "material" | "material_deprec":
+-                asset = build_scene_material(args, cls, idx)
+-            case _:
+-                raise ValueError(f"Unsupported asset type: {asset_type}")
++    # Random-decision tracer: records every np.random.* call site + result
++    # during asset construction so the planner can see what runtime values
++    # this seed actually produced (e.g. season="spring", fruit_type=None).
++    _tracer = None
++    try:
++        import sys as _sys
++        import os as _os
++        _trace_path = _os.environ.get("INFINIGEN_RANDOM_TRACE_DIR")
++        if _trace_path is None:
++            # Default: dump alongside this seed's output (output_folder defined above).
++            _trace_path = str(output_folder)
++        # Ensure infinigen_o is on sys.path so we can import core.random_trace.
++        _sys.path.insert(0, str(Path(__file__).parent.parent.parent))
++        from core.random_trace import tracer as _tracer
++        _tracer.start()
++    except Exception as _e:
++        print(f"[random_trace] could not start tracer ({_e}) — continuing without state.json")
++        _tracer = None
++
++    try:
++        with FixedSeed(idx):
++            match asset_type:
++                case "object":
++                    asset = build_scene_asset(args, cls, idx)
++                case "sim_object":
++                    asset = build_scene_asset(args, cls, idx)
++                case "scatter":
++                    asset = build_scene_scatter(args, cls, idx)
++                case "material" | "material_deprec":
++                    asset = build_scene_material(args, cls, idx)
++                case _:
++                    raise ValueError(f"Unsupported asset type: {asset_type}")
++    finally:
++        if _tracer is not None:
++            _tracer.stop()
++            try:
++                _tracer.dump(Path(_trace_path) / "state.json")
++                print(f"[random_trace] wrote state.json with "
++                      f"{len(_tracer.log)} random decisions")
++            except Exception as _e:
++                print(f"[random_trace] dump failed: {_e}")
+ 
+     # Apply displacement mode to all materials
+     set_displacement_mode()
+@@ -397,6 +470,208 @@ def build_and_save_asset(payload: dict):
+         image_path = output_folder / "Image.png"
+         scene.render.filepath = str(image_path)
+         bpy.ops.render.render(write_still=True)
++        _auto_adjust_exposure(image_path, scene)
++
++        # Multi-angle: after the main render, optionally render N-1 more angles by
++        # rotating the asset around the vertical axis. n_angles=1 (default) = single
++        # render. n_angles=4 → main + 3 rotated views at 90°, 180°, 270°.
++        if getattr(args, "n_angles", 1) > 1:
++            try:
++                _rot_target = parent if "parent" in dir() and parent else asset
++                if hasattr(_rot_target, "rotation_euler"):
++                    rot_obj = _rot_target
++                else:
++                    rot_obj = asset
++                original_z = float(rot_obj.rotation_euler[2])
++                n = int(args.n_angles)
++
++                # Find fruit/apple objects for scale animation.
++                # Fruits are typically GeoNode instances — changing obj.scale has NO effect.
++                # We must scale the actual mesh vertex positions of the source objects.
++                fruit_scale_max = getattr(args, "fruit_scale_anim", 1.0)
++                fruit_objs = []
++                mesh_orig_verts = {}  # mesh.name -> [Vector(co)]
++                if fruit_scale_max > 1.0:
++                    import re as _re
++                    fruit_objs = [
++                        obj for obj in bpy.data.objects
++                        if _re.search(r"fruit|apple", obj.name, _re.IGNORECASE)
++                        and obj.type == 'MESH' and obj.data is not None
++                    ]
++                    # Cache original vertex positions, deduplicated by mesh
++                    for obj in fruit_objs:
++                        if obj.data.name not in mesh_orig_verts:
++                            mesh_orig_verts[obj.data.name] = [v.co.copy() for v in obj.data.vertices]
++                    print(f"[fruit_scale_anim] Found {len(fruit_objs)} fruit objects "
++                          f"({len(mesh_orig_verts)} unique meshes), max_scale={fruit_scale_max}x")
++
++                no_rotation = getattr(args, "no_rotation", False)
++                height_max = getattr(args, "tree_height_anim", 1.0)
++                original_scale_z = float(rot_obj.scale[2]) if height_max > 1.0 else None
++                if height_max > 1.0:
++                    print(f"[tree_height_anim] peak Z scale = {height_max}x on {rot_obj.name}")
++
++                # Leaf color animation: find leaf materials and override Principled BSDF Base Color.
++                # Each instance shares the source material, so changes propagate to all instances.
++                import colorsys as _colorsys
++                # Flower density animation: scale flower/petal mesh vertices through
++                # three phases — normal → very dense (big) → very sparse (tiny) → normal.
++                flower_density_anim = getattr(args, "flower_density_anim", False)
++                flower_objs = []
++                flower_mesh_orig_verts = {}  # mesh.name -> [Vector(co)]
++                if flower_density_anim:
++                    # Density is controlled by 'density' inputs on GROUP nodes inside the
++                    # 'generate_branch' GeoNode group. Modifying those values (links=0)
++                    # and tagging the objects re-triggers evaluation.
++                    _branch_ng = bpy.data.node_groups.get("generate_branch")
++                    _density_inputs = []  # list of (node_input, original_value)
++                    _branch_objs = []
++                    if _branch_ng:
++                        for _nd in _branch_ng.nodes:
++                            for _inp in _nd.inputs:
++                                if _inp.name.lower() == "density" and len(_inp.links) == 0:
++                                    _density_inputs.append((_inp, float(_inp.default_value)))
++                        _branch_objs = [
++                            o for o in bpy.data.objects
++                            if any(m.node_group == _branch_ng for m in o.modifiers if m.type == "NODES")
++                        ]
++                    print(f"[flower_density_anim] Found {len(_density_inputs)} density inputs "
++                          f"on {len(_branch_objs)} branch objects")
++
++                leaf_color_anim = getattr(args, "leaf_color_anim", False)
++                leaf_color_nodes = []  # list of (node, input_name, original_rgba)
++                if leaf_color_anim:
++                    import re as _re2
++                    for mat in bpy.data.materials:
++                        if mat is None or not _re2.search(r"leaf|flower|petal|blossom", mat.name, _re2.IGNORECASE):
++                            continue
++                        if not mat.use_nodes or mat.node_tree is None:
++                            continue
++                        for node in mat.node_tree.nodes:
++                            # Principled BSDF: override Base Color
++                            if node.type == "BSDF_PRINCIPLED" and "Base Color" in node.inputs:
++                                inp = node.inputs["Base Color"]
++                                leaf_color_nodes.append((inp, tuple(inp.default_value)))
++                            # RGB node: override output color (set on the node itself)
++                            elif node.type == "RGB":
++                                inp = node.outputs[0]  # RGB has its color on output, set via node
++                                # Default color is on node.outputs[0].default_value for RGB nodes
++                                leaf_color_nodes.append((inp, tuple(inp.default_value)))
++                    print(f"[leaf_color_anim] Found {len(leaf_color_nodes)} leaf-material color inputs")
++                for i in range(1, n):
++                    if not no_rotation:
++                        angle_rad = i * (2 * np.pi / n)
++                        rot_obj.rotation_euler[2] = original_z + angle_rad
++                        angle_deg = int(round(angle_rad * 180 / np.pi))
++                        frame_path = output_folder / f"Image_angle{angle_deg:03d}.png"
++                    else:
++                        frame_path = output_folder / f"Image_frame{i:03d}.png"
++
++                    # Smooth scale pulse: 1 → max → 1 over all frames (cosine curve).
++                    t = 0.5 * (1 - np.cos(2 * np.pi * i / n))  # 0→1→0
++
++                    # Fruit scaling: modify mesh vertex positions (works for GeoNode instances).
++                    if fruit_objs:
++                        sf = 1.0 + (fruit_scale_max - 1.0) * t
++                        for mesh_name, orig_verts in mesh_orig_verts.items():
++                            mesh = bpy.data.meshes.get(mesh_name)
++                            if mesh is None:
++                                continue
++                            for v, ov in zip(mesh.vertices, orig_verts):
++                                v.co = ov * sf
++                            mesh.update()
++
++                    # Tree height: scale the entire asset on Z axis.
++                    if original_scale_z is not None:
++                        zf = 1.0 + (height_max - 1.0) * t
++                        rot_obj.scale[2] = original_scale_z * zf
++
++                    # Flower density: modify 'density' GeoNode inputs directly.
++                    # 3-phase: normal → dense (3x) → sparse (0.05x) → normal
++                    if _density_inputs:
++                        def _smoothstep(x):
++                            x = max(0.0, min(1.0, x))
++                            return x * x * (3 - 2 * x)
++                        _t2 = i / n
++                        _dense_f, _sparse_f = 3.0, 0.05
++                        if _t2 < 1/3:
++                            _df = 1.0 + (_dense_f - 1.0) * _smoothstep(_t2 * 3)
++                        elif _t2 < 2/3:
++                            _df = _dense_f + (_sparse_f - _dense_f) * _smoothstep((_t2 - 1/3) * 3)
++                        else:
++                            _df = _sparse_f + (1.0 - _sparse_f) * _smoothstep((_t2 - 2/3) * 3)
++                        for _inp, _orig_val in _density_inputs:
++                            _inp.default_value = _orig_val * _df
++                        # Tag branch objects to force modifier re-evaluation
++                        for _bo in _branch_objs:
++                            _bo.data.update_tag()
++                        bpy.context.view_layer.update()
++
++                    # Leaf color: cycle hue starting/ending at pink (~0.92), sat=0.7, val=1.
++                    if leaf_color_nodes:
++                        pink_hue = 0.92
++                        hue = (pink_hue + i / n) % 1.0
++                        r, g, b = _colorsys.hsv_to_rgb(hue, 0.7, 1.0)
++                        new_rgba = (r, g, b, 1.0)
++                        for inp, _orig in leaf_color_nodes:
++                            inp.default_value = new_rgba
++
++                    scene.render.filepath = str(frame_path)
++                    bpy.ops.render.render(write_still=True)
++
++                # Restore fruit mesh vertex positions
++                if fruit_objs:
++                    for mesh_name, orig_verts in mesh_orig_verts.items():
++                        mesh = bpy.data.meshes.get(mesh_name)
++                        if mesh is None:
++                            continue
++                        for v, ov in zip(mesh.vertices, orig_verts):
++                            v.co = ov
++                        mesh.update()
++
++                # Restore flower density inputs
++                if _density_inputs:
++                    for _inp, _orig_val in _density_inputs:
++                        _inp.default_value = _orig_val
++
++                # Restore tree Z scale
++                if original_scale_z is not None:
++                    rot_obj.scale[2] = original_scale_z
++
++                # Restore leaf colors
++                for inp, orig in leaf_color_nodes:
++                    inp.default_value = orig
++
++                rot_obj.rotation_euler[2] = original_z
++            except Exception as e:
++                print(f"[multi-angle] Failed to render extra angles: {e}")
++
++        # Clay render: use Blender's render override to force all objects (incl. hair) to grey
++        clay_mat = bpy.data.materials.new("__clay__")
++        clay_mat.use_nodes = True
++        bsdf = clay_mat.node_tree.nodes.get("Principled BSDF")
++        if bsdf:
++            bsdf.inputs["Base Color"].default_value = (0.6, 0.6, 0.6, 1.0)
++            bsdf.inputs["Roughness"].default_value = 0.9
++            if "Specular IOR Level" in bsdf.inputs:
++                bsdf.inputs["Specular IOR Level"].default_value = 0.0
++            if "Subsurface Weight" in bsdf.inputs:
++                bsdf.inputs["Subsurface Weight"].default_value = 0.0
++
++        view_layer = bpy.context.view_layer
++        view_layer.material_override = clay_mat
++
++        orig_exposure = bpy.context.scene.view_settings.exposure
++        bpy.context.scene.view_settings.exposure = -3.0
++
++        clay_path = output_folder / "Image_clay.png"
++        scene.render.filepath = str(clay_path)
++        bpy.ops.render.render(write_still=True)
++
++        bpy.context.scene.view_settings.exposure = orig_exposure
++        view_layer.material_override = None
++        bpy.data.materials.remove(clay_mat)
++
+     elif args.render == "video":
+         bpy.context.scene.frame_end = args.frame_end
+         driver = parent(asset).driver_add("rotation_euler")[-1]
+@@ -440,6 +715,23 @@ def adjust_cam_distance(asset, camera, margin, percent=0.999):
+         camera.location[1] = -6
+ 
+ 
++def make_paired_grid(args, name, clean_files, clay_files):
++    """Build a 2-row grid: top row = textured Image.png, bottom row = Image_clay.png.
++    Both rows aligned column-wise so each pair is the same seed."""
++    path = args.output_folder
++    n = len(clean_files)
++    with Image.open(clean_files[0]) as i:
++        x, y = i.size
++    img = Image.new("RGBA", (n * x, 2 * y))
++    for col, f in enumerate(clean_files):
++        with Image.open(f) as i:
++            img.paste(i, (col * x, 0))
++    for col, f in enumerate(clay_files):
++        with Image.open(f) as i:
++            img.paste(i, (col * x, y))
++    img.save(f"{path}/{name}.png")
++
++
+ def make_grid(args, name, files, n):
+     path = args.output_folder
+ 
+@@ -555,7 +847,7 @@ def main(args):
+ 
+     targets = [
+         {"args": args, "fac": fac, "idx": idx}
+-        for idx in range(args.n_images)
++        for idx in range(args.start_seed, args.start_seed + args.n_images)
+         for fac in factories
+     ]
+ 
+@@ -567,8 +859,14 @@ def main(args):
+ 
+     for fac in factories:
+         if args.render == "image":
+-            files = list(args.output_folder.glob(f"{fac}_*/Image*.png"))
+-            make_grid(args, "grid_" + fac, files, args.n_images)
++            clean = sorted(args.output_folder.glob(f"{fac}_*/Image.png"))
++            clay  = sorted(args.output_folder.glob(f"{fac}_*/Image_clay.png"))
++            if clean and clay and len(clean) == len(clay):
++                # Paired layout: top row textured, bottom row clay (geometry).
++                make_paired_grid(args, "grid_" + fac, clean, clay)
++            else:
++                files = list(args.output_folder.glob(f"{fac}_*/Image*.png"))
++                make_grid(args, "grid_" + fac, files, args.n_images)
+         elif args.render == "video":
+             subprocess.run(
+                 f'ffmpeg -y -r 24 -pattern_type glob -i "{fac}_*/Image*.png" video.mp4',
+@@ -597,6 +895,9 @@ def make_args():
+     parser.add_argument(
+         "-n", "--n_images", default=1, type=int, help="Number of scenes to render"
+     )
++    parser.add_argument(
++        "--start_seed", default=0, type=int, help="Starting seed index"
++    )
+     parser.add_argument(
+         "-m",
+         "--margin",
+@@ -720,6 +1021,38 @@ def make_args():
+     )
+     parser.add_argument("-z", "--zoom", action="store_true", help="zoom first figure")
+ 
++    parser.add_argument(
++        "--n_angles", type=int, default=1,
++        help="If > 1, render the asset from N evenly-spaced rotations around the "
++             "vertical axis. Outputs Image.png plus Image_angleNNN.png for each extra view.",
++    )
++
++    parser.add_argument(
++        "--fruit_scale_anim", type=float, default=1.0,
++        help="If > 1, animate fruit/apple objects scale: starts at 1x, peaks at this "
++             "value at the midpoint, returns to 1x at the end. E.g. 3.0 = 3x max.",
++    )
++
++    parser.add_argument(
++        "--no_rotation", action="store_true",
++        help="When used with --n_angles, keep camera/asset fixed and only animate fruit scale.",
++    )
++
++    parser.add_argument(
++        "--tree_height_anim", type=float, default=1.0,
++        help="If > 1, animate the whole asset's Z scale: 1x → peak → 1x over the run.",
++    )
++
++    parser.add_argument(
++        "--leaf_color_anim", action="store_true",
++        help="Cycle leaf color through the hue wheel, starting and ending at pink.",
++    )
++
++    parser.add_argument(
++        "--flower_density_anim", action="store_true",
++        help="Animate flower/petal scale: normal → very dense (3x) → very sparse (0.05x) → normal.",
++    )
++
+     parser.add_argument("--n_workers", type=int, default=1)
+     parser.add_argument("--slurm", action="store_true")
+ 
+diff --git a/infinigen_examples/generate_indoors.py b/infinigen_examples/generate_indoors.py
+index c385db2f..493e72a0 100644
+--- a/infinigen_examples/generate_indoors.py
++++ b/infinigen_examples/generate_indoors.py
+@@ -164,20 +164,32 @@ def compose_indoors(output_folder: Path, scene_seed: int, **overrides):
+     stages, consgraph, limits = restrict_solving(stages, consgraph)
+ 
+     if overrides.get("restrict_single_supported_roomtype", False):
+-        restrict_parent_rooms = {
+-            np.random.choice(
+-                [
++        # --- scene_picker: force_roomtype ---
++        # Allow the caller to NAME the room type (e.g. compose_indoors.force_roomtype='Kitchen').
++        # Absent -> original random behaviour, unchanged.
++        _forced = overrides.get("force_roomtype", None)
++        if _forced is not None:
++            _sem = getattr(t.Semantics, _forced, None) if isinstance(_forced, str) else _forced
++            if _sem is None:
++                raise ValueError(
++                    f"force_roomtype={_forced!r} is not a t.Semantics member"
++                )
++            restrict_parent_rooms = {_sem}
++        else:
++            restrict_parent_rooms = {
++                np.random.choice(
++                    [
+                     # Only these roomtypes have constraints written in home_furniture_constraints.
+                     # Others will be empty-ish besides maybe storage and plants
+                     # TODO: add constraints to home_furniture_constraints for garages, offices, balconies, etc
+-                    t.Semantics.Bedroom,
+-                    t.Semantics.LivingRoom,
+-                    t.Semantics.Kitchen,
+-                    t.Semantics.Bathroom,
+-                    t.Semantics.DiningRoom,
+-                ]
+-            )
+-        }
++                        t.Semantics.Bedroom,
++                        t.Semantics.LivingRoom,
++                        t.Semantics.Kitchen,
++                        t.Semantics.Bathroom,
++                        t.Semantics.DiningRoom,
++                    ]
++                )
++            }
+         logger.info(f"Restricting to {restrict_parent_rooms}")
+         apply_greedy_restriction(stages, restrict_parent_rooms, cu.variable_room)
+ 
+diff --git a/infinigen_examples/generate_nature.py b/infinigen_examples/generate_nature.py
+index 9a6b1bea..542a4d09 100644
+--- a/infinigen_examples/generate_nature.py
++++ b/infinigen_examples/generate_nature.py
+@@ -352,12 +352,24 @@ def compose_nature(output_folder, scene_seed, **params):
+             o.hide_viewport = False
+         for c in hidden_cols:
+             c.hide_viewport = False
++        # MODIFIED (BeyondInfinigen, 2026-07-22): exclude the water volume.
++        # These objs become RRT collision obstacles. validate_node_nature()
++        # (core/util/rrt.py) decides "inside an object" by casting a ray up and
++        # checking hit-count parity, so for an underwater scene every camera
++        # node -- which is legitimately inside the water mesh -- returns an odd
++        # count and is rejected. The whole search space reads as solid and
++        # trajectory search fails 100% of the time (coral_reef / under_water /
++        # kelp_forest all died with "Could not find 1 trajectory proposals").
++        # Water is not a physical obstacle for the camera, so drop it here.
++        # Terrain liquid objects are named after ElementNames.Liquid ("liquid",
++        # e.g. "liquid.001"); upstream already special-cases "atmosphere".
+         objs = [
+             obj
+             for obj in bpy.context.scene.objects
+             if obj.type == "MESH"
+             and not obj.hide_render
+             and "atmosphere" not in obj.name
++            and "liquid" not in obj.name.lower()
+         ]
+         cam_traj.animate_trajectories(
+             cam_rigs=camera_rigs,

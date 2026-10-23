@@ -1,0 +1,41 @@
+SUMMARY: PotFactory builds a single procedural pot/cooking-vessel as one coherent mesh assembly. It subclasses PanFactory (which builds a revolved circular vessel body with optional handle and rim guard) and adds either two side handle-bars (torus rings cut against the body) or reuses the pan's single handle. The base.py TablewareFactory supplies material assignment, wall solidification with inside/guard face tagging, and wear/tear. Editing these files changes vessel proportions, handles/bars, and materials; despite the request's "oden hot pot" description, the actual code produces a generic round pot (no compartments, broth, skewers, or ladles).
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tableware/pot.py
+  PotFactory.__init__: samples pot geometry & bar/handle config (all via FixedSeed(factory_seed))
+    knobs: depth(log_uniform 0.6-2.0) -> vessel height; r_expand(fixed 1) -> straight cylindrical walls (no flare); r_mid(fixed 1) -> no mid bulge; has_bar(uniform<0.5) -> two side handle-bars vs pan handle; has_handle(=not pan.has_handle) -> single side handle; has_guard(=not has_bar) -> rim guard; bar_height(depth*uniform 0.75-0.85) -> vertical bar placement; bar_radius(log_uniform 0.2-0.3) -> ring major size; bar_inner_radius(log_uniform 0.2-0.4 * bar_radius) -> ring tube thickness; bar_scale(3-tuple, log_uniform 0.6-1.0 * scale, scale, 0.6-1.2 * scale; scale log_uniform 0.6-1.5) -> bar ellipse shape; bar_taper(log_uniform 0.3-0.8) -> taper of bar along X; bar_y_rotation(uniform -pi/6..0) -> bar tilt; bar_x_offset(bar_radius*uniform -0.1..0.1) -> bar outward offset; guard_type(fixed "round"); guard_depth(log_uniform 0.5-1.0 * thickness) -> rim thickness; scale(log_uniform 0.1-0.15) -> overall size
+  PotFactory.post_init: re-samples bar_x/bar_inner_radius/bar_x_offset (random) and re-derives has_handle/has_guard from has_bar
+  PotFactory.create_asset: builds base, optionally adds bars, applies scale -> ONE joined object
+  PotFactory.create_placeholder: bbox sizing per bar/handle/plain case (uses radius_, x_handle, thickness, depth, scale)
+  PotFactory.add_bar: creates torus rings both sides, boolean-diff against body, keeps outer split piece, tags "guard" faces -> side handle-bars
+
+FILE: assets/objects/tableware/pan.py
+  PanFactory.__init__: base vessel params (overridden heavily by PotFactory but active for handle path)
+    knobs: r_expand(1 w/ 0.2 prob else log_uniform 1.0-1.2) -> rim flare; depth(log_uniform 0.3-0.8, overridden by Pot); r_mid -> mid radius; has_handle(True); has_handle_hole(uniform<0.6) -> hole in handle end; pre_level(2); x_handle(log_uniform 1.2-2.0) -> handle length; z_handle(x_handle*uniform 0-0.2) -> handle rise; z_handle_mid(uniform 0.6-0.8 * z_handle); s_handle(log_uniform 0.8-1.2) -> handle end scale; thickness(log_uniform 0.04-0.06) -> wall thickness; has_guard(uniform<0.8); x_guard(r_expand + uniform 0-0.2 * x_handle) -> guard start radius; guard_depth(log_uniform 1.0-2.0 * thickness); metal_color(None); scale(log_uniform 0.1-0.15)
+  PanFactory.make_base: builds revolved 3-loop circle body; n=4*int(log_uniform 4,8) -> radial segment count; bridges loops, fills grid, solidifies, adds guard + subsurf; add_handle if enabled; add_handle_hole if enabled
+  PanFactory.add_handle: extrudes an edge into a handle using x_handle/z_handle/z_handle_mid/s_handle
+  PanFactory.add_handle_hole: cylinder boolean cutter; scale uniform 0.06-0.1; position r_expand + uniform 0.8-0.9 * x_handle -> hole size/placement
+
+FILE: assets/objects/tableware/base.py
+  TablewareFactory.__init__: material & wear setup
+    knobs: thickness(fixed 0.01, overridden); surface/inside_surface material (weighted_sample material_assignments.cup) -> outer/inner look; guard_surface (weighted_sample material_assignments.woods) -> guard/handle-bar look; scratch/edge_wear (prob from material_assignments.wear_tear_prob) -> wear overlays; lower_thresh(uniform 0.5-0.8) -> inside-face height cutoff; scale(1.0); metal_color("bw+natural"); is_fragile/allow_transparent(False)
+  TablewareFactory.add_guard: extrudes selected faces by guard_depth and tags "guard"
+  TablewareFactory.solidify_with_inside: SOLIDIFY modifier + tags "inside"/"lower_inside" faces for inside material
+  TablewareFactory.finalize_assets: assigns surface, inside_surface (inside), guard_surface (guard), applies scratch/edge_wear
+  TablewareFactory.make_double_sided: helper limiting selection to near-vertical normals
+
+FILE: assets/objects/tableware/__init__.py
+  module exports: registers PotFactory and sibling tableware factories (no tunables)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> read_co / subsurf / write_attribute mesh helpers
+  assets/utils/object.py -> join_objects, new_base_circle, new_base_cylinder, new_bbox, origin2lowest primitives
+  assets/composition/material_assignments -> material generator pools (cup, woods, wear_tear) and probabilities
+  core/surface.py -> geometry-node modifier application, material assignment by face selection
+  core/nodes/node_info.py, core/nodes/node_wrangler.py -> node graph construction (Nodes, NodeWrangler)
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle
+  core/util/blender.py -> ViewportMode, modify_mesh, apply_transform, split_object, delete, select_none
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform, weighted_sample samplers
+  core/util/logging.py, core/__init__.py, assets/__init__.py, __init__.py -> package init / logging infra

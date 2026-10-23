@@ -1,0 +1,35 @@
+SUMMARY: BeverageFridgeFactory procedurally builds a single glass-door beverage fridge as one coherent Geometry-Nodes assembly: a hollow body shell, a glass-fronted door with metal handle and extruded brand-name text, stacked wire racks (repurposed oven-rack node), and a back panel. The upper-level file both samples per-instance dimensions/counts/materials (under a FixedSeed) and defines all the transpiled node groups that build the mesh; create_asset() runs the node group twice (once to collect bevel edges, once for final geometry) and applies optional scratch/edge-wear.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/appliances/beverage_fridge.py
+  BeverageFridgeFactory.__init__: entry point; stores dimensions and samples params under FixedSeed(factory_seed).
+    knobs: dimensions([1.0,1.0,1.0]) -> nominal size but currently IGNORED (sample_parameters overrides with random values)
+  BeverageFridgeFactory.sample_parameters: randomizes per-instance geometry params.
+    knobs: depth/width/height(1+N(0,0.1), sampled) -> overall box proportions; DoorThickness(U(0.05,0.1)*depth, sampled) -> shell/door wall thickness; DoorRotation(fixed 0) -> door open angle (set >0 to open door); RackRadius(U(0.01,0.02)*depth, sampled) -> thickness of rack wires; RackHAmount(RI(2,4), sampled) -> number of shelf tiers; RackDAmount(RI(4,6), sampled) -> wire divisions per shelf; BrandName("BrandName", fixed) -> extruded text on door
+  BeverageFridgeFactory.get_material_params: assigns materials + wear.
+    knobs: Surface(weighted metals) -> body/frame look; Front(appliance_front_maybeglass) -> door panel (glass vs solid); Handle(appliance_handle) -> handle+text+racks material; Back(metals) -> back panel; scratch/edge_wear (prob-gated by material_assignments.wear_tear_prob, sampled) -> surface aging
+  BeverageFridgeFactory.create_asset: builds mesh via node group, twice for bevel; add_bevel offset(0.01) -> edge rounding amount
+  nodegroup_beverage_fridge_geometry: master assembly graph (body/door/racks/back panel).
+    knobs: hollowcube Switch2/Switch4=True (fixed) -> which shell faces are open; handle width(Width*0.05), handle length(Height*0.8), handle placement Y(Width*0.1)/Z(Height*0.9) -> handle size & position; text placement Z(0.03) & Size(Height*0.05) & Offset Scale(0.0020) -> brand text size/depth; center MarginX(-1.0)/MarginY(0.1)/MarginZ(0.15) -> glass-panel inset region on door; rack inset multiply_7/8 (DoorThickness*2.1) -> rack clearance from walls; rack vertical spacing = (Height-2*DoorThickness)/(RackHAmount+1)
+  nodegroup_oven_rack: builds one wire shelf grid.
+    knobs: Radius, Amount (driven by RackRadius/RackDAmount), quadrilateral Width/Height (driven) -> shelf wire density/thickness
+  nodegroup_handle: door handle bar geometry (width/length/thickness sockets, all driven from body params)
+  nodegroup_text: string-to-mesh brand label (String/Size/Offset Scale, rotation fixed 1.5708,0,1.5708)
+  nodegroup_center: selection helper marking inner vs outer region for material split (MarginX/Y/Z)
+  nodegroup_cube / nodegroup_hollow_cube: primitive box / 6-face-switchable hollow shell builders (Size/Pos/Thickness/Switch1-6)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material candidate lists (metals, appliance_front_maybeglass, appliance_handle) and wear_tear probabilities used for random material selection
+  assets/materials/wear_tear/scratches.py -> scratch surface effect applied in finalize_assets
+  assets/materials/wear_tear/edge_wear.py -> edge-wear surface effect applied in finalize_assets
+  assets/materials/metal|plastic|ceramic|... -> shader implementations referenced by material_assignments
+  assets/materials/text.py -> brand-text material support
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> Geometry-Nodes graph construction API (Nodes, NodeWrangler, to_nodegroup)
+  core/util/bevelling.py -> get_bevel_edges / add_bevel / complete_bevel / complete_no_bevel edge-bevel pipeline
+  core/util/blender.py -> spawn_cube, modify_mesh, delete helpers used in create_asset
+  core/util/math.py -> FixedSeed deterministic sampling context
+  core/util/random.py -> weighted_sample for material choice
+  core/placement/factory.py -> AssetFactory base class (seed handling, create_asset contract)
+  core/placement/detail.py, core/surface.py, core/util/color.py, logging.py -> engine placement/surface/color/logging utilities
+  assets/utils/object.py, core/nodes/__init__.py, assets/materials/__init__.py, etc. -> package wiring / imports
+  assets/objects/appliances/__init__.py -> exposes BeverageFridgeFactory (and sibling appliance factories) for import

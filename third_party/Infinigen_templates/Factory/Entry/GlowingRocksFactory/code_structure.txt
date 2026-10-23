@@ -1,0 +1,53 @@
+SUMMARY: The GlowingRocksFactory builds glowing, translucent gem-like rocks: it generates a base collection of Blender rock meshes, applies a translucent/transparent gem shader tinted with a random gemstone color, and parents a point light inside each rock to make it glow. The upper-level files define the base rock geometry (blender_rock.py) and the glowing gem appearance plus lighting (glowing_rocks.py); __init__.py just exposes the factories.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/rocks/glowing_rocks.py
+  shader_glowrock(nw, transparent_for_bounce): builds the gem material — translucent BSDF mixed with a per-object color, optionally transparent to camera rays.
+    knobs: color = colors.hsv2rgba(colors.gem_hsv()) (random gemstone hue/sat/val from infra) -> crystal color (purple/yellow/pink etc.); change gem_hsv or hardcode for specific palette
+    knobs: MixRGB factor (0.6, fixed) -> blend between white-noise variation and base gem color (higher = more color, lower = more noise variation)
+    knobs: WhiteNoiseTexture noise_dimensions ("4D", driven by object Random) -> per-instance color randomness
+    knobs: transparent_for_bounce (True) -> if True, faces are transparent to camera but translucent to light bounces (glow effect); False = always translucent
+  GlowingRocksFactory.__init__:
+    knobs: watt_power_range ((400, 800), sampled per asset) -> brightness of internal glow light
+    knobs: rock_collection n=5 (fixed count of base rock variants)
+    knobs: BlenderRockFactory detail=1 -> base mesh resolution
+    knobs: SUBSURF levels=2 (applied to each base rock) -> mesh smoothness/roundness
+  GlowingRocksFactory.create_asset:
+    knobs: rotation_euler = uniform(-pi, pi, 3) (random) -> random orientation
+    knobs: scale = uniform(0.7, 1.5, 3) * 0.5 (random, non-uniform) -> per-axis size and overall scale (0.5 base multiplier)
+    knobs: point light radius = min_side_length * 1.0 -> glow light softness relative to rock size
+    knobs: light type "POINT" -> light shape/falloff
+  GlowingRocksFactory.quickly_resample: re-randomizes placeholder EMPTY rotation (uniform -pi..pi).
+  GlowingRocksFactory.create_placeholder: spawns a 0.1-radius SPHERE empty as placeholder (s=0.1 knob).
+
+FILE: assets/objects/rocks/blender_rock.py
+  BlenderRockFactory.create_asset: generates a procedural rock mesh via the extra_mesh_objects addon (add_mesh_rock).
+    knobs: detail (default 1) -> display_detail/detail mesh density
+    knobs: zscale = uniform(0.2, 0.8) (random) -> vertical flattening
+    knobs: zrand = uniform(0, 0.7) (random) -> Z-scale randomness lower bound
+    knobs: scale_X/scale_Y ((1.00, 1.01), fixed near-uniform) -> horizontal shape (kept ~1 to avoid addon bug)
+    knobs: deform = uniform(2, 10) (random) -> large-scale rock deformation
+    knobs: rough = uniform(0.5, 1.0) (random) -> surface roughness (>1.0 causes self-intersection)
+    note: shade_flat gives faceted look; retries on addon's ~1.1% sampling failure
+
+FILE: assets/objects/rocks/__init__.py
+  module exports: re-exports BlenderRockFactory, BoulderFactory, GlowingRocksFactory (no tunables).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/colors.py -> gem_hsv() gemstone color sampling and hsv2rgba conversion
+  assets/utils/object.py -> mesh/object helper utilities
+  core/nodes/node_wrangler.py -> NodeWrangler / Nodes API for building shader graphs
+  core/nodes/node_info.py -> node type definitions and metadata
+  core/nodes/compatibility.py -> Blender version node compatibility shims
+  core/nodes/utils.py -> node graph helper utilities
+  core/surface.py -> shaderfunc_to_material: converts shader function to Blender material
+  core/placement/factory.py -> AssetFactory base class and make_asset_collection
+  core/placement/detail.py -> level-of-detail placement utilities
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> spawn_empty, deep_clone_obj, modify_mesh, apply_transform, apply_modifiers
+  core/util/color.py -> color-space conversion helpers
+  core/util/random.py, core/util/math.py -> random/math utilities
+  core/init.py -> require_blender_addon (loads extra_mesh_objects addon)
+  core/util/logging.py -> logging setup
+  assets/__init__.py, core/__init__.py, core/nodes/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package initialization

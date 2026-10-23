@@ -1,0 +1,55 @@
+SUMMARY: This factory builds coral assets; HoneycombCoralFactory specifically produces a single reaction-diffusion "honeycomb" coral mesh — a bulging convex form covered in a periodic honeycomb ridge pattern, wrapped in a coral shader whose color/subsurface are seeded per instance. generate.py defines the top-level CoralFactory wrapper (mesh scaling, remeshing, material, optional bump/noise texture, optional tentacles) and the thin per-type subclasses; the honeycomb geometry itself comes from reaction_diffusion.py. Each create_asset() call returns exactly one coral object. To match the "teardrop wild beehive, tan-golden" description, tune the honeycomb reaction-diffusion parameters and the shader hue in the files below.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/corals/reaction_diffusion.py
+  ReactionDiffusionBaseCoralFactory: builds the base convex mesh and paints a reaction-diffusion pattern onto it, then shrinkwraps and displaces.
+    knobs: tentacle_prob(0.0 fixed) -> no tentacles for honeycomb corals; noise_strength(0.01) -> surface micro-bump amount applied in generate.py
+    knobs (reaction_diffusion_make): subsurf_level(2) -> base smoothness/round bulge; new_icosphere(subdivisions=8, radius=3) -> pattern resolution/density; DISPLACE strength(0.4), mid_level(0.0) on vertex group "B" -> depth of honeycomb ridges (raise for deeper/waxier comb)
+  HoneycombBaseCoralFactory.honeycomb_make: sets the honeycomb pattern parameters (this is the maker used by HoneycombCoralFactory).
+    knobs: feed_rate(0.070) -> cell size/pattern regime; kill_rate(feed2kill(feed_rate)-0.001) -> pattern stability/ridge thickness; make_periodic_weight_fn(5) -> periodicity/scale of honeycomb cells (increase for more/smaller cells)
+  brain_make: alternate maker (feed_rate 0.055, make_periodic_weight_fn(100,0.02)); not used by HoneycombCoralFactory but shares reaction_diffusion_make.
+  ReactionDiffusionBaseCoralFactory.__init__: makers=[brain,honeycomb], weights=[0.5,0.5] -> which pattern when base factory is chosen randomly (HoneycombBaseCoralFactory forces honeycomb).
+
+FILE: assets/objects/corals/generate.py
+  CoralFactory.create_asset: wraps base mesh: rescales to default_scale * uniform(0.8,1.2,3) (random per-instance stretch), remeshes at face_size(0.01), assigns material, applies bump/noise.
+    knobs: face_size(0.01) -> mesh resolution; scale jitter uniform(0.8,1.2,3) -> random overall proportions (raise Z range for teardrop elongation); bump_prob(from base=0.3) -> chance of noise-vs-bump texture
+  CoralFactory.build_base_hue: samples the coral base hue.
+    knobs: 0.25 prob full-random hue uniform(0,1); else uniform(-0.2,0.3)%1 -> for tan-golden set this range near ~0.08-0.12 (yellow-orange)
+  CoralFactory.shader_coral: the coral surface material (color ramp + principled BSDF).
+    knobs: shift(uniform(0.05,0.1)*±1) -> hue variation; bright_color(hsv (base+shift, sat 0.7-0.9, val 0.2)) & dark_color(hsv base, sat 0.5-0.7, val 0.1) & light_color(sat 0.2-0.4, val 0.4) -> comb color; for waxy tan-golden lower saturation and raise value; musgrave scales uniform(10,20) -> ramp mottling frequency; specular uniform(0.25,0.5) -> sheen; subsurface_ratio(uniform(0,0.05) or 0) & subsurface_radius(uniform(0.05,0.2)) & subsurface_color(random hsv) -> waxy translucency (fix color to warm tan for beeswax)
+  CoralFactory.apply_noise_texture: STUCCI/MARBLE displace; noise_scale log_uniform(0.01,0.02), strength=noise_strength*uniform(0.9,1.2).
+  CoralFactory.apply_bump: VORONOI displace; noise_scale log_uniform(0.02,0.03), intensity log_uniform(1.5,2), minkovsky_exponent uniform(1,1.5), strength -noise_strength*uniform(1,2) -> could reinforce cell-like bumps.
+  CoralFactory.__init__: factory_methods list + weights [0.15,0.2,0.15,0.2,0.2,0.15,0.2] -> only used when type not forced; HoneycombCoralFactory forces HoneycombBaseCoralFactory (no effect here).
+  HoneycombCoralFactory: entry class — passes HoneycombBaseCoralFactory to CoralFactory (no own knobs).
+
+FILE: assets/objects/corals/base.py
+  BaseCoralFactory: shared defaults inherited by all base coral factories.
+    knobs: default_scale([0.8,0.8,0.8]) -> overall object size (Z stretch here would help teardrop shape); noise_strength(0.02) -> global surface bump default; tentacle_prob(0.5), bump_prob(0.3), density(500), tentacle_distance(0.05) -> mostly overridden for honeycomb
+
+FILE: assets/objects/corals/__init__.py
+  module exports only — no tunables.
+
+(Other base factories present but UNUSED by HoneycombCoralFactory: diff_growth.py, elkhorn.py, fan.py, laplacian.py, star.py, tree.py, tube.py, tentacles.py — edit only if switching coral type.)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/reaction_diffusion.py -> reaction_diffusion solver, feed2kill mapping, make_periodic_weight_fn (drives honeycomb pattern)
+  assets/utils/mesh.py -> build_convex_mesh, treeify, polygon_angles, build_convex base shape
+  assets/utils/object.py -> mesh2obj/data2mesh, new_icosphere, new_circle, center, join_objects, origin2lowest helpers
+  assets/utils/decorate.py -> geo_extension, read/write_co, displace_vertices, subsurface2face_size mesh ops
+  assets/utils/laplacian.py -> build_laplacian_3d (cauliflower base only)
+  assets/utils/draw.py -> shape_by_angles, make_circular_interp shaping helpers
+  assets/utils/shortest_path.py -> geo_shortest_path (fan coral only)
+  assets/utils/nodegroup.py -> geo_radius node group for curve-to-tube skinning
+  assets/utils/misc.py -> assign_material, sample_direction
+  core/surface.py -> shaderfunc_to_material, add_geomod, eval_argument geometry/material plumbing
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> node graph construction (build_color_ramp, Nodes enum)
+  core/placement/factory.py -> AssetFactory base class, make_asset_collection
+  core/placement/detail.py -> remesh_with_attrs
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/blender.py -> modify_mesh, apply_transform, deep_clone_obj, ViewportMode blender utilities
+  infinigen_gpl/extras/diff_growth.py -> build_diff_growth (diff-growth corals only)
+  assets/objects/trees/tree.py -> build_radius_tree branching skeletons (tree/tentacle corals only)

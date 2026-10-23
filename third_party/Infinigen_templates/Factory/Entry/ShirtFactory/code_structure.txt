@@ -1,0 +1,27 @@
+SUMMARY: The ShirtFactory procedurally generates a single shirt/top garment mesh per create_asset() call, built from a mirrored outline of anchor points that define the body, neck, and sleeve silhouette. The outline is extruded to a solid cloth, cleaned, beveled, subsurfed, and given a fabric material. The upper-level shirt.py controls all garment proportions (width, sleeve type/length/angle, neck size, thickness) and material selection.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/clothes/__init__.py
+  module: Re-exports clothing factories (Blanket, Pants, Shirt, Towel). No tunables.
+
+FILE: assets/objects/clothes/shirt.py
+  ShirtFactory.__init__: samples garment shape params and picks material.
+    knobs: width(log_uniform 0.45-0.55, random) -> shirt body half-width scale; size(width + uniform 0.25-0.3, random) -> overall vertical length of body; size_neck(uniform 0.1-0.15 * size, random) -> neck/collar height; type(np.random.choice ["short","long"]) -> selects sleeve length regime; sleeve_length short(size/2 + uniform -0.35..-0.3) / long(size/2 + uniform -0.05..0.0, random) -> reach of sleeves; sleeve_width(uniform 0.14-0.18, random) -> sleeve thickness/opening; sleeve_angle(uniform pi/6..pi/4, random) -> downward slope of sleeves; thickness(log_uniform 0.02-0.03, random) -> cloth solidify depth
+    material: surface_gen_class = weighted_sample(material_assignments.pants) (random) -> fabric type; ArtFabric branch seeds procedural fabric art from factory_seed
+  ShirtFactory.create_asset: builds outline mesh from x_anchors/y_anchors, mirrors, fills, solidifies, trims faces, bevels, subsurfs, UV-wraps material.
+    knobs: x_anchors/y_anchors (derived from init params) -> full garment silhouette; last y_anchor collar dip (size + size_neck * uniform 0.3-0.7, random) -> neckline curve depth; remesh_fill resolution(0.02, fixed) -> mesh density; remove_faces normal thresholds (y_<-0.5, y_>0.5 & x_*x<0, fixed) -> which faces get cut open (armholes/neck); remove_doubles threshold(1e-3, fixed) -> weld tolerance; BEVEL width(sleeve_width * uniform 0.1-0.15, random) -> edge rounding; subsurf level(1, fixed) -> smoothing
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides `pants` weighted material distribution used for fabric selection
+  assets/materials/art.py -> ArtFabric procedural patterned-fabric material
+  assets/materials/fabric/*.py -> knit/leather/rug/sofa fabric shaders selectable via material_assignments
+  assets/materials/wear_tear/*.py -> edge-wear and scratch surface detailing
+  assets/utils/decorate.py -> read_center, read_normal, remove_faces, subsurf, write_co mesh operations
+  assets/utils/draw.py -> remesh_fill for filling/remeshing the outline
+  assets/utils/object.py -> new_circle base mesh primitive
+  assets/utils/uv.py -> wrap_front_back UV mapping for the garment
+  core/placement/factory.py -> AssetFactory base class and seeded instancing contract
+  core/util/random.py -> log_uniform, weighted_sample sampling helpers
+  core/util/blender.py -> ViewportMode, modify_mesh, Suppress Blender wrappers
+  core/nodes/*, core/surface.py -> shader node graph and material application engine

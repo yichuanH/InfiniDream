@@ -1,0 +1,51 @@
+SUMMARY: This factory builds inflatable balloon text: a randomly-generated word is extruded, solidified, cloth-simulated with internal pressure to give it a puffy inflated look, subdivided/smoothed, and assigned a decorative metallic material. The upper-level files also bundle several unrelated clothing factories (blanket, pants, shirt) that share the same cloth/material utilities but are not part of the balloon output. The entry file balloon.py is the only file needed to change the balloon result.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/wall_decorations/balloon.py
+  BalloonFactory: builds inflated balloon-letter text asset
+    knobs: alpha(0.8, fixed) -> bbox padding ratio around text; thickness(uniform 0.06-0.1) -> letter extrusion depth via SOLIDIFY; material_gen(default weighted_sample(material_assignments.decorative_metal)) -> surface material family; rel_scale(uniform 0.2-0.3 *4 = 0.8-1.2) -> overall balloon scale; displace(uniform 0.02-0.04) -> surface DISPLACE bumpiness
+    knobs (create_placeholder): text = generate_text().upper() (random word) -> the letters shown; bbox size = rel_scale*len(text)*alpha (derived)
+    knobs (create_asset): remesh_fill(0.02) -> mesh density; subdivide_edge_ring count(8) -> lengthwise resolution; cloth_sim tension_stiffness(uniform 0-5) -> fabric slackness; gravity(0, fixed) -> no sag; uniform_pressure_force(uniform 10-20) -> inflation amount/puffiness; use_pressure(True); vertex_group_mass("pin"); subsurf(1) -> smoothing subdivisions; rotation_euler(pi/2,0,pi/2 fixed) -> orientation; SMOOTH iterations(5) -> surface smoothing
+
+FILE: assets/objects/wall_decorations/__init__.py
+  module exports: registers BalloonFactory (and RangeHood, WallArt, Mirror, WallShelf) — edit to expose/rename factories
+
+FILE: assets/objects/clothes/blanket.py  (unrelated to balloon; cloth assets)
+  BlanketFactory: flat fabric sheet
+    knobs: width(log_uniform 0.9-1.2); size(width*log_uniform 0.4-0.7); thickness(log_uniform 0.004-0.008); surface(weighted_sample material_assignments.blanket); grid x_subdivisions(64, fixed)
+    fold(): theta(uniform -pi/6..pi/6); y_margin(size*(0.5-uniform 0.1-0.3))
+  ComforterFactory: adds SOLIDIFY thickness(0.01)
+  BoxComforterFactory: margin(uniform 0.3-0.4) -> quilt box spacing
+
+FILE: assets/objects/clothes/pants.py  (unrelated to balloon)
+  PantsFactory: knobs width(log_uniform 0.45-0.55); size(width/2+uniform 0-0.05); type(choice underwear/shorts/pants) -> length; neck_shrink(uniform 0.1-0.15); thickness(log_uniform 0.02-0.03); surface(weighted_sample material_assignments.pants)
+
+FILE: assets/objects/clothes/shirt.py  (unrelated to balloon)
+  ShirtFactory: knobs width(log_uniform 0.45-0.55); size(width+uniform 0.25-0.3); size_neck(uniform 0.1-0.15*size); type(choice short/long)->sleeve_length; sleeve_width(uniform 0.14-0.18); sleeve_angle(uniform pi/6..pi/4); thickness(log_uniform 0.02-0.03); bevel width(sleeve_width*uniform 0.1-0.15); surface(weighted_sample material_assignments.pants)
+
+FILE: assets/objects/clothes/__init__.py
+  module exports: registers Blanket/Pants/Shirt/Towel factories
+
+FILE: assets/objects/creatures/util/cloth_sim.py  (shared utility, editable)
+  local_pos_rigity_mask(nw): rigidity vertex mask via node graph
+    knobs: clamp Min/Max(0.03/0.49); musgrave Scale(normal 10±1, 5±0.5); multiply factors(normal 0.07,0.12,0.1); colorramp positions(normal 0.23,0.6)
+  bake_cloth(): gravity(default 1); distance_min(0.015); use_self_collision(False); frame range from scene
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/scatters/clothes.py -> cloth_sim wrapper (pressure/tension baking) used to inflate the balloon
+  assets/composition/material_assignments.py -> weighted material family lists (decorative_metal, blanket, pants)
+  assets/materials/metal/__init__.py -> metallic shaders for balloon surface
+  assets/materials/fabric/__init__.py, assets/materials/art.py -> fabric/art shaders for clothes
+  assets/utils/misc.py -> generate_text() random word generator
+  assets/utils/draw.py -> remesh_fill mesh remeshing helper
+  assets/utils/decorate.py -> subdivide_edge_ring, subsurf, read/write_co, normals, remove_faces helpers
+  assets/utils/object.py -> new_bbox, new_grid, new_circle primitive creators
+  assets/utils/uv.py -> UV unwrapping helpers (wrap_top_bottom, wrap_front_back)
+  core/placement/factory.py -> AssetFactory base class (create_asset/create_placeholder lifecycle)
+  core/surface.py -> assign_material, attribute_to_vertex_group
+  core/nodes/node_wrangler.py, node_info.py -> node graph construction API
+  core/util/blender.py -> modify_mesh, ViewportMode, apply_transform, mesh-op wrappers
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform, weighted_sample sampling helpers
+  core/placement/detail.py, core/tags.py -> LOD/tagging engine support
+  assets/materials/wear_tear/*.py -> edge wear / scratch procedural detail materials

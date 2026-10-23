@@ -1,0 +1,56 @@
+SUMMARY: This factory builds procedural mollusk shells; ScallopFactory specifically produces a two-valve scallop/oyster-style shell made from two clamped ellipsoid valves with radial ribbing/grooves and a hinge ear, textured with a mottled wave-based shader. The upper-level files split into shape generation (shell.py builds valve geometry, snail.py builds spiral shells) and the top-level MolluskFactory (generate.py) which wraps a base maker, adds solidify/displace noise, and assigns the mottled shader. To satisfy the "thorny oyster with long flattened outward-curving spines" request you must add spine geometry (none exists today) and bias colors toward orange/cream via the shader.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mollusk/generate.py
+  MolluskFactory: orchestrates base shape + noise displacement + shader material.
+    knobs: factory_methods([SnailBaseFactory, ShellBaseFactory]) -> which family; weights([1,1]) -> selection probability (ScallopFactory forces ScallopBaseFactory)
+  MolluskFactory.decorate_mollusk: post-process the raw shell mesh.
+    knobs: SOLIDIFY thickness(0.005) -> valve wall thickness; texture type(choice STUCCI/MARBLE) -> surface bump style; texture.noise_scale(log_uniform 0.1-0.2) -> bump grain; DISPLACE strength(self.factory.noise_strength=0.02) -> outer surface roughness/bumpiness
+  MolluskFactory.build_base_hue: picks base hue (static).
+    knobs: prob(0.4) branch -> hue in (0,0.2); else hue in (0.05,0.12) [reds/oranges]; raise/narrow toward ~0.05-0.09 for orange-cream oyster
+  MolluskFactory.shader_mollusk: mottled two-band wave-texture color shader.
+    knobs: roughness(uniform 0.2-0.8) -> gloss; specular(0.3 fixed) -> highlight; value_scale(log_uniform 1-20) -> overall brightness (dark 0.005*v^1.5, light 0.05*v); saturation_scale(log_uniform 0.4-1) -> color vividness; dark_color/light_color hue jitter(±0.06) & saturation(0.6-1.0); color_fn dark_prob(0.4) -> proportion dark patches; n(randint 3-5) -> number of color bands (mottling detail); WaveTexture Scale x_scale/z_scale, Distortion(distortion) & wave_profile SAW/bands_direction -> rib/stripe pattern of coloring; MixRGB ratio -> blend of X vs Z bands
+  ScallopFactory: entry point; forces ScallopBaseFactory (no own knobs)
+
+FILE: assets/objects/mollusk/shell.py
+  ShellBaseFactory.__init__: base params for shell family.
+    knobs: makers list; maker(random choice) -> shape (ScallopBaseFactory overrides to scallop_make); z_scale(log_uniform 2-10) -> shader vertical stripe density
+  ShellBaseFactory.build_ellipse: makes the valve dome.
+    knobs: vertices(1024) -> mesh resolution; viewpoint((0,0,1)) -> dome apex direction; softness(0.3 scallop / 0.5 clam,mussel) -> how sharply the dome bulges
+  ShellBaseFactory.scallop_make: builds one scallop valve (used by Scallop).
+    knobs: scale(1,1.2,1) -> valve aspect (fan width); boundary(0.42) -> outer angular extent; outer(uniform 0.28-0.32), inner(uniform 0.18-0.22) -> fan taper bands; s(uniform 0.6-0.7) -> edge falloff of fan; calls add_radial_groove + add_hinge
+  ShellBaseFactory.add_radial_groove: ribs the valve surface (key for "thick ribbed valves").
+    knobs: frequency(45) -> number of radial ribs; scale(0.02) -> rib depth; clip(r-0.25) -> ribs start radius; increase frequency/scale for pronounced oyster ribs
+  ShellBaseFactory.add_hinge: adds the hinge ear at top (satisfies "small hinge ear").
+    knobs: length(0.4) -> ear span; width(0.1) -> ear depth; x(uniform 0.8-1.0) -> ear taper asymmetry; SUBSURF levels(2) -> smoothness; DISPLACE strength(0.2)+STUCCI -> ear texture
+  ShellBaseFactory.create_asset: clamps two mirrored valves together.
+    knobs: upper.location z(+0.005) -> gap seed; lower z-scale(-1) -> mirror to second valve; base(uniform 0-pi/4) -> overall tilt; upper open angle(uniform pi/6-pi/3 extra) -> valve gape (set near 0 for "clamped shut")
+  NOTE: no spine/thorn geometry exists — to add long flattened outward-curving spines you must write a new maker/helper (e.g. instance tapered flat cones along the margin, longest near boundary) and call it in scallop_make.
+
+FILE: assets/objects/mollusk/snail.py
+  SnailBaseFactory & spiral makers (volute/nautilus/conch/auger): NOT used by ScallopFactory; edit only for snail-type mollusks.
+    knobs: freq(256), ratio, z_scale(log_uniform 0.2-1), distortion(log_uniform 2-20), build_cross_section(concave, spike, affine), snail_make(lateral, longitudinal, freq, scale, loop)
+
+FILE: assets/objects/mollusk/base.py
+  BaseMolluskFactory: shared defaults inherited by all makers.
+    knobs: max_expected_radius(0.5); noise_strength(0.02) -> displacement magnitude in decorate; ratio(1); x_scale(2), z_scale(1) -> shader stripe scales; distortion(1) -> shader wave distortion
+
+FILE: assets/objects/mollusk/__init__.py
+  module exports only (no knobs)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> subsurface2face_size, displace_vertices (mesh refinement & vertex displacement)
+  assets/utils/draw.py -> shape_by_angles (angular scaling of valve profile)
+  assets/utils/object.py -> new_circle, mesh2obj, data2mesh, join_objects, center, new_empty primitives
+  assets/utils/misc.py -> assign_material helper
+  core/surface.py -> shaderfunc_to_material, add_geomod (attach shader/geometry-node graphs)
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> node graph construction (WaveTexture, PrincipledBSDF, build_color_ramp, etc.)
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle
+  core/placement/detail.py -> level-of-detail / face-size management
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> modify_mesh, apply_transform, deep_clone_obj, ViewportMode, delete utilities
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/color.py -> color helpers
+  core/nodes/compatibility.py, utils.py -> Blender version node compatibility

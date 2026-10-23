@@ -1,0 +1,38 @@
+SUMMARY: MushroomStemFactory procedurally builds the stem (stipe) of a mushroom: a spun surface-of-revolution tube, optionally with an annulus/skirt "web" (solid or hollow/voronoi lattice) and a wavy surface "band", finished with STUCCI displacement and a BEND deform. The entry file stem.py is the sole editable upper-level module; __init__.py just re-exports sibling MushroomFactory/MushroomGrowthFactory (those generators are not included here). Note the selecting okapi request is unrelated to this mushroom-stem asset.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/mushroom/stem.py
+  MushroomStemFactory.__init__: chooses stem variant and materials at seed time
+    knobs: web_weights([1,1,2] over hollow/solid/None) -> probability stem has a skirt web (currently 50% chance of no web); has_band(uniform<0.75, ~75% true) -> whether wavy band is applied; material/material_web(=material_func()) -> surface shading of stem and web; inner_radius(passed in) -> base thickness of stem
+  MushroomStemFactory.create_asset: builds the main spun stem body + assembles web/band/displace/bend
+    knobs: length(log_uniform(0.4,0.8)) -> stem height; x_anchors profile (inner_radius, log_uniform(1,2)*inner_radius bulge, uniform(1,1.2)*inner_radius) -> stem taper/bulge silhouette; z_anchors mid = -length*uniform(0.3,0.7) -> where bulge sits; STUCCI texture.noise_scale(uniform(0.005,0.01)) -> surface bumpiness scale; DISPLACE strength(0.008 fixed) -> bump depth; SIMPLE_DEFORM BEND angle(-uniform(0,pi/2)) -> curvature/lean of stem; band scale arg(uniform(0.008,0.01)) -> band relief depth
+  MushroomStemFactory.build_solid_web: spun solid ring/skirt near top
+    knobs: outer_radius(inner_radius*uniform(1.5,3.5)) -> web width; z offset(uniform(0,0.05)); length(uniform(0.15,0.2)) -> skirt droop; mid z-anchor factor(uniform(0.3,0.4)); geo_inverse_band scale(-uniform(0.008,0.01)) -> web relief
+  MushroomStemFactory.build_hollow_web: lacy/voronoi-cut skirt
+    knobs: outer_radius(inner_radius*uniform(2,3.5)); length(log_uniform(0.2,0.4)) -> skirt size; SUBSURF levels(3 fixed); SMOOTH iterations(2 fixed); geo_voronoi cut (below)
+  MushroomStemFactory.geo_voronoi (static): carves holes into hollow web
+    knobs: VoronoiTexture Scale(uniform(15,20)) -> hole density; distance threshold(0.06 fixed) -> hole/strut thickness
+  MushroomStemFactory.geo_band (static): wavy vertical band on lower stem
+    knobs: WaveTexture Scale(log_uniform(5,10)) -> ridge frequency; Distortion(uniform(5,10)) -> ridge waviness; Detail Scale(2 fixed); selection z-threshold(-uniform(0.3,0.7)*length) -> how far up band extends; normal bias (0,0,2) -> displacement direction
+  MushroomStemFactory.geo_inverse_band (static): wavy relief for solid web (z-mirrored)
+    knobs: WaveTexture Scale(log_uniform(5,10)), Distortion(uniform(5,10)), Detail Scale(2 fixed); normal bias (0,0,2)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/mushroom/__init__.py -> re-exports MushroomFactory / MushroomGrowthFactory (sibling generators, not part of this stem factory)
+  assets/utils/draw.py -> spin(): surface-of-revolution mesh from anchor curve
+  assets/utils/decorate.py -> geo_extension, subsurface2face_size: mesh conditioning/detail helpers
+  assets/utils/misc.py -> assign_material(): binds material to object
+  assets/utils/object.py -> join_objects(): merges web + stem into one mesh
+  assets/utils/mesh.py -> mesh utility helpers
+  core/nodes/node_wrangler.py -> NodeWrangler: geometry/shader node graph builder
+  core/nodes/node_info.py -> Nodes enum (Voronoi, WaveTexture, SetPosition, etc.)
+  core/nodes/nodegroups/transfer_attributes.py, core/nodes/utils.py, core/nodes/compatibility.py -> node graph support
+  core/surface.py -> surface.add_geomod(): applies geometry-node modifiers (band/web/voronoi)
+  core/placement/detail.py -> remesh_with_attrs(): remesh to target face_size
+  core/placement/factory.py -> AssetFactory base class / generation interface
+  core/tagging.py, core/tags.py -> tag_object(): semantic tagging ("stem","web")
+  core/util/blender.py -> butil.modify_mesh(): SUBSURF/SMOOTH/DISPLACE/SIMPLE_DEFORM modifiers
+  core/util/math.py -> FixedSeed: deterministic per-seed sampling
+  core/util/random.py -> log_uniform(): log-scaled random sampling
+  core/util/logging.py -> logging utilities
+  __init__.py, assets/__init__.py, assets/utils/__init__.py, core/*/__init__.py -> package init/exports

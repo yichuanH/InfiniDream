@@ -1,0 +1,28 @@
+# Pinned to the versions the pipeline was developed and tested with
+# (full freeze of the reference machine: third_party/pip_freeze_reference.txt).
+# `infinigen` itself is installed separately with `pip install -e third_party/infinigen` (see README).
+bpy==4.2.0
+numpy==1.26.4
+Pillow==10.0.1
+scipy==1.17.0
+shapely==2.0.5
+trimesh==3.22.5
+opencv-python==4.8.1.78
+imageio==2.31.6
+matplotlib==3.10.8
+scikit-image==0.19.3
+scikit-learn==1.3.2
+tqdm==4.67.2
+gin-config==0.5.0
+python-dotenv==1.2.2
+anthropic==0.89.0
+openai==2.31.0
+# local reference-image fallback (Z-Image-Turbo); CUDA build of torch — see README if pip picks CPU-only
+torch==2.11.0
+torchvision==0.26.0
+diffusers==0.37.1
+transformers==5.5.3
+accelerate==1.13.0
+huggingface_hub==1.10.1
+safetensors==0.7.0
+einops==0.8.2

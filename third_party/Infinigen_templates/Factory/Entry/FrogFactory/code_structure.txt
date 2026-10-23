@@ -1,0 +1,93 @@
+SUMMARY: FrogFactory (in reptile.py) is one of several reptile/amphibian creature factories built from a modular genome system: a CreatureGenome tree of PartFactory nodes is assembled by `*_genome()` functions, converted to meshes by `creature.genome_to_creature`, then joined/rigged/materialized via `joining.join_and_rig_parts`. Currently `frog_genome()` only emits a head part (body/legs/eyes are commented out), so to produce a gliding frog with webbed membranes you must uncomment/extend the body, front/back legs, and toes and add membrane geometry between limbs. The util files provide the genome/tree data model, skeleton attachment, rigging, and procedural animation; curve_slither/run_cycle only affect snakes/lizards.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/reptile.py
+  frog_genome(): Builds the frog CreatureGenome — THIS is the primary file to edit to realize the gliding-frog request. Body/leg/toe/eye/jaw attachment code is present but COMMENTED OUT; only the head is currently returned.
+    knobs: head_size['scale_y'](0.4 + N(0,0.02), random) -> head width/depth; body_fac type='frog_body'/'frog'(commented) -> torso shape; fleg/bleg LizardFrontLeg/BackLeg(type='frog')(commented) -> limbs needed for membranes; toe attach coords (0.97/0.98, 0.5, ±0.3/±0.6) & Joint rest (0,0,±13/±40)(commented) -> toe splay/webbing spread (widen for "webbed hands and feet spread flat"); leg attach coords front (U(0.5,0.55),0.45,0.9) back (U(0.70,0.75),0.45,0.8) & shoulder rest (0,0,110)/(0,0,50)(commented) -> limb placement/pose (splay out to stretch flank membrane wrist-to-ankle); shoulder_bounds ([-20,-20,-20]..[20,20,20])(commented) -> joint rotation limits
+    note: no membrane/wing geometry exists here — must add a new part (e.g. a webbing mesh factory) bridging front→hind limbs; no dedicated frog animation params (uses generic mode='swim', speed_m_s=0.5)
+  frog_genome() return: postprocess_func=reptile_postprocessing, animation mode='swim', speed_m_s=0.5(fixed) -> movement style
+  dinosaur() / lizard_genome() / snake_genome() / chameleon_genome(): sibling genome builders (not used by FrogFactory) — reference templates for how to attach body/legs/toes/eyes/horns.
+    knobs: snake w_mod/h_mod (N(1,0.05), random) -> body width/height variation; eye Radius (N(0.03,0.005), random) -> eye size; horn length U(0.2,0.3), rad1 0.4, rad2 0.3, thickness U(0.04,0.08) -> teeth size
+  reptile_postprocessing(): assigns materials to frog.
+    knobs: main_template = weighted_sample(material_assignments.reptile) (random) -> body skin material; applies tongue.Tongue, bone.Bone (Horn), eyeball.Eyeball (coord='X'), nose.Nose to matching extras
+  snake_swim_params/lizard_run_params/chameleon_eye_params(): animation magnitude/frequency (not used by frog).
+    knobs: swim_mag (N(200,3)/N(50,3)/N(20,3)), swim_freq, flipper_freq/mag/var -> wiggle intensity/speed
+  FrogFactory:
+    knobs: max_distance(40) -> cull distance; create_asset flags animate/rigging/simulate (default False) -> whether armature/anim applied; adapt_mode='remesh'(fixed) -> mesh resolution method
+  SnakeFactory:
+    knobs: snake_length(('uniform',0.5,3), random) -> length; AnimPolicyRandomForwardWalk speed/step_range(0.2,0.2)/yaw_dist(-7,7) -> path motion; scale s = snake_length/20
+  LizardFactory / ChameleonFactory: analogous asset builders (max_distance=40).
+
+FILE: assets/objects/creatures/util/animation/curve_slither.py
+  add_curve_slithers(): snake-only slither wiggle (not frog).
+    knobs: Wavelength(snake_length/U(2,4)), Magnitude(snake_length*0.05*N(1,0.2)), MagRandom(U(0,0.7)), Loopyness(0), AltitudeOffset(0.02) -> slither shape
+  nodegroup_wiggles/add_wiggles/add_loopbacks: geometry-node wiggle generators; SubdivisionSurface Level=3, ResampleCurve = wavelength/4
+  slither_along_path(): zoff_pct(0.7) -> vertical offset on curve
+  snap_curve_to_floor(): step_height(1) -> ground snapping raycast height
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  animate_run(): quadruped gait (lizard); not called for frog by default.
+    knobs: stride_length(0.7*clip_gaussian(0.4,0.3,0.3,0.6)*dim_x), spread(clip_gaussian(0.15,0.1,0,0.5)), stride_height(U(0.15,0.4)), body_height(*clip_gaussian(0.6,0.4,0.3,1.2)), flap_height(U(0.3,1)), squash_gait_pct(0.1)
+  animate_wiggle_bones/front_leg/back_leg: sinusoidal bone drivers.
+    knobs: mag_deg, freq, wavelength, off -> oscillation amplitude/rate/phase
+  foot_path/body_path: NURBS gait cycle shapes (length, height, upturn, down_stroke, curve_resolution=8)
+
+FILE: assets/objects/creatures/util/genome.py
+  Joint: rest/pose/bounds/stiffness/stretch -> per-attachment pose & IK limits (edit rest to splay limbs for membranes)
+  Attachment: coord(u,v,rad), rotation_basis('global'/'normal'/'tangent'), bridge_rad, smooth_rad -> where/how parts attach & blend
+  IKParams: chain_parts(1), rotation_weight(0), mode('iksolve'/'pin'), target_size(0.2)
+  attach()/part(): syntactic sugar used by *_genome() to build the tree; interp_* functions blend two genomes
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature(): turns genome tree into posed meshes; raycast attachment, writes local/global attributes
+  PartFactory: base class (sample_params/make_part) — subclass here to add a new membrane/webbing part
+  ALL_TAGS(['body','neck','head','jaw','head_detail','limb','foot','rigid']) -> per-vertex tags for materials/rigging
+  raycast_surface()/apply_attach_transform(): attachment mechanics (edit for membrane spanning between limbs)
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts(): joins body parts, computes bevel/smooth joins, remeshes, rigs, applies materials.
+    knobs: adapt_mode('remesh'), min_remesh_size(0.01), smooth_joins(True), remove_doubles thresholds(0.01/0.001), roll('GLOBAL_POS_Y'), SUBSURF levels=1 -> mesh density/smoothness of final frog
+  compute_joining_effects(): bevel connector segments=5 -> limb-to-body blend width (driven by Attachment.bridge_rad/smooth_rad)
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig()/create_bones()/constrain_bones(): builds armature from skeletons & joint constraints.
+    knobs: shoulder_auto_stiffness(0.85), trim_bounds_child_margin(0.15), connector_collapse_margin_radpct(0.5)
+  create_ragdoll(): physics colliders — min_col_length(0.1), col_joint_margin(0.2), col_radius(0.07), mass(5)
+
+FILE: assets/objects/creatures/util/creature_util.py
+  polar_skeleton()/interp_dict()/offset_center(): skeleton & param interpolation helpers (usually unchanged)
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree + iter/map/fold/tzip: generic tree data structure for the genome (do not usually edit)
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  create_bevel_connection()/smooth_around_line(): mesh-level join geometry.
+    knobs: width, segments(9/5), close_caps(True), simplify_thresh(1.5e-2), smooth iters(30)/factor(0.9) -> smoothness of part junctions (relevant for continuous membrane surface)
+
+FILE: assets/objects/creatures/__init__.py
+  Registry — exports FrogFactory/LizardFactory/SnakeFactory. Add new factory names here.
+
+FILE: assets/objects/creatures/parts/__init__.py
+  Imports the part submodules (body, foot, leg, wings, reptile_detail, eye, etc.). To add a membrane part, create a module and register it here. NOTE: reptile.py references parts.body_tube, parts.reptile_neck, parts.chameleon.Chameleon which are NOT imported here — verify availability. parts.wings exists and may serve as basis for the gliding membrane.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class (spawn/create_asset lifecycle)
+  core/placement/animation_policy.py -> forward-walk anim policy & bezier path creation
+  core/placement/detail.py -> adapt_mesh_resolution (remesh/subdivide to target face size)
+  core/placement/path_finding.py -> navigation/path utilities
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py -> geometry-node graph construction (Nodes, NodeWrangler, to_nodegroup)
+  core/surface.py -> write/smooth mesh attributes, surface shader application
+  core/util/blender.py -> Blender object helpers (spawn, join, modify_mesh, modes, transforms)
+  core/util/math.py -> lerp, clip_gaussian, homogenize, FixedSeed, sampling math
+  core/util/random.py -> random_general, weighted_sample
+  core/util/logging.py -> Suppress, Timer logging utilities
+  assets/composition/material_assignments.py -> material_assignments.reptile pool (skin material candidates)
+  assets/materials/creature/bone.py -> Bone material (horns/teeth)
+  assets/materials/creature/eyeball.py -> Eyeball material
+  assets/materials/creature/nose.py -> Nose material
+  assets/materials/creature/tongue.py -> Tongue material
+  assets/materials/* (ceramic/fabric/metal/plastic/wood/plant/terrain/wear_tear/...) -> shared material shader libraries
+  assets/colors.py -> color palette sampling
+  assets/utils/geometry/lofting.py -> skeleton_to_tangents, loft skeletons into surfaces
+  assets/utils/geometry/nurbs.

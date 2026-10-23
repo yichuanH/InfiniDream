@@ -1,0 +1,51 @@
+SUMMARY: LargeShelfFactory builds a single logical shelving unit as one coherent assembly of back board, side uprights, bottom kick boards, and multiple horizontal division (shelf) boards with screw-head detail, assembled via geometry nodes. The upper-level file defines all the component node-groups and the factory logic that samples dimensions/materials and computes per-cell translations, then bakes it onto one plane object. utils.py provides the tagged support-surface cube helper and a coordinate-rotation utility.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/shelves/large_shelf.py
+  nodegroup_screw_head: cylinder screw-head decoration mirrored across the shelf, placed at corners of each division board.
+    knobs: Depth(default 0.005) -> screw protrusion; Radius(default 1.0, driven by screw_head_radius) -> screw head size; screw_width_gap/screw_depth_gap -> inset offsets from board edges
+  nodegroup_attachment: L-bracket-style attachment cubes near the top of side boards (built but note: not joined into final geometry in geometry_nodes).
+    knobs: attach_thickness, attach_length, attach_width, attach_gap, attach_z_translation -> bracket size/placement
+  nodegroup_division_board: one horizontal shelf board (cube) + screw heads; the actual shelf surface. Uses tagged_cube when tag_support=True for support-surface tagging.
+    knobs: thickness, width(=cell width), depth, z_translation, x_translation, screw_* -> shelf plank size/position and screw detail
+  nodegroup_bottom_board: bottom kick/base board per cell.
+    knobs: thickness, depth, y_gap, height, width, x_translation -> base panel size/recess
+  nodegroup_back_board: single rear panel spanning full width.
+    knobs: width, thickness, height, depth -> back panel dimensions/offset
+  nodegroup_side_board: vertical upright board.
+    knobs: board_thickness, depth, height, x_translation -> upright thickness/position
+  geometry_nodes: assembles frame (back+sides+bottoms with frame_material) and shelves (division boards with board_material), joins, triangulates, rotates -90° about Z.
+    knobs: add offsets (shelf_depth+0.004, shelf_height+0.002/-0.001) -> small board clearances; final Rotation(0,0,-1.5708 fixed) -> orientation; frame_material/board_material -> surface look
+  LargeShelfBaseFactory.get_asset_params: fills unset params with random samples (ranges below).
+    knobs: shelf_depth(clip normal(0.26,0.03)->0.18–0.36) -> shelf front-back depth; side_board_thickness(normal(0.02,0.002)->0.015–0.025) -> upright chunkiness; backboard_thickness(fixed 0.01); bottom_board_y_gap(uniform 0.01–0.05) -> base recess; bottom_board_height(normal(0.083,0.01)->0.05–0.11, times {1.0,0.0} p=[0.8,0.2] so 20% no base) -> base presence/height; division_board_thickness(normal(0.02,0.002)->0.015–0.025) -> shelf plank thickness; screw_depth_head(uniform 0.001–0.004); screw_head_radius(uniform 0.001–0.004); screw_width_gap(uniform 0.0–0.02); screw_depth_gap(uniform 0.025–0.06); attach_length(0.05–0.1); attach_width(0.01–0.025); attach_thickness(0.002–0.005); attach_gap(0.0–0.05); shelf_cell_width(randint 1–4 columns, each choice[0.76,0.36] p=[0.5,0.5] × normal(1.0,0.1) clip 0.75–1.25) -> column count/widths; shelf_cell_height(randint 3–8 rows × 0.3 × normal jitter) -> row count/heights; frame_material(choice ["white","black_wood","wood"] p=[0.4,0.3,0.3]); board_material(defaults to frame_material); tag_support(True fixed)
+  LargeShelfBaseFactory.update_translation_params: computes shelf_width/height and all board x/z translations from cell lists (derived, not direct knobs; edit spacing constant 0.001 between adjacent uprights).
+  LargeShelfBaseFactory.get_material_func: maps material name strings to shader materials (white/black_wood/wood, frame uses *_z variants).
+  LargeShelfBaseFactory.create_asset: creates plane, applies geomod, tags system. Returns one object per call.
+  LargeShelfFactory.sample_params (overrides base): sets explicit convenience-store-style dimensions.
+    knobs: Dimensions = (depth uniform 0.25–0.35, width uniform 0.3–2.0, height uniform 0.9–2.0); bottom_board_height(fixed 0.083); shelf_depth(=depth-0.01); num_h rows via (height-0.083)/0.3 -> shelf row count/spacing; num_v columns via width/0.5 (min 1) -> column count/widths
+
+FILE: assets/objects/shelves/utils.py
+  nodegroup_tagged_cube: cube whose top face (index==2) is tagged SupportSurface so placed objects sit on shelves.
+    knobs: Compare index target(3=2 -> which face tagged); Size(from caller)
+  get_nodegroup_assets: helper to bake a nodegroup into a mesh (utility, not a knob).
+  blender_rotate: coordinate-frame rotation matrix helper for vecs (utility).
+
+FILE: assets/objects/shelves/__init__.py
+  module exports: registers LargeShelfFactory and sibling shelf factories; edit to expose/rename factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/wood/plywood.py -> shader_shelves_white/wood/black_wood(+_z) surface shaders used for frame/boards
+  assets/materials/wood/wood.py -> base wood shader utilities
+  assets/materials/metal/*.py -> metal shader library (available for retexturing uprights)
+  assets/materials/ceramic/glass.py, plastic/plastic_rough.py -> additional material shaders
+  assets/materials/utils/common.py -> shared shader helpers
+  assets/utils/extract_nodegroup_parts.py -> extract_nodegroup_geo for baking nodegroups to meshes
+  assets/utils/object.py -> object creation/manipulation helpers
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py, compatibility.py -> geometry-node graph construction API (NodeWrangler, Nodes, to_nodegroup)
+  core/surface.py -> add_geomod, shaderfunc_to_material (apply geometry/material)
+  core/tagging.py, tags.py -> semantic tagging (SupportSurface, relabel_obj)
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> detail/subdivision utilities
+  core/util/blender.py -> TemporaryObject and blender helpers
+  core/util/{math,random,color,logging}.py -> sampling/color/math/logging utilities

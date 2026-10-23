@@ -1,0 +1,80 @@
+SUMMARY: FlowerPlantFactory procedurally builds a stemmed flowering plant: a curved central stem grown from a resampled curve, with instanced leaves along it, a main flower at the tip, optional side branches (each with their own flowers/leaves), all assembled from geometry-node groups. The flower geometry comes from FlowerFactory (petals via phyllotaxis + petal mesh, plus a seeded center) and leaves come from LeafFactory (a procedural mesh leaf). NOTE: the current code produces a generic stem-and-flower plant, NOT a Venus flytrap; to satisfy the request you would need to replace the flower/leaf geometry with lobed snap-trap geometry (hinged two-lobed traps, red inner surface, marginal teeth fringe, radial rosette) — none of that exists here yet.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/grassland/flowerplant.py
+  FlowerPlantFactory: top-level plant assembler; spawns leaves+flowers, applies geo_flowerplant.
+    knobs: leaves_version_num(4) -> number of distinct leaf shapes available; flowers_version_num(1) -> number of distinct flower shapes; leaf genome leaf_width(0.35)/width_rand(0.1) -> leaf size/variation; flower rad(uniform 0.4-0.7, random) -> flower size
+  geo_flowerplant: builds stem curve, leaves, main flower, branches.
+    knobs: resample_curve Count(20) -> stem segment resolution; stem-leaf resample Count(150) -> leaf placement density; num_versions(randint 0-3, random) -> number of side branches; branch resample_num(randint 80-100, random) -> branch leaf/flower density; branch scale RandomValue Min(0.4,0.4,0.4) -> branch size; branch rotate Min(0.15,0.15,0)/Max(0.45,0.45,6.28) -> branch spread/twist; z_rotate(uniform 0-6.28, random) -> whole-plant yaw
+  nodegroup_stem_rotation: stem curvature/bend.
+    knobs: curvature(clip(abs(normal(0,0.4)),0,0.8), random) -> stem bend amount; multiply_2 factor(1.2) -> bend gain; noise_texture Scale(0.3) -> stem wobble
+  nodegroup_stem_geometry: stem tube mesh.
+    knobs: rad(uniform 0.01-0.02, random) -> stem thickness; curve_circle Resolution(10) -> tube smoothness; colorramp taper (1.0->0.4) -> base-to-tip radius falloff
+  nodegroup_stem_branch_geometry: branch tube mesh.
+    knobs: r(uniform 0.015-0.022, random) -> branch thickness; Resolution(10) -> smoothness; taper colorramp (1.0->0.4)
+  nodegroup_stem_branch_rotation: branch curvature.
+    knobs: curvature(uniform -0.5..0.5, random) -> branch bend direction/amount
+  nodegroup_stem_leaf_selection / nodegroup_stem_branch_leaf_selection: which stem points get leaves.
+    knobs: colorramp band positions (stem 0.30/0.85; branch 0.20/0.80) -> leaf zone along stem; integer(randint 5-15 / 10-30, random) -> leaf spacing/count
+  nodegroup_stem_leaf_s_r / nodegroup_stem_branch_leaf_s_r: leaf scale+orientation.
+    knobs: RandomValue range(0.3-0.6 / 0.2-0.7, random) -> leaf scale
+  nodegroup_stem_branch_selection: which stem points spawn branches.
+    knobs: colorramp band (0.50/0.80) -> branch zone; threshold(uniform 0.05-0.1, random) -> branch probability
+  nodegroup_main_flower_setting: tip flower placement.
+    knobs: scale(uniform 0.25-0.45, random) -> main flower size
+  nodegroup_branch_flower_setting: branch-tip flower.
+    knobs: scale(uniform 0.4-0.6, random) -> branch flower size
+  nodegroup_stem_branch_leaves: branch leaves.
+    knobs: resample Count(100) -> branch leaf density; rotate Max(0.6,0.6,6.28) -> leaf spread/twist
+
+FILE: assets/objects/grassland/flower.py
+  FlowerFactory: builds a full flower (center + petals) — replace/rework to make a trap.
+    knobs: rad(0.15 default; passed 0.4-0.7) -> overall flower radius; diversity_fac(0.25) -> per-instance variation blend (dict_lerp 0.25)
+  get_flower_params: samples flower shape params (all random).
+    knobs: pct_inner(uniform 0.05-0.4) -> center vs petal proportion; base_width(2pi*rad*pct/normal(20,5)) -> petal base width; top_width(rad*clip(normal(0.7,0.3))) -> petal tip width; min/max_angle(sorted deg uniform -20..100) -> petal pitch range; Seed Size(uniform 0.005-0.01) -> seed granule size; Wrinkle(uniform 0.003-0.02) -> petal wrinkle; Curl(deg normal(30,50)) -> petal curl
+  nodegroup_flower_petal: single petal shape (candidate for trap lobe).
+    knobs: Point(0.56)/Point height(-0.1) -> tip pointiness; Bevel(1.83) -> edge profile; Base/Upper width -> silhouette; Resolution H(8)/V(16) -> mesh density; Wrinkle/Curl -> surface deform
+  nodegroup_phyllo_points: phyllotaxis point layout for petals.
+    knobs: Count/Min-Max Radius/Radius exp -> ring spacing; Min/Max angle -> tilt; random_value(-0.1..0.1, random) -> yaw jitter; Yaw offset(-1.5708)
+  nodegroup_plant_seed: seed granule mesh (center).
+    knobs: float_curve profile -> granule taper; U/V(6,6) -> resolution
+  shader_petal: petal material.
+    knobs: petal_color(colors.petal_hsv(), random) -> petal color (set to red inner for trap); specular normal(0.6,0.1); roughness normal(0.4,0.05); translucent_amt normal(0.3,0.05) -> translucency
+  shader_flower_center: center material.
+    knobs: colorramp stops (dark browns -> orange) -> center color gradient
+  geo_flower: assembles center sphere + seeds + petals.
+    knobs: uv_sphere Segments/Rings(8,8); center flatten Scale Z(0.05); DistributePoints Density Max(50000); petal Curl noise Value(0.025) -> petal offset noise
+
+FILE: assets/objects/small_plants/leaf_general.py
+  LeafFactory: procedural single leaf (candidate to become a trap stalk/lobe).
+    knobs: scale(0.3) -> leaf size; genome leaf_width(0.5)/width_rand(0.33) -> width/variation; alpha(0.3) -> curl shape; use_wave(True) -> wavy edge; z_scaling(0) -> vertical cup; wave height(randn*0.3)/width(0.75+randn*0.1)/speed(rand) -> ripple
+
+FILE: assets/objects/grassland/__init__.py
+  module exports (DandelionFactory, FlowerFactory, FlowerPlantFactory, GrassTuftFactory) — edit only to add/rename factories
+
+FILE: assets/objects/small_plants/__init__.py
+  module exports (Fern/SnakePlant/SpiderPlant/Succulent factories) — leaf_general imported directly, not via this file
+
+FILE: assets/objects/trees/utils/mesh.py
+  low-level mesh helpers used by LeafFactory.
+    functions: select_vtx_by_idx/select_vtx_by_pos, finalize_obj, init_mesh, extrude_path, sample_vtxs, get_world_coords — mesh building/sampling utilities; no visual knobs
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/colors.py -> color palette helpers (petal_hsv, hsv2rgba) for material colors
+  assets/materials/plant/simple_greenery.py -> green stem/leaf shader (shader_simple_greenery)
+  assets/materials/plant/__init__.py -> plant material registry
+  assets/utils/object.py -> object creation/spawn utilities
+  core/nodes/node_wrangler.py -> NodeWrangler / Nodes API for building geometry+shader node graphs
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve, node group helpers
+  core/nodes/node_info.py, compatibility.py, utils.py -> node type metadata / version compat
+  core/surface.py -> add_geomod, shaderfunc_to_material, set_geomod_inputs
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/detail.py -> LOD/detail handling
+  core/tagging.py, core/tags.py -> tag_object / tag_nodegroup semantic tagging
+  core/util/blender.py -> butil (spawn_vert, apply_modifiers, delete, SelectObjects, set_geomod_inputs)
+  core/util/math.py -> FixedSeed, dict_lerp
+  core/util/color.py -> color-space conversions
+  core/util/random.py -> random sampling helpers
+  core/util/logging.py -> logging
+  assets/objects/trees/utils/helper (via mesh.py) -> set_active_obj and blender helpers

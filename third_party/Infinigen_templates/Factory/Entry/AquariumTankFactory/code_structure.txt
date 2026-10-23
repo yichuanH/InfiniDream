@@ -1,0 +1,54 @@
+SUMMARY: The AquariumTankFactory builds a single glass tank assembly: a solidified glass cube shell, two metal belts (top and bottom frame rings), water, and one procedurally-generated interior decor asset (either a "wet" sea creature/coral/seaweed or a "dry" mushroom/cactus/boulder). The upper-level entry file (aquarium_tank.py) orchestrates dimensions, material assignment, and sub-factory selection; the other __init__.py files simply re-export the interior sub-factories it draws from.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/decor/aquarium_tank.py
+  AquariumTankFactory.__init__: samples tank dimensions, materials, and which interior asset factory to use
+    knobs: is_wet(uniform()<0.5, random bool) -> chooses wet vs dry interior set; width(log_uniform(0.5,1), random) -> tank X size; depth(log_uniform(0.5,0.8), random) -> tank Y size; height(log_uniform(0.5,1), random) -> tank Z size; thickness(uniform(0.01,0.02), random) -> glass wall thickness; belt_thickness(log_uniform(0.02,0.05), random) -> metal frame belt height; base_factory_fn(np.random.choice over wet/dry lists) -> which decor object goes inside
+  AquariumTankFactory.dry_factories: fixed list [MushroomFactory, CactusFactory, BoulderFactory] -> pool of dry interior objects
+  AquariumTankFactory.wet_factories: fixed list [MolluskFactory, CoralFactory, SeaweedFactory] -> pool of wet interior objects
+  AquariumTankFactory materials: glass_surface(ceramic.Glass()) -> transparent side appearance; belt_surface(weighted_sample(material_assignments.frame)()) -> metal frame look; water_surface(fluid.Water(), created but note: not applied in finalize_assets) -> water shader
+  AquariumTankFactory.create_placeholder: bbox extents from thickness/depth/width/height -> collision/placement bounds
+  AquariumTankFactory.create_asset: builds cube shell, belts, and scales/positions interior
+    knobs: scale = uniform(0.7,0.9)/max_fit (random) -> how large the interior asset fills tank; tag "glass" on tank faces; base_obj placed at (width/2, depth/2, thickness); obj rotation_euler[-1]=pi/2 (fixed 90° final rotation)
+  AquariumTankFactory.make_belts: constructs top and bottom frame belts
+    knobs: belt located at z=0 (bottom) and z=height-belt_thickness (top); belt XY footprint = tank width/depth; extrude height = belt_thickness; SOLIDIFY thickness = self.thickness; tags faces "belt"
+  AquariumTankFactory.finalize_assets: applies glass to "glass" selection and belt_surface to "belt" selection (water/scratch/edge_wear code commented out — re-enable to add those effects)
+
+FILE: assets/objects/decor/__init__.py
+  re-exports AquariumTankFactory -> package entry point
+
+FILE: assets/objects/cactus/__init__.py
+  re-exports CactusFactory (+ base/variant factories) -> dry interior candidate
+
+FILE: assets/objects/corals/__init__.py
+  re-exports CoralFactory (+ variant factories) -> wet interior candidate
+
+FILE: assets/objects/mollusk/__init__.py
+  re-exports MolluskFactory (+ shell/snail factories) -> wet interior candidate
+
+FILE: assets/objects/mushroom/__init__.py
+  re-exports MushroomFactory / MushroomGrowthFactory -> dry interior candidate
+
+FILE: assets/objects/rocks/__init__.py
+  re-exports BoulderFactory (+ rock factories) -> dry interior candidate
+
+FILE: assets/objects/underwater/__init__.py
+  re-exports SeaweedFactory / UrchinFactory -> wet interior candidate
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides `frame` material pool for belt_surface selection
+  assets/materials/ceramic/__init__.py -> Glass() shader for transparent tank sides
+  assets/materials/fluid/__init__.py -> Water() shader for water surface
+  assets/materials/metal/__init__.py -> metal shaders used by frame material pool
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> optional wear effects (currently commented out)
+  assets/materials/* (fabric, plastic, wood, plant, creature, terrain, art, text, lamp_shaders, dev) -> shader libraries available to sub-factories
+  assets/utils/decorate.py -> read_co, write_attribute (face tagging for material selection)
+  assets/utils/object.py -> join_objects, new_bbox, new_cube, new_plane primitives
+  core/placement/factory.py -> AssetFactory base class / create_asset contract
+  core/placement/detail.py -> level-of-detail utilities
+  core/surface.py -> surface/material application backend
+  core/nodes/node_wrangler.py, node_info.py -> shader node graph construction
+  core/util/blender.py -> butil (modify_mesh, apply_transform, ViewportMode, deep_clone_obj)
+  core/util/math.py -> FixedSeed for deterministic resampling
+  core/util/random.py -> log_uniform, weighted_sample sampling helpers
+  core/util/logging.py -> logging utilities

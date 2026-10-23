@@ -1,0 +1,83 @@
+SUMMARY: This factory builds a single tube coral asset: one dense cluster of hollow upright tubes of varied heights grown by extruding faces from a perturbed dual-mesh icosphere, then shaded and optionally decorated with tentacles. TubeCoralFactory (in generate.py) wraps TubeBaseCoralFactory (tube.py) inside the shared CoralFactory pipeline, which handles scaling, material assignment, noise/bump displacement, and tentacle instancing. The tube geometry lives in tube.py; the color/shader and post-processing live in generate.py; tentacle geometry/shading lives in tentacles.py. Other coral variants share the same base plumbing but are not used by this entry.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/corals/tube.py
+  TubeBaseCoralFactory: defines the hollow-tube cluster geometry (the actual tube coral shape).
+    knobs: default_scale([0.7]*3 fixed) -> overall base size before CoralFactory rescale
+    knobs: points_fn=make_radius_points_fn(0.05, 0.4) -> tentacle placement: min_distance 0.05, radius_threshold 0.4 (only outer verts get tentacles)
+  TubeBaseCoralFactory.create_asset: mesh build & modifier stack.
+    knobs: new_icosphere(subdivisions=2) -> base tube count/density (more subdivs = more tubes)
+    knobs: BEVEL width_pct=10, segments=1 -> tube rim rounding
+    knobs: SOLIDIFY thickness=0.05 -> tube wall thickness (hollowness)
+    knobs: SUBSURF levels=2 -> tube smoothness
+    knobs: DISPLACE strength=0.1 with STUCCI texture -> surface bumpiness
+  TubeBaseCoralFactory.geo_coral_tube: procedural tube-growth node graph (varied heights, upright growth).
+    knobs: ico_sphere_perturb(0.2) -> randomness of initial base shape
+    knobs: growth_z(1) -> upward bias of tube growth direction
+    knobs: short_length_range(0.2,0.4) / long_length_range(0.4,1.2) -> tube height variance (sampled per extrusion)
+    knobs: angles(linspace(2pi/5, pi/10, 6)) -> per-step growth cone narrowing (controls how upright/branchy tubes are)
+    knobs: scales(linspace(1,0.9,6)) -> per-step tube tapering
+    knobs: face_perturb(0.4) -> lateral wobble of tube direction
+    knobs: growth_prob(0.75) -> fraction of faces that sprout tubes (cluster density)
+    knobs: 6 extrusion steps (zip over angles/scales) -> tube segment count / max height
+    knobs: seed = randint(1e3) -> resampled per asset
+
+FILE: assets/objects/corals/generate.py
+  CoralFactory.create_asset: shared pipeline wrapping TubeBaseCoralFactory.
+    knobs: face_size(0.01) -> remesh resolution
+    knobs: obj.scale factor uniform(0.8,1.2,3) -> per-instance nonuniform rescale (sampled)
+    knobs: bump_prob (from BaseCoralFactory=0.3) -> chance of noise vs bump texture
+    knobs: tentacle_prob (TubeBase inherits BaseCoralFactory=0.5) -> chance tubes get tentacles
+  CoralFactory.build_base_hue: overall coral hue.
+    knobs: 0.25 prob full-random hue else uniform(-0.2,0.3)%1 -> mostly cyan/green range (matches "soft cyan edges"); widen range to shift color
+  CoralFactory.shader_coral: coral surface material.
+    knobs: shift(uniform 0.05-0.1, ±) -> bright-color hue offset
+    knobs: subsurface_color hsv2rgba(random,random,1.0) -> SSS tint
+    knobs: bright_color/dark_color/light_color sat & value (0.7-0.9/0.2, 0.5-0.7/0.1, 0.2-0.4/0.4) -> tube surface tones
+    knobs: specular uniform(0.25,0.5) -> shininess
+    knobs: musgrave scale uniform(10,20) -> color-ramp mottling frequency
+    knobs: color_ramp stops [0,0.3,0.7,1.0] dark->bright -> edge highlight distribution ("soft cyan edges")
+    knobs: subsurface_ratio (0 or uniform 0-0.05) -> translucency
+    knobs: subsurface_radius uniform(0.05,0.2) -> SSS depth
+  CoralFactory.apply_noise_texture / apply_bump: surface displacement.
+    knobs: noise_scale log_uniform(0.01,0.02)/(0.02,0.03) -> texture grain
+    knobs: noise_strength (BaseCoralFactory=0.02) -> displacement amount
+    knobs: voronoi minkovsky_exponent uniform(1,1.5), noise_intensity log_uniform(1.5,2) -> bump character
+
+FILE: assets/objects/corals/base.py
+  BaseCoralFactory: shared defaults inherited by TubeBaseCoralFactory.
+    knobs: tentacle_distance(0.05), noise_strength(0.02), tentacle_prob(0.5), bump_prob(0.3), density(500 tentacle instance density), default_scale([0.8]*3, overridden to 0.7 by tube)
+
+FILE: assets/objects/corals/tentacles.py
+  build_tentacles: geometry of individual tentacle spikes decorating tubes.
+    knobs: n_branch(5), n_major(8), std(0.5), momentum(0.5), sz(0.008), init_vec spread sample_direction(0.6), base radius uniform(0.002,0.004)
+  geo_tentacles: distributes tentacles on tube surface.
+    knobs: density(500 default, passed from factory) -> tentacle count; instance Scale uniform([0.6]-[1.0])
+  shader_tentacles: tentacle material.
+    knobs: base_hue offset uniform(-0.1,0.1), sat uniform(0.4,0.6), value 0.5; fresnel_color random; roughness(0.8), specular(0.25)
+
+FILE: assets/objects/corals/__init__.py
+  module exports only — edit to expose/rename factories; no visual knobs.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/trees/tree.py -> tree/branch skeleton builder (build_radius_tree) used for tentacle geometry
+  assets/utils/decorate.py -> mesh vertex read/write, geo_extension, displacement helpers
+  assets/utils/draw.py -> circular interpolation / angle-based shaping helpers
+  assets/utils/laplacian.py -> laplacian growth mesh (other coral variants)
+  assets/utils/mesh.py -> polygon/convex mesh builders, treeify
+  assets/utils/misc.py -> assign_material, sample_direction
+  assets/utils/nodegroup.py -> geo_radius node group (skinning curves to radius)
+  assets/utils/object.py -> mesh/obj construction, icosphere/circle primitives, join/origin utils
+  assets/utils/reaction_diffusion.py -> reaction-diffusion patterns (other coral variants)
+  assets/utils/shortest_path.py -> geo_shortest_path node group (fan/elkhorn variants)
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> geometry/shader node graph API and build_color_ramp
+  core/surface.py -> add_geomod / shaderfunc_to_material bridge
+  core/placement/factory.py -> AssetFactory base class, make_asset_collection
+  core/placement/detail.py -> remesh_with_attrs
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> modify_mesh, transforms, ViewportMode, deep_clone_obj
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform sampling
+  infinigen_gpl/extras/diff_growth.py -> differential growth solver (other coral variants)

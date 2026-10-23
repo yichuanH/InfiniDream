@@ -1,0 +1,50 @@
+SUMMARY: This factory builds a domed brain coral: a reaction-diffusion process paints a maze-like ridge pattern onto a convex dome mesh, which is shrinkwrapped, displaced along the ridge groups, remeshed, and shaded with a procedural coral material. BrainCoralFactory in generate.py is a thin wrapper that forces the BrainBaseCoralFactory geometry method and drives the shared CoralFactory shading/noise/tentacle pipeline. The ridge geometry lives in reaction_diffusion.py; the wet sheen and blue-violet palette are controlled by the shader in generate.py. Other coral files (elkhorn, fan, tube, tree, star, laplacian, diff_growth) are unused by the brain variant.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/corals/generate.py
+  BrainCoralFactory: entry point; hardwires BrainBaseCoralFactory as the geometry generator (one dome per create_asset).
+  CoralFactory.create_asset: assembles final object — scaling, remesh, material, surface noise, optional tentacles.
+    knobs: obj.scale jitter uniform(0.8,1.2,3) -> per-instance size variation; face_size(default 0.01) -> mesh resolution; realize(True) -> whether tentacles are baked.
+  CoralFactory.build_base_hue: samples the dominant coral color.
+    knobs: 0.25 prob -> full random hue else uniform(-0.2,0.3)%1 (mostly red/orange/violet band; SHIFT toward 0.6-0.8 for blue-violet dusk).
+  CoralFactory.shader_coral: the coral surface material (wet sheen + palette).
+    knobs: shift uniform(0.05,0.1) sign-random -> ridge color offset; subsurface_color hsv2rgba(rand,rand,1.0) -> SSS tint; bright_color hsv sat uniform(0.7,0.9) val 0.2 -> ridge peaks; dark_color hsv sat uniform(0.5,0.7) val 0.1 -> grooves; light_color hue base±uniform(-0.2,0.2) sat uniform(0.2,0.4) val 0.4 -> highlight veins; specular uniform(0.25,0.5) -> wet sheen intensity; musgrave scale uniform(10,20) -> ridge color pattern density; color_ramp stops [0,0.3,0.7,1.0] -> dark/bright split; roughness float_curve (0,0.5)->(1,1.0) -> glossy vs matte; subsurface_ratio uniform(0,0.05) (50% chance 0) -> translucency; subsurface_radius uniform(0.05,0.2) -> SSS spread.
+  CoralFactory.apply_noise_texture / apply_bump: chosen via factory.bump_prob(0.3); noise_strength(0.01 for brain) scales displacement; STUCCI/MARBLE noise_scale log_uniform(0.01,0.02); VORONOI bump noise_scale log_uniform(0.02,0.03), intensity log_uniform(1.5,2), minkovsky_exponent uniform(1,1.5) -> fine surface texture.
+
+FILE: assets/objects/corals/reaction_diffusion.py
+  ReactionDiffusionBaseCoralFactory / BrainBaseCoralFactory: builds the maze-ridge dome mesh.
+    knobs: tentacle_prob(0.0) -> brain has no tentacles; noise_strength(0.01) -> surface displacement magnitude.
+  reaction_diffusion_make: dome construction pipeline.
+    knobs: subsurf_level(2) on convex base -> base smoothness; new_icosphere(subdivisions=8,radius=3) -> RD simulation resolution (higher = finer ridges, slower); SHRINKWRAP PROJECT -> conforms ridge sphere onto dome; DISPLACE vertex_group "B" strength(0.4) mid_level(0.0) -> ridge relief height (raise for deeper mazes).
+  brain_make: RD parameters that define the maze pattern (the key brain look).
+    knobs: feed_rate(0.055) -> ridge spacing/branching; kill_rate=feed2kill(feed_rate) -> pattern stability; make_periodic_weight_fn(100, 0.02) -> spatial frequency(100) and amplitude(0.02) of ridge tightness.
+
+FILE: assets/objects/corals/base.py
+  BaseCoralFactory: shared defaults inherited by brain.
+    knobs: default_scale([0.8]*3) -> overall size; noise_strength(0.02) overridden to 0.01; tentacle_prob(0.5)/bump_prob(0.3); density(500) tentacle count (unused for brain).
+
+FILE: assets/objects/corals/__init__.py
+  package exports only; no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/reaction_diffusion.py -> reaction_diffusion sim, feed2kill, make_periodic_weight_fn (the maze-ridge generator).
+  assets/utils/mesh.py -> build_convex_mesh (the dome base) and mesh helpers.
+  assets/utils/object.py -> mesh/object construction (new_icosphere, mesh2obj, center, join_objects).
+  assets/utils/decorate.py -> geo_extension surface deformation, vertex read/write helpers.
+  assets/utils/nodegroup.py -> geo_radius node group for tentacle radii.
+  assets/utils/draw.py -> circular interp / shape-by-angle utilities (used by other variants).
+  assets/utils/laplacian.py -> laplacian growth (cauliflower variant, unused here).
+  assets/utils/shortest_path.py -> geo_shortest_path (fan variant, unused here).
+  assets/utils/misc.py -> assign_material, sample_direction.
+  assets/objects/trees/tree.py -> build_radius_tree, path/space-colonization skeleton (tree/tentacle variants).
+  core/surface.py -> shaderfunc_to_material, add_geomod, node eval bridge.
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> geometry/shader node graph API and build_color_ramp.
+  core/placement/factory.py -> AssetFactory base class and make_asset_collection.
+  core/placement/detail.py -> remesh_with_attrs (final uniform remeshing).
+  core/tagging.py, core/tags.py -> tag_object semantic labeling.
+  core/util/blender.py -> modify_mesh, transforms, viewport-mode, clone/delete helpers.
+  core/util/color.py -> hsv2rgba color conversion.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> log_uniform sampling.
+  infinigen_gpl/extras/diff_growth.py -> build_diff_growth (leather/table variants, unused here).

@@ -1,0 +1,67 @@
+SUMMARY: This factory builds monocot grass/grain clumps procedurally: leaf/ear instances are grown along a vertical stem curve with per-point rotation and scale, then bent, twisted, and shaded. `GrassesMonocotFactory` produces the base fountain of arching narrow blades (the miscanthus-like clump); subclasses (Wheat, Maize, Reed) add ears, husks, or plume branches on top. `growth.py` supplies the shared stem-building, leaf-instancing geometry-nodes graph, deformation, and PrincipledBSDF shader used by all variants.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/grasses.py
+  GrassesMonocotFactory.__init__: shape of the base grass clump (the requested miscanthus fountain).
+    knobs: stem_offset(uniform 1.5-2.0) -> overall clump/blade height; angle(uniform pi/6..pi/3) -> azimuthal spacing between successive blades (spiral density); z_drag(uniform 0.0-0.2) -> downward droop of blade tips (arching); min_y_angle(uniform 0.35pi..0.45pi)/max_y_angle(uniform 0.45pi..0.5pi) -> blade tilt from bottom to top of stem (fountain spread); count(int log_uniform 16-64) -> number of blades; scale_curve([(0,1.0),(1,0.2)]) -> blade size falloff top-to-bottom; bend_angle(pi/2) -> global clump bend
+  GrassesMonocotFactory.build_base_hue: leaf base color hue (random).
+    knobs: 60% chance hue uniform(0.08,0.12) (yellow-green) else uniform(0.2,0.25) (green)
+  GrassesMonocotFactory.build_leaf: single blade silhouette.
+    knobs: x_anchors(mid points uniform 0.1-0.2, 0.5-0.7) -> blade length profile; y_anchors(uniform 0.02-0.03) -> blade width; cut_prob(0.4) -> chance blade is diagonally clipped; x_cutoff(uniform 0.5-1.0)/angle(uniform -pi/3..pi/3) -> position/angle of the clip
+  GrassesMonocotFactory.is_grass: flag True (marks as grass for downstream systems)
+
+  WheatEarMonocotFactory.__init__: dense wheat-ear spike parameters.
+    knobs: stem_offset(uniform 0.4-0.5); angle(uniform pi/6..pi/4); min_y_angle(uniform pi/4..pi/3)/max_y_angle(pi/2); leaf_prob(uniform 0.9-1); count(int log_uniform 96-128) -> spikelet density; bend_angle(pi)
+  WheatEarMonocotFactory.build_base_hue: hue uniform(0.12,0.28)
+  WheatEarMonocotFactory.build_leaf: spikelet shape (convex-hull of radial bezier curves, 4-5 sides random; y_anchors width uniform 0.01-0.015)
+
+  WheatMonocotFactory.__init__: full wheat = grass stem + ear.
+    knobs: scale_curve([(0,1.0),(1,0.6)]); leaf_range((0.1,0.7)) -> vertical band where leaves appear; base_hue uniform(0.08,0.12)
+  WheatMonocotFactory.create_asset: ear bent by uniform(0,ear.bend_angle), placed at stem top
+
+  MaizeMonocotFactory.__init__: corn plant.
+    knobs: stem_offset(uniform 2.0-2.5); scale_curve([(0,1.0),(1,0.6)]); leaf_range((0.1,0.7))
+  MaizeMonocotFactory.build_leaf: broader corn leaf (y_anchors uniform 0.03-0.06)
+  MaizeMonocotFactory.build_husk: spun ear husk (x profile uniform 0.04-0.05/0.03; z height uniform 0.24-0.4; STUCCI displace strength 0.02 scale 0.01; tilt uniform 0..0.2pi)
+
+  ReedEarMonocotFactory.__init__: reed plume tuft.
+    knobs: stem_offset(uniform 0.3-0.4); min_y_angle(uniform pi/4..pi/3); count(int log_uniform 48-96); radius(0.002)
+  ReedBranchMonocotFactory: reed branching plume (max_branches=6; stem_offset uniform 0.6-0.8; scale_curve (0,1)(0.5,0.6)(1,0.1); min/max_y_angle negative -> upward branches; radius 0.005)
+  ReedMonocotFactory.__init__: tall reed (stem_offset uniform 3.0-4.0; scale_curve [(0,1.2),(1,0.8)]; base_hue uniform 0.08-0.12)
+  ReedMonocotFactory.shader_ear: plume color (hue uniform 0.06-0.1, sat 0.2-0.5, val log_uniform 0.2-0.5; specular uniform 0-0.2; clearcoat 20% chance uniform 0.2-0.5)
+
+FILE: assets/objects/monocot/growth.py
+  MonocotGrowthFactory.__init__: base defaults shared by all variants.
+    knobs: count(128); perturb(0.05) -> random jitter on per-blade rotation/scale; angle(pi/6); min_y_angle(0)/max_y_angle(pi/2); leaf_prob(uniform 0.8-0.9) -> fraction of stem points bearing a leaf; leaf_range((0,1)); stem_offset(0.2); scale_curve([(0,1),(1,1)]); radius(0.01) -> stem thickness; bend_angle(pi/4); twist_angle(pi/6); z_drag(0.0); z_scale(uniform 1.0-1.2); align_factor(0)/align_direction((1,0,0)); bright_color(hsv base_hue, sat 0.6-0.8, val log_uniform 0.05-0.1); dark_color(hue±0.03, sat 0.8-1.0, val log_uniform 0.05-0.2)
+  MonocotGrowthFactory.build_base_hue: default hue uniform(0.15,0.35)
+  MonocotGrowthFactory.decorate_leaf: per-leaf deformation.
+    knobs: y_ratio(4)/y_bend_angle(pi/6)/z_bend_angle(pi/6) -> blade curl; noise_scale(0.1)/strength(0.02) -> surface wrinkle; width displace uniform(0.01,0.02)
+  MonocotGrowthFactory.make_geo_flower: geometry-nodes graph placing leaves along stem curve (uses count, angle, min/max_y_angle, scale_curve, leaf_prob, leaf_range, perturb, align_*)
+  MonocotGrowthFactory.build_stem: stem mesh (SUBSURF levels 9; geo_radius w/ radius,16 sides; STUCCI displace strength 0.01 scale 0.1)
+  MonocotGrowthFactory.decorate_monocot: whole-plant deform (z_drag droop; TWIST uniform ±twist_angle; BEND uniform 0..bend_angle; scale xy uniform 0.8-1.2, z=z_scale; random z rotation)
+  MonocotGrowthFactory.shader_monocot: leaf PrincipledBSDF (musgrave color ramp bright->dark at stops 0/0.3/0.7/1.0; specular uniform 0-0.2; clearcoat 20% chance uniform 0.2-0.5; roughness curve 0.5->0.8; subsurface 0.01)
+
+FILE: assets/objects/monocot/__init__.py
+  module exports: registers all monocot factories; add/remove exported factory names here
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> mesh vertex ops (remove_vertices, displace_vertices, write_attribute, write_material_index, geo_extension)
+  assets/utils/draw.py -> curve primitives (leaf, bezier_curve, spin)
+  assets/utils/mesh.py -> polygon_angles helper for radial layouts
+  assets/utils/misc.py -> assign_material utility
+  assets/utils/nodegroup.py -> geo_radius nodegroup for stem thickness
+  assets/utils/object.py -> mesh/object helpers (data2mesh, mesh2obj, origin2leftmost, join_objects)
+  assets/utils/shapes.py -> shape construction helpers
+  core/nodes/node_wrangler.py -> NodeWrangler API for building shader/geometry node graphs
+  core/nodes/node_info.py -> Nodes enum of Blender node types
+  core/nodes/node_utils.py -> build_color_ramp and node helpers
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer nodegroups
+  core/surface.py -> surface/shader binding (add_geomod, shaderfunc_to_material, read_attr_data, eval_argument)
+  core/placement/factory.py -> AssetFactory base class and make_asset_collection
+  core/placement/detail.py -> mesh resolution control (adapt_mesh_resolution, remesh_with_attrs)
+  core/tagging.py, core/tags.py -> tag_object semantic labeling
+  core/util/blender.py -> Blender op wrappers (modify_mesh, ViewportMode, apply_transform, join_objects, delete_collection)
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling

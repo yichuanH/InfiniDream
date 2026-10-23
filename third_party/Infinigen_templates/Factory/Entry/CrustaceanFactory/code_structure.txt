@@ -1,0 +1,54 @@
+SUMMARY: The CrustaceanFactory procedurally builds one of three crustacean species (crab, lobster, spiny_lobster) by assembling a genome tree of parts — body, legs, two claws, stalked eyes, and optionally tail/fins/antennae — then joining, rigging, texturing, and animating them. The upper-level files fall into three tiers: crustacean.py orchestrates species selection, per-species parameter dicts, the genome layout, shaders, and post-processing; the parts/crustacean/*.py factories generate each body-part mesh from sampled params; and the util/* files provide the generic genome→creature→rig→join pipeline. To match the requested hermit-crab description (crab body, asymmetric large/small claws, stalked eyes, curled soft rear) you would primarily edit crab_params and the claw/body/eye part factories.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/crustacean.py
+  CrustaceanFactory.__init__: picks species randomly from {lobster, crab, spiny_lobster}.
+    knobs: self.species (np.random.choice, per factory_seed) -> which creature type; use CrabFactory subclass to force crab.
+  crustacean_genome(sp): assembles part tree (body + 4 leg pairs + 2 claws + 2 eyes + optional tail/fins/antennae).
+    knobs: n_legs(4) -> leg-pair count; n_limbs(5) -> spacing subdivisions; n_side_fin(2) -> tail fin pairs; leg_x_lengths (np.sort(uniform(0.6,1,4)) random) -> per-leg taper; both claws use SAME claw_fac (symmetric) — to make asymmetric large/small claws, build two claw_fac with different x_length and attach per side.
+  build_base_hue(): body color hue.
+    knobs: prob 0.6 -> hue uniform(0,0.05) (reddish); else uniform(0.4,0.45) (teal).
+  shader_crustacean(nw, params): shell material.
+    knobs: value_shift(log_uniform(2,10)) -> overall brightness; bright/dark color sat(uniform(0.8,1.0)), val(log_uniform(0.02-0.05 / 0.01-0.02)); dark hue jitter(±0.05); light_color sat(0-0.4) val(log_uniform(0.2,1.0)); specular(0.6-0.8); clearcoat/Coat(0.2-0.8); roughness(0.1-0.3); metallic(0.6-0.8); Musgrave Scale(log_uniform(5,8)); color_ramp stops [0,0.3,0.7,1.0].
+  shader_eye(nw): fixed dark eye (Base Color (0.1,0.1,0.1), Specular 0).
+  crustacean_postprocessing: maps tags {body,claw,leg,eye} to materials via face attributes.
+  crab_params(): the crab preset (edit these for a hermit crab front-half).
+    knobs: leg_x_length(y_length*log_uniform(2,3)); claw_x_length(y_length*log_uniform(1.5,1.8)) -> claw size; x_legs(linspace(0.08-0.1,0.55-0.6)+arange*0.02, reversed) -> leg attach positions; leg_angle(0.42-0.44); leg_joint x(sort uniform(-5,5)), y(sort uniform(0,10)), z(sort uniform(65-105)±8 +arange*2) -> splay; x_claw_offset(0.08-0.1); claw_angle(0.44-0.46); claw_joint(x uniform(-50,-40), y uniform(-20,20), z uniform(10,20)); x_eye(0.92-0.96); eye_angle(0.8-0.85); eye_joint(0, uniform(-60,0), uniform(10,70)) -> eye stalk orientation; tail/antenna/fin all None; leg_curl/claw_curl/tail_curl -> animation ranges; base_hue(build_base_hue); freq(1/log_uniform(100,200)) -> anim speed.
+  lobster_params(): lobster preset (adds tail, fins, antennae).
+    knobs: tail_x_length(x_length*log_uniform(1.2,1.8)); antenna_x_length(log_uniform(1.6,3.0)); fin_x_length; x_fins(sort uniform(0.85,0.95)); tail_curl((-π*0.6,0)); antenna_curl; freq(1/log_uniform(400,500)); plus claw/leg/eye knobs analogous to crab.
+  spiny_lobster_params(): lobster variant, claws replaced by leg-like appendages, spiny antennae.
+    knobs: antenna_fn(SpinyLobster); claw_fn(LobsterLegFactory); x_antenna(0.7-0.75); antenna_angle(0.4-0.5).
+
+FILE: assets/objects/creatures/parts/crustacean/body.py
+  CrabBodyFactory.make_part / add_head / add_spikes / add_mouth: carapace geometry, spikes, mouth cavity, bend.
+    knobs (sample_params): x_length(0.8-1.2); y_length(x*0.5-0.7); x_tip(0.3-0.6); y_tail(0.1-0.3); has_sharp_tip(prob 0.4); front/back_midpoint(0.7-0.9); front_angle(π/12-π/8); back_angle(π/6-π/4); tip_size(0.05-0.15); upper_z(x*0.15-0.3); upper_alpha(0.8-0.9); upper_shift(-0.6..-0.4); noise_strength(0.02-0.03); noise_scale(8-15); lower_z(x*0.3-0.4); lower_alpha(0.96-0.98); lower_shift(0.1-0.2); spike_height(0.05-0.2 or 0, prob 0.5); spike_depth(log_uniform(0.4,2)); spike_center(0.3-0.7); spike_density(log_uniform(100,500)); mouth_z(0.5-0.8); mouth_x(0.1-0.15); mouth_noise_scale(10-15); mouth_noise_strength(0.1-0.2); bend_angle(0..π/3); bend_height(0.08-0.12); color_cutoff(0-0.5).
+    class consts: min_spike_distance(0.1); min_spike_radius(0.02).
+  LobsterBodyFactory: elongated spun body with z-shift and bottom cutoff (soft-belly-like).
+    knobs (sample_params): x_length(0.6-0.8); y_length(0.15-0.2); z_length(y*1-1.2); midpoint_first(0.65-0.75); midpoint_second(0.95-1.05); z_shift(0.4-0.6); z_shift_midpoint(0.2-0.3); noise_strength(0.02-0.04); noise_scale(5-8); bottom_shift(0.3-0.5); bottom_cutoff(0.2-0.3); mouth params. class consts min_spike_distance(0.08)/radius(0.01).
+
+FILE: assets/objects/creatures/parts/crustacean/claw.py
+  CrabClawFactory.make_part / make_claw: pincer with movable lower jaw (rig_extras).
+    knobs (sample_params): z_length(y*1-1.2); x_mid_first(0.2-0.25); x_mid_second(0.4-0.6) -> pincer start; y_mid_first(1.5-2.0); y_mid_second(y_mid_first*log_uniform(1,1.5)) -> claw bulk; y_expand(1.4-1.5); noise_strength(0.01-0.02); top_shift(0.6-0.8); claw_y_first(0.6-1.5); claw_y_second(*0.4-0.6); claw_x_depth((1-x_mid)*0.3-0.5); claw_x_turn(0.2-0.4); claw_z_width(0.2-0.3); claw_spike_strength(0.02-0.03); claw_spike_distance(0.03-0.06); lower_z_scale(0.4-0.6); lower_scale(0.75-0.9); lower_z_offset(-0.5..0.5); lower rotation uniform(π/12,π/4). animate_bones: claw_curl (main) / claw_lower_curl (jaw). class const min_spike_radius(0.01).
+  LobsterClawFactory: bigger/smoother pincer.
+    knobs: y_expand(1.4-1.5); y_mid_first(1.5-2.0); y_mid_second(*log_uniform(1.2,1.6)); claw_y_first(1.2-1.5); claw_y_second(*0.7-0.8); noise_strength(0.01-0.02); claw_spike_strength(0.01-0.02).
+
+FILE: assets/objects/creatures/parts/crustacean/leg.py
+  CrabLegFactory.make_part/make_segments: 3-segment tapered walking leg with curl animation.
+    knobs (sample_params): x_length(0.8-1.2); y_length(0.025-0.035); z_length(y*1-1.5); x_mid_first(0.3-0.4); x_mid_second(0.6-0.7); y_mid_first(0.7-1.0); y_mid_second; y_expand(1.1-1.3); noise_strength(0.005-0.01); noise_scale(log_uniform(5,10)); bottom_shift(0.3-0.5); bottom_cutoff(0.2-0.5); top_shift(0.2-0.4); top_cutoff(0.6-0.8). animate_bones uses leg_curl/leg_rot/freq.
+  LobsterLegFactory: thinner legs.
+    knobs: y_length(0.01-0.015); z_length(y*log_uniform(1,1.2)).
+
+FILE: assets/objects/creatures/parts/crustacean/eye.py
+  CrustaceanEyeFactory.make_part: icosphere on a cylinder stalk (stalked eye).
+    knobs (sample_params): radius(0.015-0.02); length(radius*1-1.5) -> stalk length. class consts min_spike_distance(0.05)/radius(0.02).
+
+FILE: assets/objects/creatures/parts/crustacean/antenna.py
+  LobsterAntennaFactory.make_part: bent multi-segment feeler.
+    knobs (sample_params): y_length(0.01-0.015); z_length(y*log_uniform(1,1.2)); x_mid_first(0.1-0.15); x_mid_second(0.25-0.3); antenna_bend(2-5). animate_bones uses antenna_curl.
+  SpinyLobsterAntennaFactory: thicker feeler.
+    knobs: y_length(0.05-0.08); z_length(y*log_uniform(1,1.2)).
+
+FILE: assets/objects/creatures/parts/crustacean/tail.py
+  CrustaceanTailFactory.make_part/make_segments: decaying-segment curled abdomen (the "soft curled rear").
+    knobs (sample_params): x_length(1.0-1.5); y_length(0.15-0.2); z_length(y*1-1.2); y_expand(1.1-1.3); y_midpoint_first(0.85-0.95); y_midpoint_second(0.7-0.8); noise_strength(0.01-0.02); noise_scale(log_uniform(10,20)); bottom_shift(0.3-0.5); bottom_cutoff(0.2-0.5); n_segments(randint 6-10); x_decay(log_uniform(0.2,0.3)); shell_ratio(1.05-1.08); fin_x_length(0.5-0

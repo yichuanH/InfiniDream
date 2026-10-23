@@ -1,0 +1,55 @@
+SUMMARY: BedFrameFactory builds a single low platform bed frame: a wide flat slatted base, a solidified plinth/leg block that can appear floating, an upholstered/decorated headboard panel, and side rails. It subclasses ChairFactory, reusing its limb/back/leg machinery but overriding seat, legs, leg-decor and back-decor construction and swapping in wider, bed-scaled dimensions and bed-specific materials. mattress.py contributes the make_coiled() tufting helper used for coiled dot patterns on legs/headboard.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/seating/bedframe.py
+  BedFrameFactory (class-level defaults):
+    knobs: scale(1.0) -> overall asset scale; leg_decor_types(weighted: coiled2/pad2/plain1/legs2) -> plinth/leg base style; back_types(weighted: coiled3/pad3/whole2/horizontal-bar1/vertical-bar1) -> headboard style
+  BedFrameFactory.__init__ (sampled params, FixedSeed):
+    knobs: width(log_uniform 1.4-2.4) -> bed width; size(uniform 2-2.4) -> bed length; thickness(uniform 0.05-0.12) -> slat/base plate thickness; has_all_legs(prob 0.2) -> adds extra center legs; leg_thickness(uniform 0.08-0.12) -> leg/plinth thickness; leg_height(uniform 0.2-0.6) -> plinth/leg height (floating gap); leg_decor_type(sampled) -> plinth style; leg_decor_wrapped(prob 0.5) -> plinth extends past leg footprint (wrap outset); back_height(uniform 0.5-1.3) -> headboard height; seat_back(fixed 1) -> back-edge width ratio; seat_subdivisions_x(randint 1-4) -> base grid divisions across; seat_subdivisions_y(int log_uniform 4-10) -> number of slats along length; has_arm(False) -> disabled; leg_type(fixed "vertical") -> straight vertical legs; leg_x_offset/leg_y_offset/back_x/back_y offsets(0) -> disable chair splay
+    knobs: dot_distance(log_uniform 0.16-0.2) -> tuft spacing (coiled); dot_size(uniform 0.005-0.02) -> tuft button size; dot_depth(uniform 0.04-0.08) -> tuft dimple depth; panel_distance(uniform 0.3-0.5) -> pad panel cell size; panel_margin(uniform 0.01-0.02) -> pad inset/bevel margin
+    knobs: surface(weighted_sample material_assignments.bedframe) -> main frame material (sampled); limb_surface(weighted furniture_hard_surface) -> rail/leg material (walnut via material set); scratch/edge_wear(prob from wear_tear_prob) -> wear overlays (sampled, currently not applied in finalize); clothes_scatter(surface.NoApply) -> no draped cloth
+  make_seat: builds flat slatted grid base; scale uses (width-leg_thickness)/2, (size-leg_thickness)/2; solidify thickness = leg_thickness-1e-3; final BEVEL width=bevel_width, segments=8
+  make_legs: adds 4 corner legs (via super) plus 4 extra legs if has_all_legs; leg_ends z = -leg_height
+  make_leg_decors: builds plinth by convex-hulling legs, clamping z to -leg_height*uniform(0.7-0.9), removing top/bottom faces; "coiled" -> tufted plinth; "pad" -> inset panel plinth (BEVEL segments=4); writes "panel" face attr
+  divide: subdivides obj per axis by ceil(size/distance); z-axis distance scaled by uniform(0.5-1.0)
+  make_back_decors: "coiled"->tufted headboard bisected at back_height; "pad"->paneled headboard (inset thickness/depth=panel_margin, BEVEL segments=4); else default chair back
+  make_back: joins/convex-hulls back limbs, solidify thickness=min(thickness,leg_thickness)
+
+FILE: assets/objects/seating/chairs/chair.py
+  ChairFactory (inherited base — bed overrides most geometry but reuses these):
+    knobs: bevel_width(thickness*0.1 or *0.5, prob 0.4) -> edge rounding on base/back/decors; back_thickness(uniform 0.04-0.05) -> headboard limb thickness; back_type(rg back_types, overridden by bedframe) -> headboard variant; back_vertical_cuts(randint 1-4) -> vertical-bar count; back_partial_scale(uniform 1-1.4) -> partial back depth; is_leg_round(prob 0.5) -> round vs geo-radius profile on limbs; is_seat_round/is_seat_subsurf -> unused for bed base (bed overrides make_seat)
+    knobs: has_leg_x_bar/has_leg_y_bar(prob 0.6 each) -> cross rails between legs; leg_offset_bar(uniform 0.2-0.4, 0.6-0.8) -> rail height fraction
+  make_backs: places two headboard posts at seat_back*width/2, ends at back_height
+  make_back_decors: bridges back profile edges (number_cuts=64), smoothness/profile_shape_factor sampled; solidify + bevel
+  make_limb: builds bezier limb, profile per leg_type
+  create_asset: assembles seat+legs+backs+decors, rotates 90°, assigns surface/panel_surface/limb_surface materials by face tag
+  Note: finalize_assets and per-face material apply lines are commented out; scratch/edge_wear currently NOT applied.
+
+FILE: assets/objects/seating/mattress.py
+  make_coiled(obj, dot_distance, dot_depth, dot_size): tufting helper — pokes faces, bevels 16-edge verts (radius=dot_distance*uniform 0.06-0.08), extrudes dimples, scales tips (dot_size/radius), smooths (factor uniform 0.5-1.0, 5 iters). Used by bedframe coiled decors.
+  MattressFactory: not part of bed frame asset (separate factory in same module).
+
+FILE: assets/objects/seating/__init__.py
+  Registers BedFrameFactory and sibling factories (import wiring only).
+FILE: assets/objects/seating/chairs/__init__.py
+  Registers chair factories (import wiring only).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material sets: bedframe, furniture_hard_surface, furniture_leg, fabrics, wear_tear(+probs)
+  assets/materials/wood/__init__.py -> walnut/wood shaders for side rails & frame
+  assets/materials/fabric/__init__.py -> upholstery fabric shaders
+  assets/materials/metal/__init__.py, ceramic, plastic, wear_tear/* -> other surface + scratch/edge-wear shaders
+  assets/scatters/clothes.py -> cloth simulation (used by MattressFactory wrapped type)
+  assets/utils/decorate.py -> read/write co/normal/attr, face/edge selection, subdivide_edge_ring, solidify, subsurf
+  assets/utils/draw.py -> bezier_curve, align_bezier limb/curve construction
+  assets/utils/nodegroup.py -> geo_radius node (round limb profiles)
+  assets/utils/object.py -> new_grid, new_cube, new_bbox, join_objects
+  assets/utils/shapes.py -> dissolve_limited
+  core/surface.py -> assign_material, add_geomod, NoApply, set_active, write_attr_data
+  core/nodes/* -> node graph API for geo_scale/geo_radius
+  core/placement/factory.py -> AssetFactory base (create_asset/placeholder lifecycle)
+  core/util/blender.py -> ViewportMode, modify_mesh, apply_transform, deep_clone_obj
+  core/util/math.py -> FixedSeed
+  core/util/random.py -> log_uniform, weighted_sample, random_general(rg)
+  core/tags.py -> face/attribute tagging support

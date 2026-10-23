@@ -1,0 +1,36 @@
+SUMMARY: OfficeChairFactory builds a single office/gaming chair as one assembly: a lofted curvy bucket-style seat/back (from curvy_seats.py) placed on a procedurally generated leg system (single-stand pedestal or five-pole wheeled base), reusing the table leg/geometry node groups from the tables package. The upper-level files sample all dimensions, leg style, and materials (OfficeChairFactory.sample_parameters + geometry_assemble_chair), then geometry_create_legs and the curvy-seat/table node groups construct the actual mesh. Materials (fabric top, metal/wood legs) and optional scratch/edge-wear are assigned per seed.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/seating/chairs/office_chair.py
+  OfficeChairFactory.__init__: entry factory; per-seed sampling of params, leg_style, and materials.
+    knobs: dimensions(None or (x,x,z)) -> overall chair footprint & height; if None, x=uniform(0.5,0.6), z=uniform(1.0,1.4).
+  OfficeChairFactory.get_material_params: material selection.
+    knobs: TopMaterial(weighted_sample large_seat_fabric) -> seat/back fabric; LegMaterial(weighted_sample furniture_leg) -> leg finish; scratch/edge_wear(prob from material_assignments.wear_tear_prob, sampled) -> surface wear overlays.
+  OfficeChairFactory.sample_parameters: all geometry knobs (random unless noted).
+    knobs: top_thickness(uniform 0.5-0.7) -> seat/back cushion depth; Top Profile Width(=x) -> seat width; Top Front Relative Width(0.5-0.8), Top Mid Relative Width(0.5-0.9), Top Back Relative Width(0.6-0.9) -> taper of front/mid/back profile rings; Top Front Bent(-1.5..-0.4), Top Seat Bent(-1.5..-0.4), Top Mid Bent(-2.4..-0.5), Top Back Bent(-1..-0.1) -> curvature/recline of seat & bucket back; Top Mid Pos(0.4-0.6) -> lumbar/mid transition location along warp curve; Top Height(=z-top_thickness) -> seat elevation; Leg Style(choice ['single_stand','wheeled']; 'straight' disabled due to bug) -> pedestal vs 5-wheel base; Leg NGon(choice [4,32]) -> leg cross-section shape; Leg Placement Top Relative Scale(0.7 fixed), Leg Placement Bottom Relative Scale(uniform 1.1-1.3) -> leg splay; Leg Height(1.0 fixed).
+    single_stand branch: Leg Number(1), Leg Diameter(uniform 0.7x-0.9x) -> column thickness; Leg Curve Control Points(4 pts, y sampled 0.1-0.3) -> column taper profile.
+    wheeled branch: Leg Diameter(uniform 0.03-0.05) -> pole thickness; Leg Pole Number(choice [4,5]) -> spokes/wheels count; Leg Joint Height(uniform 0.5-0.8 * (z-thickness)) -> gas-cylinder height; Leg Wheel Arc Sweep Angle(uniform 120-240) -> caster housing shape; Leg Wheel Width(uniform 0.11-0.15); Leg Wheel Rot(uniform 0-360); Leg Pole Length(uniform 1.6-2.0) -> star-base radius.
+  geometry_assemble_chair: joins seat (translated to Top Height, set TopMaterial) with geometry_create_legs; maps kwargs into generate_curvy_seats sockets. Edit to re-wire seat/leg sockets or add head-pillow/armrest parts.
+  OfficeChairFactory.create_asset: builds plane, applies geomod, rotates z by +pi/2. One logical object per call.
+
+FILE: assets/objects/seating/chairs/seats/curvy_seats.py
+  generate_curvy_seats: lofts 6 stacked profile rings (seat, mid, front, back, top + 2 pinch caps) then warps around a bezier spine into the bucket seat+back.
+    knobs: U Resolution(256), V Resolution(128) -> mesh density; ring radii/Radius(0.5 base) & CombineXYZ Y thickness(0.0050/Thickness) -> ring cross-section; ring Z translations (0.06,0.5→1.0,1.5,2.0,2.1) -> vertical spacing of profiles; bezier_segment handles ((0,0.1,0.1), Mid Pos, Seat Height) -> back recline/spine curvature; Top Relative Width/Top Bent sockets (exposed, currently unused by chair) -> extra top ring shaping if wired.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/tables/cocktail_table.py -> provides geometry_create_legs node group dispatching single_stand/straight/wheeled leg builders + SetMaterial.
+  assets/objects/tables/legs/single_stand.py -> pedestal column via radius curve + n-gon cylinder.
+  assets/objects/tables/legs/straight.py -> straight tapered leg (unused; style disabled).
+  assets/objects/tables/legs/wheeled.py -> five-star wheeled base: chair_wheel casters, gas cylinder, hub; sockets for pole count/width/rotation/sweep.
+  assets/objects/tables/strechers.py -> stretcher bar geometry (used only by straight legs).
+  assets/objects/tables/table_top.py -> table-top & capped-cylinder node groups used by legs/wheels.
+  assets/objects/tables/table_utils.py -> core node groups: n_gon_profile/cylinder, radius curve, anchors, legs_and_strechers, arc_top, align_to_floor, bent, create_cap.
+  assets/objects/table_decorations/utils.py -> lofting, lofting_poly, warp_around_curve, flip_index, cylinder_side used by curvy_seats.
+  assets/composition/material_assignments.py -> weighted material palettes (large_seat_fabric, furniture_leg) and wear_tear probabilities.
+  assets/materials/** -> shader implementations for fabric/metal/wood/plastic and wear_tear (scratches, edge_wear).
+  core/placement/factory.py -> AssetFactory base class / instancing contract.
+  core/surface.py -> add_geomod applies geometry node functions to objects.
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py -> NodeWrangler API and to_nodegroup decorator.
+  core/tagging.py, core/tags.py -> semantic part tagging (tag_system.relabel_obj, tag_nodegroup).
+  core/util/math.py (FixedSeed), core/util/random.py (weighted_sample), core/util/blender.py -> seeded sampling and transform utilities.

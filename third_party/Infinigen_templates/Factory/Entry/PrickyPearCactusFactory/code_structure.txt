@@ -1,0 +1,70 @@
+SUMMARY: This factory builds a single prickly-pear cactus: flat pads (leaves) assembled hierarchically into one coherent plant, given a dusty-green fresnel shader and covered with small procedurally-instanced spines. PrickyPearCactusFactory (generate.py) wraps PrickyPearBaseCactusFactory (pricky_pear.py), which grows the pad assembly; generate.py then remeshes it, applies noise displacement, assigns the cactus material, and scatters spikes via spike.py. The other cactus base classes (columnar/globular/kalidium) are siblings in the same package but not used by the prickly-pear entry point.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/cactus/generate.py
+  CactusFactory.__init__: selects base morphology and builds the skin material.
+    knobs: factory_method(fixed=PrickyPearBaseCactusFactory for this factory) -> cactus type; base_hue(uniform 0.2-0.4) -> overall green/yellow-green skin hue; factory_methods/weights(equal weights, prickly-pear forced) -> morphology mix if used generically
+  CactusFactory.create_asset: assembles remesh, noise displace, material, spikes.
+    knobs: face_size(default 0.01) -> mesh resolution & spike gating (spikes only if <=0.05); realize(True) -> bake spike instances; noise texture type(random STUCCI/MARBLE) -> skin bumpiness pattern; texture.noise_scale(log_uniform 0.1-0.15) -> bump frequency; DISPLACE strength(=factory.noise_strength) -> bump depth
+  CactusFactory.shader_cactus: dusty green fresnel skin.
+    knobs: shift(uniform -0.15-0.15) -> bright-color hue offset; bright_color(hsv base_hue+shift,1.0,0.02) -> lit skin tone; dark_color(hsv base_hue,0.8,0.01) -> shadow skin tone; fresnel_color(hsv base_hue-0.05..0.1,0.9,0.3-0.5) -> rim highlight; specular(0.25) -> glossiness; fresnel mult(log_uniform 0.6-1.0) -> rim strength; musgrave scale(log_uniform 10-50) -> color mottling frequency; color_ramp stops[0,0.3,0.7,1.0] -> dark/bright split; roughness curve(0.5->0.8) -> surface roughness range; noise Scale(50) -> roughness variation
+
+FILE: assets/objects/cactus/pricky_pear.py
+  PrickyPearBaseCactusFactory (class attrs): global spine/skin params for this cactus.
+    knobs: spike_distance(0.08) -> spacing between spines; cap_percentage(0.1, inherited base) -> extra spines near pad tips; noise_strength(0.02, inherited) -> skin displacement depth; base_radius(0.002, inherited) -> spine thickness; density(5e4, inherited) -> spine count per area
+  geo_leaf: shape of one flat pad.
+    knobs: resolution(64) -> pad smoothness; anchors radius profile [(0,0.15-0.2),(0.4-0.6,0.4-0.5),(1.0,0.05)] -> pad width taper (base width, mid bulge, tip); radius scale(log_uniform 0.5-1.5) -> overall pad size
+  build_leaf: single pad geometry & flattening.
+    knobs: scale(x uniform 0.8-1.2, y uniform 0.2-0.25 (flatness), z uniform 0.8-1.2) -> pad proportions/thickness
+  build_leaves: recursive pad assembly (this makes the "few broken pads around base"/branching).
+    knobs: level(called with 2) -> branching depth; n(randint 1-3) -> child pads per pad; angles([-π/3..-π/2, -π/16..π/16, π/3..π/2] permuted) -> pad spread directions; child scale(uniform 0.5-0.75) -> child pad size ratio; leaf.location z offset(-0.15) -> pad attachment depth; rotation_euler z(uniform -π/3..π/3) -> pad twist
+  create_asset: builds one prickly-pear (writes selection=1 for spikes, tags object).
+    knobs: build_leaves(2) -> total complexity/pad count
+
+FILE: assets/objects/cactus/spike.py
+  build_spikes: geometry of one spine cluster instance.
+    knobs: n_branch(4) -> spines per cluster; n_major(9) -> points along spine; path std(0.5)/momentum(0.85) -> spine curliness; sz(uniform 0.005-0.01) -> spine length; init_vec(sample_direction 0.8) -> spread; radius_fn decay(0.5^) -> taper; base_radius(0.002) -> thickness; geo_radius smooth(0.001)
+  make_default_selections: where spines appear.
+    knobs: cap_percentage/spike_distance/density (passed from factory) -> tip clustering, spacing, count; MergeByDistance(spike_distance/2 for cap, spike_distance for body) -> declustering
+  geo_spikes: instancing/orientation of spines.
+    knobs: selection threshold(GREATER_THAN 0.8) -> which surface gets spines; rotation AlignEulerToVector factor(uniform 0.2-0.5) -> outward tilt; random angle(0-2π) -> spin; jitter(±0.05) -> orientation noise; Scale(uniform 0.5-1.0) -> spine size variation
+  shader_spikes: spine appearance.
+    knobs: color(hsv 0.2-0.4, sat 0.1-0.3, val 0.8) -> spine tint; roughness(0.8); specular(0.25); mix_ratio(0.9 principled vs translucent) -> translucency; Subsurface Weight(0.1)
+  apply: spine collection size.
+    knobs: make_asset_collection count(5) -> number of distinct spine instances
+
+FILE: assets/objects/cactus/base.py
+  BaseCactusFactory: shared defaults inherited by prickly-pear.
+    knobs: spike_distance(0.025)/cap_percentage(0.1)/noise_strength(0.02)/base_radius(0.002)/density(5e4) -> spine & skin defaults (overridden per subclass)
+
+FILE: assets/objects/cactus/__init__.py
+  (exports only) -> no visual knobs
+
+FILE: assets/objects/cactus/columnar.py, globular.py, kalidium.py
+  Sibling cactus morphologies; NOT used by PrickyPearCactusFactory. Edit only if enabling those types via CactusFactory.factory_methods/weights.
+
+FILE: assets/objects/trees/tree.py
+  build_radius_tree / recursive_path / rand_path: skeleton generator used by spike.build_spikes (and columnar/kalidium).
+    knobs: rand_path std/momentum/sz/sz_decay -> branch shape (set via branch_config in callers)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base, make_asset_collection for instance collections
+  core/placement/detail.py -> remesh_with_attrs (adaptive remeshing preserving attributes)
+  core/surface.py -> add_geomod / shaderfunc_to_material / eval_argument / write_attr_data
+  core/nodes/node_wrangler.py -> NodeWrangler geometry/shader node graph API
+  core/nodes/node_info.py -> Nodes enum of Blender node types
+  core/nodes/node_utils.py -> build_color_ramp helper
+  core/nodes/utils.py, core/nodes/compatibility.py, core/nodes/nodegroups/* -> node graph plumbing/attribute transfer
+  core/tagging.py, core/tags.py -> tag_object / COMBINED_ATTR_NAME semantic labeling
+  core/util/blender.py -> modify_mesh, deep_clone_obj, ViewportMode, apply_transform, collection utils
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/logging.py -> logging setup
+  assets/utils/object.py -> new_cube, join_objects, mesh2obj/data2mesh, separate_loose, origin2lowest
+  assets/utils/decorate.py -> geo_extension (skin bulge), displace/read_co/remove_vertices helpers
+  assets/utils/misc.py -> assign_material, sample_direction, toggle_show/hide
+  assets/utils/nodegroup.py -> geo_radius (radius-based skinning), align_tilt
+  assets/utils/shortest_path.py -> geo_shortest_path (used by kalidium only)
+  assets/objects/trees/utils/* -> geometrynodes/helper/mesh backends for tree skeletons

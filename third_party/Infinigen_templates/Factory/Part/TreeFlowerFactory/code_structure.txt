@@ -1,0 +1,38 @@
+SUMMARY: TreeFlowerFactory procedurally builds a single flower asset (petals + seeded center) used as a decorative bloom, e.g. hung on flowering tree stalks. The upper-level file defines geometry node-groups (petal shape, phyllotaxis point layout, seed instancing, curve-following) and two shaders (petal, flower center), then assembles them per-instance with randomized species and per-flower parameters. Note: this factory only produces the flower itself — the trunk/stalk/canopy/fruit arrangement described in the request must be provided by a separate tree factory that scatters these flowers.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/trees/tree_flower.py
+  TreeFlowerFactory.__init__: sets overall flower scale, color, and per-species vs per-instance variation.
+    knobs: rad(sampled uniform(0.15,0.25)) -> overall flower radius/size; diversity_fac(0.25) -> unused directly but conceptual variation factor; petal_color_hsv(colors.tree_petal_hsv(), sampled per factory_seed) -> petal hue/sat/val (pink/cream); FixedSeed(factory_seed) -> deterministic species look.
+  TreeFlowerFactory.get_flower_params: samples the geometric shape params of one flower (mostly random).
+    knobs: pct_inner(uniform(0.05,0.4)) -> fraction of radius that is center vs petals (bigger=smaller petals); base_width(2*pi*rad*pct_inner/normal(20,5)) -> petal base width & petal count; top_width(rad*clip(normal(0.7,0.3),...)) -> petal upper width/flare; min_angle,max_angle(sorted deg2rad(uniform(-20,100,2))) -> petal opening angle range (flat vs cupped); Seed Size(uniform(0.005,0.01)) -> size of center seeds; Wrinkle(uniform(0.003,0.02)) -> petal surface wrinkle; Curl(deg2rad(normal(30,50))) -> petal curl amount.
+  TreeFlowerFactory.create_asset: builds mesh, blends species+instance params, random z-rotation.
+    knobs: dict_lerp(...,0.25) -> blend weight between species and per-instance params (0=pure species,1=pure instance); inst_params scale(rad*normal(1,0.05)) -> per-flower size jitter; rotation_euler.z(uniform(0,360)) -> random yaw.
+  shader_petal(color_hsv): petal material appearance.
+    knobs: translucent_color_change(uniform(0.1,0.6), unused output); specular(normal(0.6,0.1)) -> highlight strength; roughness(normal(0.4,0.05)) -> glossiness; translucent_amt(normal(0.3,0.05)) -> mix toward translucency (waxy/backlit look); Base Color = hsv2rgba(color_hsv) -> petal color.
+  shader_flower_center: material for flower center/seeds (dark brown->orange AO ramp).
+    knobs: colorramp elements positions(0.4841,0.8591,1.0) & colors((0.0127,0.0075,0.0026),(0.0848,0.0066,0.0007),(1.0,0.6228,0.1069)) -> center darkness/warm tint gradient.
+  geo_flower(petal_material, center_material): assembles center sphere, seed distribution, petals, noise displacement.
+    knobs: uv_sphere Segments/Rings(8/8) -> center resolution; center Transform Scale(1,1,0.05) -> flatness of center disk; seed Distance Min(Seed Size*1.5) & Density Max(50000) -> seed packing; plant_seed U/V(6/6) -> seed mesh resolution; seed scale musgrave(W 13.8, Scale 2.41, map_range 0.34..1.21) -> seed size variation; petal count multiplier(divide*1.2) -> petal density; petal params Point(0.56),Point height(-0.1),Bevel(1.83),Resolution H(8)/V(16) -> petal tip/shape/mesh detail; petal jitter noise(Scale 3.73,Detail 5.41,Distortion -1.0) & value(0.025) -> random petal displacement.
+  nodegroup_flower_petal: single petal geometry generator.
+    knobs: noise_texture(Scale 7.9,Distortion 0.2) -> petal micro-wrinkle pattern; Wrinkle/Bevel/Point/Curl inputs (driven by geo_flower) -> petal silhouette & curvature; quadratic_bezier Resolution(8) -> petal curve smoothness.
+  nodegroup_phyllo_points: phyllotactic petal placement points + rotations.
+    knobs: Radius exp -> radial spacing falloff; Min/Max angle -> petal pitch; random_value(-0.1..0.1) -> per-petal yaw jitter; Yaw offset(-1.5708) -> spiral rotation.
+  nodegroup_plant_seed: builds tapered seed mesh; FloatCurve points((0,0),(0.3159,0.4469),(1,0.0156)) -> seed radius profile.
+  nodegroup_follow_curve / nodegroup_polar_to_cart_old / nodegroup_norm_index: helper node-groups for bending petals along a curve (rarely edited).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/colors.py -> color palettes incl. tree_petal_hsv() and hsv2rgba() conversions
+  assets/utils/object.py -> mesh/object creation helpers
+  core/nodes/node_wrangler.py -> Nodes enum and node graph construction API
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve helper
+  core/nodes/node_info.py, compatibility.py, utils.py -> node metadata/compat shims
+  core/placement/factory.py -> AssetFactory base class + asset lifecycle
+  core/placement/detail.py -> LOD/detail handling for placement
+  core/surface.py -> shaderfunc_to_material, add_geomod, set_geomod_inputs
+  core/tagging.py, core/tags.py -> tag_object/tag_nodegroup semantic labeling
+  core/util/blender.py -> spawn_vert, apply_modifiers, misc Blender utils
+  core/util/math.py -> FixedSeed, dict_lerp
+  core/util/color.py -> HSV/RGB color math
+  core/util/random.py -> random sampling utilities
+  core/util/logging.py -> logging setup

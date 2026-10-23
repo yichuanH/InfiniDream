@@ -1,0 +1,57 @@
+SUMMARY: The NautilusFactory builds a spiral nautilus shell by sweeping a cross-section along a logarithmic spiral (via an ARRAY modifier around a rotating/scaling empty) and applying a procedural wave-texture shell material. The nautilus geometry comes from `snail.py` (`NautilusBaseFactory.nautilus_make` -> `snail_make` -> `build_cross_section`); `generate.py` wraps the base factory with material, solidify, displacement, and hue logic. To make sharp-edged rectangular chambers, change the cross-section generation (`build_cross_section`) from its round/superellipse profile to a low-vertex square profile.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mollusk/base.py
+  BaseMolluskFactory: shared defaults for all mollusks.
+    knobs: max_expected_radius(0.5)->overall placement radius; noise_strength(0.02)->surface displacement depth; ratio(1)->blend between X/Z wave color ramps; x_scale(2),z_scale(1)->shell material wave frequency; distortion(1)->wave texture warp.
+
+FILE: assets/objects/mollusk/snail.py
+  SnailBaseFactory.build_cross_section: **THE spiral cross-section shape** (change here for square chambers).
+    knobs: n(64)->vertex count of profile (set low, e.g. 4, + concave large/step corners for square); concave(2.2, passed in)->superellipse exponent, high=squarish rounded, but true sharp square needs a 4-vertex profile; affine(1)->y/x aspect of profile; spike(0.0)->random radial spikes (prob 0.2 per vert, magnitude uniform(0,spike)); perturb(1/(5n))->angular jitter; rotation_euler z(uniform(0,pi/12))->random profile twist.
+  SnailBaseFactory.freq(256): sweep resolution / spiral samples per loop -> smoothness of spiral.
+  SnailBaseFactory.__init__: sampled shell params.
+    knobs: ratio(uniform(0,0.3) or uniform(0.7,1.0))->color mix; z_scale(log_uniform(0.2,1))->material Z wave; distortion(log_uniform(2,20))->material wave warp.
+  SnailBaseFactory.snail_make: core spiral sweep via ARRAY around rotating empty.
+    knobs: lateral(0.15)->per-step displacement up spiral axis (chamber spacing); longitudinal(0.04)->offset of rotation center; freq(28)->rotation angle 2pi/freq per step (tightness); scale(0.99)->per-step shrink (spiral growth rate); loop(8)->number of spiral loops; n(40 fixed here, overrides profile count); constant_offset_displace((0,0,lateral)).
+  SnailBaseFactory.nautilus_make: nautilus-specific parameter solves (the active maker).
+    knobs: solve_scale target(uniform(0.4,0.5))->shrink per loop; solve_lateral target(uniform(1.2,1.4))->overall lateral extent; solve_longitude target(uniform(0.2,0.3))->center offset; loop(randint(4,5))->loop count.
+  SnailBaseFactory.volute_make/conch_make/auger_make: alternate shell presets (not used by NautilusFactory).
+  SnailBaseFactory.geo_affine: random small affine shear.
+    knobs: uniform(-0.1,0.1,3)->random skew magnitude.
+  SnailBaseFactory.create_asset: normalization/orientation.
+    knobs: rotation_euler(uniform(0,2pi,3))->random orientation; location z bump(dimensions[-1]*0.4).
+
+FILE: assets/objects/mollusk/generate.py
+  MolluskFactory.decorate_mollusk: post-processing of the shell mesh.
+    knobs: SOLIDIFY thickness(0.005)->wall thickness; texture type(random STUCCI/MARBLE); noise_scale(log_uniform(0.1,0.2))->displacement grain; DISPLACE strength(noise_strength)->bumpiness.
+  MolluskFactory.build_base_hue: shell hue selection.
+    knobs: prob 0.4 -> hue uniform(0,0.2) else uniform(0.05,0.12) (warm shell tones).
+  MolluskFactory.shader_mollusk: shell surface material.
+    knobs: roughness(uniform(0.2,0.8)); specular(0.3 fixed); value_scale(log_uniform(1,20))->brightness; saturation_scale(log_uniform(0.4,1)); dark/light color value multipliers(0.005*v^1.5 / 0.05*v); hue jitter(±0.06); n color-ramp stops(randint(3,5)); WaveTexture wave_profile("SAW"), bands X/Z; dark_prob(0.4)->fraction dark bands.
+  NautilusFactory: entry class; fixes factory_method=NautilusBaseFactory (no own knobs).
+
+FILE: assets/objects/mollusk/shell.py
+  ShellBaseFactory (+Scallop/Clam/Mussel): bivalve shells, unused by NautilusFactory.
+
+FILE: assets/objects/mollusk/__init__.py
+  Re-exports all factories; no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class / asset spawning interface.
+  core/placement/detail.py -> level-of-detail / face-size utilities.
+  core/surface.py -> shaderfunc_to_material, add_geomod geometry-node application.
+  core/nodes/node_wrangler.py -> NodeWrangler graph builder used in shaders/geo mods.
+  core/nodes/node_info.py -> Nodes enum (WaveTexture, PrincipledBSDF, SetPosition, etc.).
+  core/nodes/node_utils.py -> build_color_ramp helper for material ramps.
+  core/nodes/compatibility.py, core/nodes/utils.py -> node graph compatibility/util helpers.
+  core/tagging.py, core/tags.py -> tag_object semantic labeling.
+  core/util/blender.py -> mesh/object ops, modifiers (ARRAY/SOLIDIFY/DISPLACE), transforms.
+  core/util/math.py -> FixedSeed deterministic sampling.
+  core/util/random.py -> log_uniform sampling helper.
+  core/util/color.py -> color conversion utilities.
+  core/util/logging.py -> logging.
+  assets/utils/object.py -> data2mesh, mesh2obj, new_circle, new_empty, center, join_objects.
+  assets/utils/decorate.py -> subsurface2face_size, displace_vertices.
+  assets/utils/draw.py -> shape_by_angles profile shaping (bivalves only).
+  assets/utils/misc.py -> assign_material helper.

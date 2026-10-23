@@ -1,0 +1,70 @@
+SUMMARY: DragonflyFactory procedurally builds an animated dragonfly creature from modular geometry-node parts (head, eyes, mouth, antenna, body, tail, six legs, four flapping wings) assembled and transformed in `geometry_dragonfly`. The upper-level files are transpiled Blender geometry/shader node-groups: `dragonfly.py` samples a "genome" of randomized parameters (colors, sizes, flapping, poses) and wires the parts together, while each `parts/*` and `utils/*` file defines a reusable node-group and its material. To realize the requested "clockwork brass geared dragonfly with metal-frame transparent-membrane wings," edit the shader functions (metallic/brass base colors, IOR) in body/tail/head, the wing membrane transparency/frame in `dragonfly_wing.py`, and the segmentation/ring geometry in the tail/body.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/insects/dragonfly.py
+  geometry_dragonfly(nw, **kwargs): assembles all parts; applies per-part Transforms, wing flap animation, symmetric cloning, and final postprocess transform.
+    knobs: wing flap driver = sin(scene_time * 2π * Flap Freq) * Flap Mag -> wing beat speed/amplitude; final result Rotation (0,0,-π/2) & Translation (0.6,0,0) -> origin/orientation; PostprocessScale (fixed×3) -> overall size; leg Translations/Scales (value_1=1.2, value_2=1.18, value_3=1.04) & rotations -> per-leg-pair placement; wing Translations (0,-2.4,1.8)/(0,-4.18,1.8) & Scales (5.4, 6.0) -> forewing/hindwing size & position; head Translation (0,-0.3,0), Scale (1.1,1.0,1.0) -> head placement; tail Translation (0,-10.2,0), Scale 10.0 -> tail placement; Segment Length (0.38 fixed) -> tail segment spacing.
+  DragonflyFactory.__init__: sets up walk animation policy.
+    knobs: y=U(20,60) yaw range; speed=U(7,10); step_range=(0.2,7); forward_vec=(1,0,0); placeholder z bump U(0.5,2).
+  DragonflyFactory.sample_geo_genome (staticmethod): samples all randomized appearance/pose params (all U/N sampled per seed).
+    knobs: base_color HSV hue=U(0.1,0.6),sat 0.9,val 0.8 (+N noise) -> body/eye/tail tint (raise for brass: hue~0.09, high metallic in shaders); Eye Color & Body Color = base±N(0,0.1 hue) -> part color variation; Tail Length U(2.5,3.5); Tail Tip Z U(-0.4,0.3); Tail Radius U(0.7,0.9); Tail Seed/Body Seed U(-100,100) -> noise pattern; Body Length U(8,10); Flap Freq U(20,50); Flap Mag U(0.15,0.25); Wing Yaw U(0.43,0.7); Wing Scale U(0.9,1.1); Leg Scale U(0.9,1.1); Leg Openness 1/2/3 U(0,1) -> leg pose; Head Scale U(1.6,1.8); Head Roll U(-0.2,0.2); Head Pitch U(-0.6,0.6); V U(0,0.5) -> HSV value mix in all shaders; Ring Length U(0,0.3) -> tail ring band width; PostprocessScale 0.015*N(1,0.1).
+
+FILE: assets/objects/creatures/insects/parts/wing/dragonfly_wing.py
+  nodegroup_dragonfly_wing: builds wing outline from bezier pivots, fills mesh, computes vein/edge coordinates.
+    knobs: resolution (32 fixed) -> mesh density; pivot1..pivot5 vectors -> wing silhouette shape (make thinner metal frame here); membrane fill via FillCurve+SubdivideMesh.
+  shader_wing_shader: transparent membrane + vein pattern.
+    knobs: MixShader Fac 0.1 (transparent vs principled) -> membrane transparency (raise for clearer glass panels); voronoi Scales 12.0/14.96/10.02 -> vein cell density (lower for panel frames); colorramp elements (black@0, white@0.1136) -> vein vs membrane color; VectorRotate angles 0.1047/0.2485 -> vein orientation. (Edit here to add brass frame color / transparent panels.)
+
+FILE: assets/objects/creatures/insects/parts/body/dragonfly_body.py
+  nodegroup_dragonfly_body(nw, curve_control_points, base_color, v): tube body from curve+circle cross-section, hair instancing.
+    knobs: curve_control_points (5 pts) -> body radius profile / segment bulge; ResampleCurve Count 128 -> smoothness; circlecrosssection noise amount 1.26, radius 4.0 -> cross-section irregularity; Hair Density default 200; surfacebump Displacement -0.12, Scale 75.8 -> surface texture; voronoi Scale 0.5 patterning.
+  shader_dragonfly_body_shader(nw, base_color, v): body material.
+    knobs: Metallic 0.2182 (raise to ~1.0 for brass), Specular IOR Level 0.8318, Roughness 0.1545; musgrave Scale 0.5; voronoi Scale 10.0 -> spot size; color mix from base_color+color_noise.
+
+FILE: assets/objects/creatures/insects/parts/tail/dragonfly_tail.py
+  nodegroup_dragonfly_tail(nw, base_color, v, ring_length): segmented tail (instanced rings along bezier).
+    knobs: shapequadratic radius_control_points -> per-segment radius (gear/ring silhouette); Segment Length/Scale -> ring count & size; circlecrosssection noise 0.9, Resolution 128; surfacebump Displacement 0.02, Scale 20.0; add_vertical_stripes voronoi -> ridged/geared banding.
+  shader_dragonfly_tail_shader(nw, base_color, v, ring_length): tail material with ring bands.
+    knobs: Metallic 0.5 (raise for brass), Specular 0.5114, Roughness 0.2568; colorramp positions (0.4455/0.5045) -> band width/placement; voronoi Scale 5.34 -> ring segmentation.
+  nodegroup_add_vertical_stripes: ridged displacement stripes -> gear-tooth look.
+    knobs: voronoi Scale default 5.0; normal offset 0.1 multiplier.
+
+FILE: assets/objects/creatures/insects/parts/head/dragonfly_head.py
+  nodegroup_dragon_fly_head(nw, base_color, eye_color, v): head + eyes + mouth + antenna assembly.
+    knobs: head float_curve profile pts -> head shape; curve_circle Radius 1.1; eye Rings 128 & scale 0.6; addhair Density 500/5, scale mean 0.01/0.1; antenna length_rad1_rad2 (1.24,0.05,0.04); attach_part Length Fac/Part Rot values -> eye/antenna placement; surfacebump.
+  shader_dragonfly_head_shader(nw, base_color, v): head material (Specular 0.7545, Roughness 0.0636).
+
+FILE: assets/objects/creatures/insects/parts/eye/dragonfly_eye.py
+  nodegroup_dragonfly_eye(nw, base_color, v): compound eye sphere.
+    knobs: uv_sphere Rings input (128 via head), Scale (1,1,1.3); voronoi Scale 1000 -> facet density; Roughness 0.0.
+  shader_dragonfly_eye_shader: facet/iridescence material.
+
+FILE: assets/objects/creatures/insects/parts/leg/dragonfly_leg.py
+  nodegroup_leg_control: maps Openness->Femur/Tarsus/Shoulder angles.
+    knobs: MapRange targets Femur(0.6,1.44), Tarsus(-0.26,0.16), Shoulder(1.68,1.88).
+  nodegroup_dragonfly_leg / nodegroup_leg_part / nodegroup_leg_cross_section: 3-segment leg + claw + hairs.
+    knobs: radius_control_points per segment; NextJoint Scale (0.4/0.45/0.75); Cross Section Scale (0.8/1.2); Num Hairs (10/15/30); Hair Scale Min/Max (0.18/0.22, 0.15); bezier cross-section handles.
+
+FILE: assets/objects/creatures/insects/parts/mouth/dragonfly_mouth.py
+  nodegroup_dragonfly_mouth: 4 fused tubes forming mandibles.
+    knobs: per-tube length_rad1_rad2, aspect 1.5, fullness 7.9, transforms; noise Scale 0.5 displacement; SubdivisionSurface Level 2.
+
+FILE: assets/objects/creatures/insects/parts/antenna/dragonfly_antenna.py
+  nodegroup_dragonfly_antenna: simple tapered tube antenna.
+    knobs: length_rad1_rad2 default (1.24,0.02,0.01); angles_deg (0,-63.9,31.39); proportions.
+
+FILE: assets/objects/creatures/insects/parts/hair/principled_hair.py
+  nodegroup_principled_hair: quadratic hair strand geometry.
+    knobs: radius_control_points [(0,0.1125),(0.625,0.1),(1,0.0531)] -> taper; Start/Middle/End control length/bend.
+
+FILE: assets/objects/creatures/insects/utils/geom_utils.py
+  Reusable node-groups: nodegroup_symmetric_clone (mirror parts), nodegroup_add_hair, nodegroup_attach_part/part_surface/raycast_rotation (surface attachment), nodegroup_random_rotation_scale, nodegroup_instance_on_points, nodegroup_surface_bump (displacement), nodegroup_circle_cross_section (noisy tube profile), nodegroup_shape_quadratic (curve-to-mesh w/ radius/tilt), nodegroup_simple_tube_v2 & helpers (polar_bezier, smooth_taper, aspect_to_dim, warped_circle_curve).
+    knobs: surface_bump defaults Displacement 0.02/Scale 50; circle_cross_section Resolution 256; shape_quadratic radius_control_points; smooth_taper fullness 2.5.
+  shader_dragonfly_body_shader (unused alt body material): Metallic 0.2182, colorramp greens.
+
+FILE: assets/objects/creatures/insects/utils/shader_utils.py
+  shader_black_w_noise_shader: dark metallic material for hairs/legs/antenna (Metallic 0.9, Roughness 0.2568) -> good base for brass if recolored.
+  nodegroup_add_noise: vector-domain noise offset (Scale, amount inputs).
+  nodegroup_color_noise: HSV noise recolor node-group.
+    knobs: Hue From/To (0.4-0.7 -> 0.48-0.55), Value From/To ranges, Scale 0.8, Detail 10, Rough

@@ -1,0 +1,69 @@
+SUMMARY: BarChairFactory builds a single bar/counter stool as one coherent assembly: a round seat (capped-cylinder mesh) placed atop a procedurally generated leg system reused from the cocktail-table code. Each create_asset() call yields exactly one stool, resampled per factory_seed. The upper-level files define seat geometry, three leg styles (straight splayed legs w/ stretchers, single central stand, or wheeled base), and the shared node groups that generate cylinders, profiles, stretchers, wheels, and material assignment.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/seating/chairs/bar_chair.py
+  BarChairFactory.sample_parameters: samples overall dimensions, leg style, and per-style leg params (all random unless dimensions passed in).
+    knobs: dimensions x(uniform 0.35-0.45) -> seat radius & footprint; z/Height(uniform 0.7-1.0) -> overall stool height; top_thickness(uniform 0.06-0.10) -> seat slab thickness; Leg Style(choice straight/single_stand/wheeled) -> whole leg structure; Leg NGon(choice 4 or 32) -> square vs round leg cross-section; Leg Placement Top Relative Scale(0.7 fixed) -> how far leg tops sit from center; Leg Placement Bottom Relative Scale(uniform 1.1-1.3) -> splay amount of leg bottoms; Leg Height(1.0 fixed)
+    knobs (single_stand): Leg Number(1 fixed); Leg Diameter(uniform 0.7x-0.9x) -> central pole thickness; Leg Curve Control Points(random y at ctrl pts 0.1-0.3) -> pole taper/flare profile
+    knobs (straight): Leg Diameter(uniform 0.04-0.06) -> leg tube thickness; Leg Number(choice 3 or 4) -> number of legs; Leg Curve Control Points(random 0.4-0.95) -> leg taper; Strecher Relative Pos(uniform 0.6-0.9) -> height of footrest/stretcher ring; Strecher Increament(choice 0/1/2) -> stretcher connectivity pattern
+    knobs (wheeled): Leg Diameter(uniform 0.03-0.05); Leg Pole Number(choice 4 or 5) -> number of caster arms; Leg Joint Height(uniform 0.5-0.8*seatH) -> gas-cylinder joint height; Leg Wheel Arc Sweep Angle(uniform 120-240) -> caster shroud arc; Leg Wheel Width(uniform 0.11-0.15); Leg Wheel Rot(uniform 0-360); Leg Pole Length(uniform 1.6-2.0)
+  BarChairFactory.get_material_params: assigns seat/leg materials + wear.
+    knobs: SeatMaterial(weighted_sample large_seat_fabric) -> seat surface look; LegMaterial(weighted_sample furniture_leg) -> frame finish (metal/powder-coat); scratch/edge_wear (applied w/ prob from material_assignments.wear_tear_prob) -> surface aging
+  geometry_assemble_chair: joins seat (translated to Top Height) + legs into one object; edit to add footrest ring, rubber tips, or perforation.
+
+FILE: assets/objects/seating/chairs/seats/round_seats.py
+  generate_round_seats: builds the round capped-cylinder seat.
+    knobs: thickness(default uniform 0.05-0.12, overridden by Top Thickness); radius(default uniform 0.35-0.45, overridden by Top Profile Width); cap_radius/Cap Flatness(uniform 2.0-3.2) -> seat dome curvature; bevel_factor(uniform 0.01-0.04) -> edge rounding; Cap Relative Scale(0.0140 fixed); Cap Relative Z Offset(-0.0020 fixed); Resolution(128 fixed) -> seat smoothness/perforation grid density
+
+FILE: assets/objects/tables/cocktail_table.py
+  geometry_create_legs: dispatches leg style, places legs on anchors, sets LegMaterial. (Shared with tables; edit affects both.)
+    knobs: create_anchors Profile Width(=0.7*Top Profile Width) -> leg base ring radius; single_stand Resolution(64), straight Resolution(32)/Fillet Ratio(0.1), stretcher Profile Width(=Leg Diameter*0.5) -> footrest thickness
+  TableCocktailFactory: sibling table factory (not used by chair) — safe to ignore for stool.
+
+FILE: assets/objects/tables/legs/straight.py
+  nodegroup_generate_leg_straight: tapered leg from radius curve + n-gon cylinder.
+    knobs: Fillet Ratio(default 0.01) -> leg corner rounding; N-gon/Resolution passed from factory
+
+FILE: assets/objects/tables/legs/single_stand.py
+  nodegroup_generate_single_stand: central pedestal column from radius curve.
+    knobs: Resolution(64) -> column smoothness; profile driven by Leg Curve Control Points
+
+FILE: assets/objects/tables/legs/wheeled.py
+  nodegroup_wheeled_leg / nodegroup_chair_wheel: gas-lift caster base.
+    knobs: wheel value(0.0200 radius bits), cylinder Radius/Depth multipliers (0.1/0.4/0.44/0.45 of caster size), Pole Width(0.5), overall Scale value_2(0.1500) -> caster assembly size; fillet Radius(0.03), quadrilateral Height(0.02) -> caster fork shape
+
+FILE: assets/objects/tables/strechers.py
+  nodegroup_strecher: cylindrical rung used for the footrest ring / stretcher.
+    knobs: N-gon(default 32) -> ring cross-section; Profile Width -> ring thickness (set to Leg Diameter*0.5 by caller)
+
+FILE: assets/objects/tables/table_top.py
+  nodegroup_capped_cylinder: seat/wheel-hub primitive (dome cap + filleted cylinder).
+    knobs: Cap Flatness, Fillet Radius Vertical, Cap Relative Scale/Z Offset, Resolution -> seat/hub shape
+  nodegroup_generate_table_top: filleted extruded n-gon slab (used inside capped cylinder).
+    knobs: arc Resolution(4), fillet Count(8), Profile Resolution(512) -> edge quality
+  TableTopFactory: standalone table-top factory (unused by stool).
+
+FILE: assets/objects/tables/table_utils.py
+  nodegroup_n_gon_profile / nodegroup_n_gon_cylinder: core swept-cylinder generator (leg/stretcher/seat bodies).
+    knobs: CurveCircle radius(0.5), fillet Count(8), profile/vertical resolutions -> geometry smoothness
+  nodegroup_generate_radius_curve: turns Leg Curve Control Points into taper profile.
+  nodegroup_create_anchors: positions N legs around the seat (handles N=1/2/n cases).
+  nodegroup_create_legs_and_strechers: instances legs + stretcher ring, splay/scale, odd/even stretcher selection.
+    knobs: Leg Bottom Relative Scale/Rotation, Strecher Relative Position, Strecher Index Increment, Keep Odd/Even Strechers -> footrest ring layout
+  nodegroup_create_cap: hemisphere cap for capped cylinder (Rings = radius*257).
+  nodegroup_arc_top / nodegroup_align_bottom_to_floor / nodegroup_bent / nodegroup_merge_curve: helper geometry (caster arc, floor alignment, bending, curve cleanup).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material palettes (large_seat_fabric, furniture_leg) + wear_tear probabilities/generators
+  assets/materials/** -> shader/material generators (metal, fabric, plastic, wood, ceramic, wear_tear, etc.)
+  core/nodes/node_wrangler.py -> NodeWrangler + Nodes enum for building geometry-node graphs
+  core/nodes/node_utils.py -> to_nodegroup decorator, assign_curve helper
+  core/nodes/node_info.py, compatibility.py, utils.py -> node type metadata & version compatibility
+  core/surface.py -> add_geomod applies geometry-node modifiers to objects
+  core/tagging.py, core/tags.py -> semantic part tagging (SupportSurface, relabel_obj)
+  core/placement/factory.py -> AssetFactory base class (create_asset/create_placeholder/finalize)
+  core/placement/detail.py -> LOD/detail handling
+  core/util/math.py -> FixedSeed (deterministic per-seed sampling)
+  core/util/random.py -> weighted_sample material picker
+  core/util/blender.py, object.py, logging.py -> Blender object utilities & logging

@@ -1,0 +1,55 @@
+SUMMARY: ClamFactory builds a two-halved clam shell (upper + mirrored lower half) hinged at the back, then applies a wave-textured, hue-varied shell material and surface displacement noise. The upper-level files define the mollusk geometry makers (shells in shell.py, snails in snail.py), a shared base config in base.py, and the top-level MolluskFactory in generate.py that selects a maker, builds/decorates the mesh, and generates the shader. ClamFactory specifically forces the ClamBaseFactory/clam_make path. Note: the current code produces grey/colored ridged shell halves but has NO pearl and NO iridescent-nacre inner material — those must be added to match the request.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/mollusk/base.py
+  BaseMolluskFactory: shared defaults for all mollusk makers (inherited by shell & snail factories)
+    knobs: max_expected_radius(0.5) -> overall placement scale; noise_strength(0.02) -> DISPLACE surface roughness amount; ratio(1) -> blend between X-band and Z-band color ramps; x_scale(2) -> horizontal wave-texture frequency; z_scale(1) -> vertical wave-texture frequency (overridden per-factory); distortion(1) -> wave-texture distortion (overridden per-factory)
+
+FILE: assets/objects/mollusk/generate.py
+  MolluskFactory.__init__: picks maker family, builds material
+    knobs: factory_methods([SnailBaseFactory, ShellBaseFactory]) + weights(equal) -> which mollusk type when random; ClamFactory hardwires ClamBaseFactory
+  MolluskFactory.decorate_mollusk: post-process mesh
+    knobs: SOLIDIFY thickness(0.005) -> shell wall thickness; texture type(random STUCCI/MARBLE) -> displacement pattern; texture.noise_scale(log_uniform 0.1-0.2, random) -> displacement grain size; DISPLACE strength(=noise_strength) mid_level(0) -> bump depth
+  MolluskFactory.build_base_hue (static): sets base color hue
+    knobs: 0.4 prob -> uniform(0,0.2); else uniform(0.05,0.12) (random) -> shell hue (yellow/brown range; raise/lower for grey, set low saturation for grey outer)
+  MolluskFactory.shader_mollusk (static): PrincipledBSDF shell material
+    knobs: roughness(uniform 0.2-0.8, random) -> gloss (lower for nacre sheen); specular(0.3) -> highlight; value_scale(log_uniform 1-20, random) -> brightness; saturation_scale(log_uniform 0.4-1, random) -> color intensity (drop for grey); dark_color value(0.005*value_scale**1.5), light_color value(0.05*value_scale) -> dark/light tone; color_fn dark_prob(0.4) -> fraction of dark bands; n(randint 3-5) -> number of color-ramp stops; WaveTexture wave_profile("SAW"), bands_direction(X/Z) -> ridge stripe orientation. NOTE: no iridescence/nacre here — add a second material or mix with a metallic/anisotropic shader for the inner surface.
+
+FILE: assets/objects/mollusk/shell.py
+  ShellBaseFactory.__init__: z_scale(log_uniform 2-10, random) -> vertical stripe density
+  ShellBaseFactory.build_ellipse: shell dome shape
+    knobs: viewpoint((0,0,1)) -> bulge direction; softness(0.3 scallop / 0.5 clam,mussel) -> dome curvature; new_circle vertices(1024) -> mesh resolution
+  ShellBaseFactory.clam_make (the ClamFactory maker): clam silhouette
+    knobs: scale(1,1.2,1) -> aspect ratio; s(uniform 0.6-0.7, random) -> shoulder taper; angles(random ranges: outer ±[0.4,0.5], mid ±[0.3,0.35], center ±0.25)*pi -> profile shaping; scales([0,s,1,s,0]) -> radial fullness
+  ShellBaseFactory.add_radial_groove (used by scallop only): frequency(45) -> ridge count; scale(0.02) -> ridge depth; clip start(0.25) -> where ridges begin (call this from clam_make to add ridges the request wants)
+  ShellBaseFactory.add_hinge (scallop only): length(0.4), width(0.1), x(uniform 0.8-1, random) -> hinge tab size; SUBSURF levels(2); DISPLACE strength(0.2) STUCCI -> hinge roughness
+  ShellBaseFactory.create_asset: assembles two halves
+    knobs: upper scale normalization(1/dim); z offset(+0.005); lower.scale[-1]=-1 (mirror); base(uniform 0..pi/4, random) -> lower half tilt; upper extra open angle(uniform pi/6..pi/3, random) -> how wide the shell gapes open. NOTE: to add a pearl, insert a UV sphere between the halves here.
+  ClamBaseFactory: forces maker=clam_make (used by ClamFactory)
+
+FILE: assets/objects/mollusk/snail.py
+  SnailBaseFactory + Volute/Nautilus/Conch/AugerBaseFactory: spiral-shell makers (NOT used by ClamFactory; edit only for snail-type outputs)
+    knobs: freq(256), ratio/z_scale/distortion sampling, build_cross_section(concave,spike,affine), solve_scale/lateral/longitude ranges per maker, loop counts -> spiral geometry
+
+FILE: assets/objects/mollusk/__init__.py
+  re-exports all factory classes; edit only to expose new factories
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class / asset spawning
+  core/placement/detail.py -> level-of-detail / face-size handling
+  core/surface.py -> shaderfunc_to_material, add_geomod (material + geometry-node application)
+  core/nodes/node_wrangler.py -> NodeWrangler graph-building API
+  core/nodes/node_info.py -> Nodes enum (WaveTexture, PrincipledBSDF, etc.)
+  core/nodes/node_utils.py -> build_color_ramp helper
+  core/nodes/compatibility.py, core/nodes/utils.py -> node graph compatibility/utilities
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> mesh ops (modify_mesh, apply_transform, join_objects, deep_clone_obj, ViewportMode)
+  core/util/math.py -> FixedSeed deterministic RNG
+  core/util/random.py -> log_uniform sampling
+  core/util/color.py -> color helpers
+  core/util/logging.py -> logging
+  assets/utils/decorate.py -> subsurface2face_size, displace_vertices
+  assets/utils/draw.py -> shape_by_angles profile shaping
+  assets/utils/object.py -> mesh construction (new_circle, data2mesh, mesh2obj, join_objects, new_empty, center)
+  assets/utils/misc.py -> assign_material

@@ -1,0 +1,58 @@
+SUMMARY: The MattressFactory builds a single thick quilted mattress as one coherent mesh, starting from a cube subdivided along all three axes and then either "coiled" (poke-based diamond dimpling that produces a stitched/tufted diamond surface) or "wrapped" (bevel + pressurized cloth simulation giving a puffed, softly rounded pillow-top look). A fabric material is sampled and assigned in finalize_assets. The other upper-level files (blanket/pants/shirt and cloth_sim util) are sibling factories in the same asset package and are not part of the mattress output but share helper patterns.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/seating/mattress.py
+  MattressFactory: main mattress asset; controls dimensions, quilting style, dot/dimple parameters, and fabric material.
+    knobs: types(("weighted_choice",(1,"coiled"),(1,"wrapped"))) -> 50/50 pick of quilting method (coiled=diamond-stitch dimples, wrapped=puffed pillow-top); change weights to bias style
+    knobs: width(log_uniform(0.9,2.0), sampled) -> mattress width (X)
+    knobs: size(uniform(2,2.4), sampled) -> mattress length (Y)
+    knobs: thickness(uniform(0.2,0.35), sampled) -> mattress height/thickness (Z)
+    knobs: dot_distance(log_uniform(0.16,0.2), sampled) -> spacing of the diamond quilt cells / subdivision density
+    knobs: dot_size(uniform(0.005,0.02), sampled) -> size of the raised/tufted button tips in coiled mode
+    knobs: dot_depth(uniform(0.04,0.08), sampled) -> depth of the stitched dimple indentations in coiled mode
+    knobs: wrap_distance(0.05, fixed) -> subdivision spacing + bevel scale for wrapped mode (bevel width = wrap_distance/3, 2 segments)
+    knobs: surface(weighted_sample(material_assignments.fabrics), sampled) -> fabric shader (governs pale cream / quilt fabric look); swap the fabrics assignment to force a specific material
+  make_coiled (module fn): builds diamond-stitch surface via poke/bevel/extrude on 16-edge verts, then geo scale + triangulate + smooth.
+    knobs: radius(dot_distance*uniform(0.06,0.08), sampled) -> bevel radius of each stitch tuft
+    knobs: SMOOTH factor(uniform(0.5,1.0), sampled), iterations(5, fixed) -> overall softness/rounding of quilted surface
+  MattressFactory.make_wrapped: pressurized cloth-sim puff.
+    knobs: BEVEL width(wrap_distance/3), segments(2) -> edge roundness of piped border
+    knobs: pin vertex group threshold(z < 1e-1 - thickness/2) -> which bottom verts stay fixed during sim
+    knobs: uniform_pressure_force(uniform(0.1,0.2), sampled) -> amount of puffing/inflation of the pillow-top; gravity=0 fixed
+  create_placeholder: bbox sized by width/size/thickness (no independent knobs)
+
+FILE: assets/objects/seating/__init__.py
+  exports: registers MattressFactory (and sibling seating factories); edit to expose/rename factory.
+
+FILE: assets/objects/clothes/blanket.py (sibling factory, not mattress output)
+  BlanketFactory/ComforterFactory/BoxComforterFactory: cloth grid assets.
+    knobs: width(log_uniform(0.9,1.2)), size(width*log_uniform(0.4,0.7)), thickness(log_uniform(0.004,0.008)); SOLIDIFY thickness(0.01); margin(uniform(0.3,0.4)); grid subdivisions(64) -> unrelated to mattress.
+
+FILE: assets/objects/clothes/pants.py (sibling factory)
+  PantsFactory: width(log_uniform(0.45,0.55)), type(underwear/shorts/pants), length offsets, neck_shrink(uniform(0.1,0.15)), thickness(log_uniform(0.02,0.03)).
+
+FILE: assets/objects/clothes/shirt.py (sibling factory)
+  ShirtFactory: width(log_uniform(0.45,0.55)), type(short/long), sleeve_length/width/angle, thickness(log_uniform(0.02,0.03)), bevel width.
+
+FILE: assets/objects/clothes/__init__.py
+  exports clothing factories (unrelated to mattress).
+
+FILE: assets/objects/creatures/util/cloth_sim.py (helper, not used by mattress path)
+  local_pos_rigity_mask / bake_cloth: node-based rigidity mask + cloth bake settings (gravity=1, distance_min=0.015, self_collision=False).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material class pools (fabrics, blanket, pants) sampled for surface
+  assets/materials/fabric/__init__.py -> fabric shader generators (mattress cream/quilt fabric)
+  assets/materials/art.py -> ArtFabric procedural fabric pattern
+  assets/scatters/clothes.py -> cloth_sim wrapper used by make_wrapped (pressure/pin cloth simulation)
+  assets/utils/decorate.py -> read_co, subdivide_edge_ring, and mesh edit helpers
+  assets/utils/object.py -> new_bbox, new_cube, new_grid, new_circle primitives
+  core/nodes/node_wrangler.py, core/nodes/node_info.py, core/nodes/utils.py -> geometry-node graph construction (geo_scale, ScaleElements)
+  core/surface.py -> assign_material, add_geomod, write_attr_data, set_active
+  core/placement/factory.py -> AssetFactory base (create_asset/create_placeholder/finalize_assets)
+  core/placement/detail.py -> detail/subdivision management
+  core/util/blender.py -> ViewportMode, modify_mesh, apply_transform, mesh op wrappers
+  core/util/random.py -> log_uniform, uniform, weighted_sample, random_general (rg)
+  core/util/math.py -> FixedSeed for deterministic sampling
+  core/tags.py, core/util/logging.py -> tagging and timing utilities

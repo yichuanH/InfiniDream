@@ -1,0 +1,44 @@
+SUMMARY: This factory file defines three small particle asset factories—DustMoteFactory (the selected entry), RaindropFactory, and SnowflakeFactory—each of which builds a tiny primitive mesh and applies a surface material. DustMoteFactory creates a low-poly ico-sphere and coats it with a dirt/terrain material to produce a floating dust speck. The upper-level file wires primitive generation (via bpy.ops) to Infinigen's AssetFactory / geometry-node / material infrastructure; __init__.py just re-exports the factory classes.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/particles/particles.py
+  DustMoteFactory.create_asset: builds the dust mote base mesh
+    knobs: radius(1, fixed) -> overall mote size; subdivisions(2, fixed) -> mesh smoothness/facet count (2 = coarse low-poly); tag_object name("dustmote", fixed) -> semantic label
+  DustMoteFactory.finalize_assets: applies surface look
+    knobs: dirt.apply(assets) -> dirt/terrain shader coloring & bump; swap for another material module to change appearance
+
+  RaindropFactory.create_asset: builds ico-sphere then deforms into teardrop
+    knobs: radius(1, fixed); subdivisions(5, fixed) -> smooth high-poly sphere; tag name("raindrop")
+  geo_raindrop: geometry-node deformation of the sphere
+    knobs: Z vector-curve first point Y = -0.15 * N(1,0.15) (RANDOM, mean -0.15, sd 15%) -> teardrop tip sharpness/taper; curve points (-0.6091,-0.0938),(1.0,1.0) (fixed) -> body profile
+  shader_raindrop: glass material
+    knobs: IOR(1.33, fixed) -> refraction/transparency look
+  RaindropFactory.finalize_assets: applies shader_raindrop
+
+  SnowflakeFactory.create_asset: builds flat hexagonal disk
+    knobs: vertices(6, fixed) -> hex flake shape; fill_type("TRIFAN", fixed); tag name("snowflake")
+  SnowflakeFactory.finalize_assets: applies snow shader
+    knobs: snow.apply subsurface(0, fixed) -> subsurface scattering amount
+
+FILE: assets/objects/particles/__init__.py
+  module: re-exports factories (LichenFactory, MossFactory, DustMoteFactory, RaindropFactory, SnowflakeFactory, PineNeedleFactory)
+    knobs: none (import list only)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/terrain/dirt.py -> dirt/terrain shader applied to dust motes
+  assets/materials/terrain/mountain.py -> terrain material dependency of dirt
+  assets/materials/utils/surface_utils.py -> shared shader helper utilities
+  infinigen_gpl/surfaces/snow.py -> snow surface material for snowflakes
+  core/surface.py -> add_geomod / add_material application to objects
+  core/nodes/node_wrangler.py -> Nodes enum + node graph building API
+  core/nodes/node_utils.py -> assign_curve and node helper utilities
+  core/nodes/node_info.py, core/nodes/utils.py, core/nodes/compatibility.py -> node type/version support
+  core/placement/factory.py -> AssetFactory base class (create_asset/finalize_assets lifecycle)
+  core/placement/detail.py -> level-of-detail placement support
+  core/tagging.py, core/tags.py -> tag_object semantic labeling
+  core/util/blender.py -> Blender bpy helper wrappers
+  core/util/color.py -> color sampling utilities
+  core/util/math.py, core/util/random.py -> math/random sampling helpers
+  core/util/organization.py, core/util/logging.py -> naming/logging conventions
+  assets/utils/object.py -> mesh/object construction helpers
+  assets/materials/__init__.py, assets/materials/terrain/__init__.py, assets/__init__.py, core/__init__.py, core/nodes/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package init/exports

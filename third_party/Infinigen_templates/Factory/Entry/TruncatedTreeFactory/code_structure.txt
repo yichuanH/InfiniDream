@@ -1,0 +1,42 @@
+SUMMARY: This factory builds a single truncated tree stump: a full procedural tree is generated, then sawn flat by a cut plane, keeping the lower half with a noisy cut top that reads as concentric growth rings and cracks. The upper-level files are a small class hierarchy — base.py sets up the tree, bark material, and ring shader; fallen.py implements plane-cutting and half-building; truncated.py overrides the cut geometry and create_asset to keep only the lower stump. Exactly one stump object is returned per create_asset() call.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/deformed_trees/truncated.py
+  TruncatedTreeFactory.geo_cutter: displaces cut-top surface along Z to sculpt the sawn face (ring/crack relief)
+    knobs: Clamp min(0.3)/max(0.7) -> noise range on top face; strength(arg) -> vertical displacement amount; scale(arg) -> noise frequency of surface bumps; anchors((-1,0),(-0.5,0),(0,1),(0.5,0),(1,0)) -> peak bump at cut center, falls to 0 at edges
+  TruncatedTreeFactory.create_asset: assembles the single stump
+    knobs: cut_center z(uniform 0.8-1.5, random) -> stump height; cut_normal x(uniform -0.4..0.4, random) -> tilt/slant of sawn top; noise_strength(uniform 0.6-1.0, random) -> roughness of cut face; noise_scale(uniform 10-15, random) -> detail density of cut face; radius(computed from base of trunk, z<0.1) -> stump base width; is_up=False (fixed) -> keeps lower half
+
+FILE: assets/objects/deformed_trees/fallen.py
+  FallenTreeFactory.geo_cutter: base cutter (overridden by truncated) — offset limited to x^2+y^2<1, radial falloff
+    knobs: Clamp 0.3/0.7; anchors((-1,0),(-0.5,0),(0,-1),(0.5,0),(1,0)) -> dips at cut center
+  FallenTreeFactory.build_half: cuts obj by plane, fills holes, applies material and geo_cutter
+    knobs: remove_doubles threshold(1e-2) -> mesh weld tolerance on cut edge; assigns self.material to cut face
+  FallenTreeFactory.create_asset: (fallen variant, not used by truncated) full two-half fallen log — cut_center z(uniform 0.6-1.2), cut_normal x(uniform 0.1-0.2), noise_strength(uniform 0.3-0.5), noise_scale(uniform 10-15)
+
+FILE: assets/objects/deformed_trees/base.py
+  BaseDeformedTreeFactory.__init__: sets up source tree, bark material, and ring color
+    knobs: Scaling(0.2 fixed) -> trunk thickness scale; trunk_surface(weighted_sample of material_assignments.bark, random) -> bark side material; base_hue(uniform 0.02-0.08, random) -> overall wood/bark hue
+  BaseDeformedTreeFactory.build_tree: spawns generic tree via GenericTreeFactory (source geometry)
+  BaseDeformedTreeFactory.geo_xyz: stores x/y/z position attributes for ring shader lookup
+  BaseDeformedTreeFactory.shader_rings: procedural growth-ring color on cut face
+    knobs: WaveTexture Scale(uniform 10-20, random) -> ring spacing/count; Distortion(uniform 4-10, random) -> radial crack/wobble of rings; wave_type=RINGS, rings_direction=Z, wave_profile=SAW (fixed); bright_color sat(uniform 0.4-0.8)/val(log_uniform 0.2-0.8, random) -> light ring color; dark_color hue offset(uniform -0.02..0.02), sat(0.4-0.8), val(log_uniform 0.02-0.05, random) -> dark ring color
+
+FILE: assets/objects/deformed_trees/__init__.py
+  module exports: registers TruncatedTreeFactory and siblings; no tunables
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/trees/generate.py (via base) -> GenericTreeFactory, random_species: procedural source tree geometry
+  assets/composition/material_assignments.py (via base) -> bark material pool
+  assets/utils/decorate.py -> read_co, remove_vertices: vertex coordinate read / conditional deletion
+  assets/utils/draw.py -> cut_plane: slices mesh by a plane
+  assets/utils/misc.py -> assign_material
+  assets/utils/object.py -> join_objects, separate_loose: mesh combine/split
+  core/surface.py -> shaderfunc_to_material, add_geomod, eval_argument, NoApply: shader/geometry-node application
+  core/nodes/node_wrangler.py, node_info.py -> node graph construction (Wave/Noise texture, SetPosition, MixRGB, PrincipledBSDF)
+  core/tagging.py -> tag_object: semantic labeling ("truncated_tree")
+  core/util/blender.py -> ViewportMode, apply_modifiers, apply_transform, deep_clone_obj: Blender mesh ops
+  core/util/math.py -> FixedSeed: deterministic per-seed sampling
+  core/util/random.py -> log_uniform, weighted_sample: random utilities
+  core/placement/factory.py (via base) -> AssetFactory base class

@@ -1,0 +1,44 @@
+SUMMARY: PillowFactory builds ONE soft throw pillow as a single mesh object. It creates a base shape (square/rectangle/circle/torus), solidifies it, runs a cloth simulation with internal pressure to inflate it into a plush pillow, optionally adds a central seam and an extruded rim, then assigns a fabric material. The other clothes files (blanket, pants, shirt) are sibling factories in the linked module tree and are not used by this pillow output. For the requested "small square throw pillow", force self.shape="square" and tune width down for the compact appearance.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/seating/pillow.py
+  PillowFactory.shapes: weighted shape selector (sampled randomly via rg)
+    knobs: square(weight 4), rectangle(weight 4), circle(weight 1), torus(weight 1) -> which pillow silhouette. For a guaranteed square throw pillow, set self.shape="square" in __init__ or make shapes only ("weighted_choice",(1,"square")).
+  PillowFactory.__init__: per-instance geometry/material sampling (mostly random)
+    knobs: self.width(uniform 0.4-0.7) -> overall pillow footprint; lower (~0.4) = compact/small
+    knobs: self.size(=width for square, else width*log_uniform(0.6,0.8)) -> aspect for non-square; square keeps size==width
+    knobs: self.bevel_width(uniform 0.02-0.05) -> declared but unused in create_asset (no effect)
+    knobs: self.thickness(log_uniform 0.006-0.008) -> flat pre-inflation shell thickness (SOLIDIFY)
+    knobs: self.extrude_thickness(thickness*log_uniform(1,8) with 50% prob, else 0) -> adds raised piped rim; 0 = plain edge
+    knobs: self.has_seam(uniform<0.3 and not torus) -> whether a pinned center seam dimple is created
+    knobs: self.seam_radius(uniform 0.01-0.02) -> size of central seam/pin region
+    knobs: self.surface(weighted_sample(material_assignments.fabrics)) -> fabric material (random); ArtFabric gets factory_seed
+  PillowFactory.create_asset: mesh build + cloth inflation
+    knobs: circle/torus base vertices(128 fixed) -> smoothness of round shapes
+    knobs: torus inner radius(uniform 0.2-0.4) -> hole size of torus pillow
+    knobs: torus bridge number_cuts(12) -> torus ring resolution
+    knobs: grid x/y_subdivisions(32) -> square/rectangle mesh resolution (higher = softer folds)
+    knobs: pressure(torus uniform 8-12; else uniform 1-2) -> puffiness/inflation amount; raise for fatter pillow
+    knobs: cloth_sim tension_stiffness(uniform 0-5) -> how tight/wrinkled the fabric inflates
+    knobs: cloth_sim gravity(0 fixed) -> no sag; increase for slumped look
+    knobs: subsurf level(2 fixed) -> final surface smoothing
+    knobs: select_faces normal[:,-1]<0.1 -> which side faces are simulated (side seam band)
+  PillowFactory.make_circle / make_gird: helper builders (currently unused by create_asset) — safe to ignore/repurpose
+  PillowFactory.finalize_assets: assigns self.surface material to the returned object(s)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/scatters/clothes.py -> cloth_sim(): wraps Blender cloth modifier w/ pressure & pinning to inflate the pillow
+  assets/composition/material_assignments.py -> fabrics / blanket / pants weighted material generator pools
+  assets/materials/art.py -> ArtFabric procedural fabric material (seeded)
+  assets/materials/fabric/*.py -> concrete fabric shaders (knit, leather, rug, sofa fabric)
+  assets/utils/object.py -> new_grid, new_base_circle, join_objects, center primitives/utilities
+  assets/utils/decorate.py -> read_normal, read_selected, select_faces, set_shade_smooth, subsurf mesh ops
+  assets/utils/uv.py -> unwrap_faces UV unwrapping
+  core/surface.py -> assign_material application
+  core/placement/factory.py -> AssetFactory base class / create_asset contract
+  core/util/random.py -> random_general(rg), weighted_sample, log_uniform samplers
+  core/util/blender.py -> ViewportMode, apply_transform, modify_mesh, Suppress helpers
+  core/nodes/*, core/tags.py, core/placement/detail.py -> node graph engine, tagging, LOD infra
+  assets/objects/clothes/{blanket,pants,shirt}.py -> sibling garment factories (not invoked by PillowFactory)
+  assets/objects/creatures/util/cloth_sim.py -> alternate creature-cloth baking utility (unused here)

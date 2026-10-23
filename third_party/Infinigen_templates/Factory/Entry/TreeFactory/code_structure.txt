@@ -1,0 +1,102 @@
+SUMMARY: This factory builds procedural trees (and bushes) via a space-colonization skeleton, skinned trunk, and instanced branch collections carrying twigs, leaves/flowers, and fruits. The upper-level files fit together as: generate.py orchestrates species/season selection and assembles trunk + twig/leaf/fruit collections; treeconfigs.py defines the skeleton/branch/twig growth genomes; tree.py implements the skeleton math and skinning; branch.py builds fruiting branch geometry; and the leaves/ and fruits/ factories supply the instanced leaf/flower/fruit assets. For the requested "cherry blossom with red apples", tune the flower path (spring season -> flower leaf_type), petal colors, and apple fruit color/scale.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/trees/generate.py
+  TreeFactory: top-level tree assembly; selects season, species, leaf & fruit types, trunk material.
+    knobs: n_leaf(5), n_twig(2) -> count/variety of leaf & twig instances per collection; fruit_chance(1.0) -> probability tree bears fruit; season(sampled from ["summer","winter","autumn","spring"], equal) -> for spring uses flowers instead of leaves (needed for cherry-blossom look)
+  TreeFactory.get_leaf_type: chooses leaf mesh species per season.
+    knobs: leaf_type choice p=[leaf_v2:0.0, leaf_broadleaf:0.70, leaf_ginko:0.15, leaf_maple:0.15]; flower_type choice p=[flower:1.0, berry:0.0, None:0.0]; spring returns [flower_type] else [leaf_type] -> set season="spring" to force blossoms
+  TreeFactory.get_fruit_type: chooses fruit species distribution.
+    knobs: fruit p=[apple:0.2, blackberry:0.0, coconutgreen:0.2, durian:0.2, starfruit:0.2, strawberry:0.0, compositional_fruit:0.2] -> raise apple weight to force apples
+  random_tree_child_factory: maps leaf_type strings to leaf/fruit/flower factories.
+    knobs: fruit_scale(0.2 fixed) -> overall fruit size on branches; TreeFlowerFactory rad=uniform(0.15,0.25) -> flower size
+  random_season: global season sampler.
+    knobs: default weights [autumn:0.25, summer:0.3, spring:0.4, winter:0.1] -> bias toward blossom season
+  random_species: picks tree config + optional pine.
+    knobs: pine_chance(0.0) -> chance of pine species
+  make_leaf_collection / make_twig_collection / make_branch_collection: assemble instance collections.
+    knobs: decimate_rate(leaves 0.97, fruit 0.0) -> mesh poly reduction; n(random_leaf_collection default 5); twig_valid_dist(6)
+  GenericTreeFactory: skeleton->mesh pipeline.
+    knobs: scale(0.35) -> global tree size in meters; adapt_mesh_method("remesh"), decimate_placeholder_levels(0) -> mesh resolution
+  BushFactory: shrub variant.
+    knobs: n_leaf(3), n_twig(3), max_distance(50); leaf_type p=[leaf_v2:0.5, flower:0.5, berry:0]
+
+FILE: assets/objects/trees/branch.py
+  BranchFactory.sample_branch_params: controls fruiting branch layout (random per branch).
+    knobs: main branch noise amount(uniform 0.2-0.4), noise scale(0.9-1.3) -> branch waviness; overall radius(0.015-0.025) -> branch thickness; twig density(5-15), twig rotation(30-60), twig scale(3-7), twig noise amount(0.2-0.4); leaf density(5-25), leaf scale(0.25-0.35), leaf rot(30-60); fruit scale(0.15-0.25), fruit rot(0.0), fruit density(clip(uniform(1,5)/avg_fruit_dim,0.01,50)) -> number of apples on branch
+  generate_branch: geometry-node graph for branch; fruit anchor trim_top(0.9), keep_probablity(0.3) -> fruit placement region/density
+
+FILE: assets/objects/trees/tree_flower.py
+  TreeFlowerFactory: cherry-blossom flowers.
+    knobs: rad=uniform(0.15,0.25) -> flower radius; diversity_fac(0.25) -> per-instance variation
+  shader_petal: petal material (needed for pink/white blossom color).
+    knobs: color_hsv=colors.tree_petal_hsv() (INFRA sampler) -> petal color; specular(normal 0.6,0.1), roughness(normal 0.4,0.05), translucent_amt(normal 0.3,0.05)
+  get_flower_params: petal geometry.
+    knobs: pct_inner(uniform 0.05-0.4), base_width, top_width, min/max petal angle(deg uniform -20..100), Seed Size(uniform 0.005-0.01), Wrinkle(uniform 0.003-0.02), Curl(deg normal 30,50)
+  shader_flower_center: yellow/orange flower center colorramp (fixed RGB stops)
+
+FILE: assets/objects/fruits/apple.py
+  FruitFactoryApple: apple asset (key for "ripe red apples").
+    knobs: sample_surface_params base_color HSV=(uniform(-0.05,0.1), 0.999, 0.799) -> hue near red/green; set hue ~0.0 and higher sat for ripe red; alt_color hue +normal(0.05,0.02); cross radius normal(1.5,0.05) -> apple width; shape radius_control_points -> apple profile; stem_color HSV(0.10,0.96,0.13); scale_multiplier(1.0)
+
+FILE: assets/objects/fruits/general_fruit.py
+  FruitFactoryGeneralFruit: base pipeline joining cross-section/shape/surface/stem; scale via normal(1,0.1)*scale*scale_multiplier
+  general_fruit_geometry_nodes: assembles fruit geonode graph (structural, rarely edited)
+
+FILE: assets/objects/fruits/{blackberry,coconutgreen,coconuthairy,durian,pineapple,starfruit,strawberry}.py
+  Each FruitFactory*: alternate fruit species with own color/shape/stem knobs (same pattern as apple); only used if selected in get_fruit_type
+
+FILE: assets/objects/fruits/compositional_fruit.py
+  FruitFactoryCompositional: mixes cross-section/shape/surface/stem from random fruit species (FixedSeed-sampled)
+
+FILE: assets/objects/leaves/leaf_broadleaf.py
+  LeafFactoryBroadleaf: default non-spring leaf.
+    knobs: season-based blade/vein HSV (autumn hue uniform 0-0.20 sat0.85; summer/spring hue 0.28-0.32); color_randomness(0.05-0.10); sample_geo_genome vein_density(3-8), jigsaw_scale(30-70), jigsaw_depth(0-0.6), midrib_length(0-0.8)
+  scale(0.5)
+
+FILE: assets/objects/leaves/leaf_maple.py
+  LeafFactoryMaple: maple leaf variant; season HSV same scheme; angle uniform(-15,15); scale(0.5)
+
+FILE: assets/objects/leaves/leaf_ginko.py
+  LeafFactoryGinko: ginko leaf; blade hue autumn 0.125-0.2 / summer 0.25-0.3; scale(0.3)
+
+FILE: assets/objects/leaves/leaf_v2.py
+  LeafFactoryV2: generic leaf w/ blight; blade color from colors.plant_* (green 0.8, yellow 0.1, red else); vein_color_mix_factor(0.2-0.6); blight_weight/dotted_blight_weight(binomial p=0.1); scale(0.5)
+
+FILE: assets/objects/leaves/leaf_pine.py
+  LeafFactoryPine: pine needle twig; needle length randint(25-35), x_angle_mean uniform(-40,-60); scale(0.7)
+
+FILE: assets/objects/leaves/leaf.py
+  LeafFactory: simple procedural leaf outline.
+    knobs: genome leaf_width(0.5), alpha(0.3), width_rand(0.33), use_wave, z_scaling; scale(0.3)
+
+FILE: assets/objects/trees/treeconfigs.py
+  random_tree / generate_tree_config: main tree skeleton genome (structural silhouette).
+    knobs: leaf_density (winter 0-0.1, spring 0.3-0.7, else 0.4-1.0), leaf_inst (winter1/spring2/else3) -> foliage density; twig_density (winter cfg-based, else 0.5+0.5*cfg); skinning Max radius(0.2)/Min radius(0.02)/Exponent -> trunk taper; calc_height min_ht(12) -> tree height
+  shrub / pine_tree / basic_tree etc.: alternate species presets (child_placement Density/scale, spacecol D/s/d params)
+  generate_twig_config: randomized twig branching genome
+  basic_stem: fruit/flower stem skeleton preset
+
+FILE: assets/objects/cloud/__init__.py, assets/objects/fruits/__init__.py, assets/objects/leaves/__init__.py, assets/objects/trees/__init__.py
+  Re-export factory classes; edit to expose/rename factories only.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/colors.py -> palette samplers (plant_green/yellow/red, tree_petal_hsv, hsv2rgba) used for leaf/flower colors
+  assets/composition/material_assignments.py -> material_assignments.bark set sampled for trunk surface
+  assets/materials/* -> shader/material node graphs (bark, plant, ceramic, etc.)
+  assets/utils/misc.py -> toggle_show/toggle_hide collection helpers
+  assets/utils/object.py -> data2mesh/mesh2obj mesh construction
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, utils.py -> geometry/shader node graph builders (Nodes, NodeWrangler, to_nodegroup)
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer nodegroups
+  core/surface.py -> add_geomod/add_material/shaderfunc_to_material application
+  core/placement/factory.py -> AssetFactory base + make_asset_collection
+  core/placement/detail.py -> target_face_size / adapt_mesh_resolution LOD control
+  core/placement/split_in_view.py -> camera-based mesh culling for tree meshing
+  core/placement/camera.py, core/util/camera.py -> camera utilities
+  core/tagging.py, core/tags.py -> tag_object/tag_nodegroup semantic tagging
+  core/util/blender.py -> Blender object/modifier/collection helpers
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed, dict_lerp deterministic sampling
+  core/util/random.py -> weighted_sample for material/species selection
+  core/util/logging.py -> Supp

@@ -1,0 +1,88 @@
+SUMMARY: FlyingBirdFactory procedurally generates a flying bird creature (adaptable toward a swan) by assembling parametric body parts (body, neck/head, beak, wings, tail, legs, feet, eyes) into a genome tree, joining/rigging them into one mesh, grooming feather-like hair, and applying creature materials. The editable upper-level files define the bird's proportions/part parameters (`flying_bird_genome`, `duck_genome`), hair grooming, material selection, and idle/run/flap animation drivers. To make a swan, tune the genome (longer S-curved neck, white body, black+orange beak), body_material selection, and hair length in `bird.py`.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/creatures/bird.py
+  bird_hair_params(flying): feather/hair grooming + shader params
+    knobs: length(flying:U(0.01,0.025)/nonflying:U(0.03,0.06))->feather length; puff(U(0.03,0.2))->fluffiness; density(70000 fixed)->feather count; clump_n(10 fixed)->guide-hair clumping; avoid_features_dist(0.02)->bald zone near eyes/beak; Combing(U(0.6,1))->smoothness; Strand Perlin Mag(U(0,0.003))->frizz; Tuft Clumping(U(0.5,1)); Root Radius(0.006); Hair Length Pct Min(U(0.5,0.9)); material Roughness(U(0,0.4)), Radial Roughness(U(0.1,0.3)), Random Roughness(U(0,0.2)), IOR(1.55) -> feather sheen
+  flying_bird_genome(mode): MAIN swan-relevant assembly — proportions & part attachment
+    knobs: body_lrr((0.95,0.13,0.18)*N(1,0.05))->body length/radii (raise for large swan); tail attach coord(U(0.08,0.15),1,0.5), tail rest rot(0,180*N(1,0.1),0)->tail angle; head attach coord(U(0.84,0.85),0,U(1.05,1.15)) & rest pitch(0,N(18,5),0)->neck/head placement (edit for long S-curved neck); beak attach coord(0.85,0,0.5); wing_len(body_length*clip_gaussian(1.0,0.2,0.6,1.5)*0.8), wing rad1(U(0.08,0.15)), Extension(U(0.8,1))->folded vs spread wings (lower Extension<0.5 folds wings, sets wing_rot to (90,40,90)); feather_density(U(25,40)); wing_coord(N(0.68,0.02),150/180*N(1,0.1),0.8); leg length(body_length*0.5*N(1,0.05)), leg rad(0.04,0.02), Thigh/Shin Rad Fullness; leg_coord(N(0.5,0.05),N(0.2,0.04),N(0.8,0.05)); leg attach rest yaw(0,U(135,175),0); foot params: length(body_length*0.2), Toe Length(body_length*N(0.4,0.02)), Toe Splay(8*N(1,0.2)), Claw Curl(12*N(1,0.2)); eye Radius(N(0.02,0.005)), eye placement t(U(0.7,0.85)), splay(U(80,110)/180), r(0.85). All values sampled per-call via numpy N/U.
+  duck_genome(mode): alternate (non-flying duck) assembly — used by BirdFactory, not FlyingBirdFactory
+    knobs: analogous body_lrr((0.85,0.25,0.38)), fatter body; tail rest(0,170,0); wing extension(flying:U(0.7,1)/else U(0.01,0.1)); foot/leg/eye params similar to above
+  apply_bird_materials(bird, obj): routes materials to mesh part groups
+    knobs: which part-name groups get body_material vs beak_material/eyeball/bone/tongue (Feather+BodyExtra+body->body_material; Beak->beak_material; Eyeball->eyeball_material; Teeth/Claws->bone_material)
+  FlyingBirdFactory: entry factory — spawns, animates, materials
+    knobs: max_expected_radius(1), max_distance(40); altitude(("uniform",15,30))->flight height; policy speed(U(7,15)), step_range(5,40), yaw_dist(("normal",0,15))->flight path; body_material = weighted_sample(material_assignments.bird) (RANDOM — swap/force for white swan plumage); tongue/bone/eyeball/beak materials fixed from creature_materials; animation_mode(None/"idle")->idle drivers (body_mag=0, foot_motion_chance=1, head_benddown=0)
+  BirdFactory: sibling factory for grounded duck-type bird
+    knobs: animation_mode(None/"run"/"idle"/"swim"); swim wiggle mag_deg(U(0,30)), freq(U(0.5,2)); idle wing_mag(U(0,0.3)); same material sampling
+
+FILE: assets/objects/creatures/parts/__init__.py
+  registers part factories imported by bird.py (beak, body, head, wings, leg, foot, eye, tail, generic_nurbs, etc). Edit which parts a genome pulls from here.
+
+FILE: assets/objects/creatures/util/animation/idle.py
+  idle_body_noise_drivers: procedural idle motion via keyframe-free noise drivers
+    knobs: foot_motion_chance(0.2 default,1.0 for flyer), head_benddown(1.0), body_mag(1.0), wing_mag(1.0); per-part freq/mag scalars (body 0.025/0.015, head 0.07/0.03/0.2, wingtip 0.1/0.2 freq U(0.6,4), tail 0.07); freq_scalar/mag_scalar N(1,0.15)
+  snap_iks_to_floor: raycasts feet/hips onto terrain bvh; minweight(0.7)
+
+FILE: assets/objects/creatures/util/animation/run_cycle.py
+  animate_run: gait via IK-target curve paths
+    knobs: stride_length(0.7*clip_gaussian(0.4,0.3,0.3,0.6)*dim), spread(clip_gaussian(0.15,0.1,0,0.5)), stride_height(U(0.15,0.4)), body_height, flap_height(U(0.3,1)), squash_gait_pct(0.1); foot_path/body_path spline shape
+  follow_path/follow_gait_path: bind targets to bezier/NURBS paths (used for flight path following)
+  animate_wiggle_bones / animate_running_front/back_leg: sinusoidal bone drivers (mag_deg, freq, wavelength)
+
+FILE: assets/objects/creatures/util/animation/driver_wiggle.py
+  animate_wiggle_bones: sinusoid rotation drivers on bone chains
+    knobs: mag_deg(sum across bones), freq(flaps/sec), off, wavelength; remove_iks(True)
+
+FILE: assets/objects/creatures/util/hair.py
+  configure_hair: converts particle guide-hairs to groomed curves + hair BSDF
+    knobs: consumes bird_hair_params (density/clump_n/grooming/material); nodegroup_hair_grooming defaults (Length/Puff MinMaxScale, Combing, Tuft params, Root Radius) overridable via grooming dict
+  as_hair_bsdf: wraps base material Base Color into Principled Hair BSDF (Roughness/IOR from material dict)
+
+FILE: assets/objects/creatures/util/genome.py
+  part()/attach()/Joint/Attachment/CreatureGenome: DSL for building the part tree
+    knobs: attach coord(u,v,rad), Joint.rest(deg)/bounds/stiffness/stretch, rotation_basis("global"/"normal"/"tangent"), side(±1) — used throughout genome functions
+  interp_genome/interp_part_tree: blend two genomes (t in [0,1])
+
+FILE: assets/objects/creatures/util/joining.py
+  join_and_rig_parts: merges parts, remeshes, rigs, applies materials
+    knobs: face_size, min_remesh_size(0.01), adapt_mode("remesh"), smooth_joins(True), remove_doubles thresholds, roll("GLOBAL_POS_Y")
+  compute_joining_effects: bevel/smooth bridges where attachment bridge_rad/smooth_rad>0
+  get_parts: name-filtered part selection used by material application
+
+FILE: assets/objects/creatures/util/creature.py
+  genome_to_creature: instantiates part factories, attaches, writes attributes, returns mesh tree
+  Part/PartFactory: base classes; raycast_surface/attach handle surface placement
+  write_local/global_attributes: tags + skeleton_rad/skeleton_loc attrs used by hair & materials
+
+FILE: assets/objects/creatures/util/creature_util.py
+  offset_center: centers/floors creature; polar_skeleton: builds curved skeletons from rads+eulers (useful for S-neck); euler/interp_dict helpers
+
+FILE: assets/objects/creatures/util/rigging.py
+  creature_rig/create_bones/create_ik_targets/constrain_bones/pose_bones: builds armature, IK targets, joint limits from genome Joints
+    knobs: shoulder_auto_stiffness(0.85), roll type, IKParams(chain_parts, rotation_weight, target_size, mode)
+  create_ragdoll: physics colliders (col_radius(0.07), mass(5), joint margins)
+
+FILE: assets/objects/creatures/util/join_smoothing.py
+  create_bevel_connection/smooth_around_line: geometry for smooth part junctions
+    knobs: bevel segments(9/5), offset_pct(98), smooth iters(30)/factor(0.9), simplify_thresh(1.5e-2)
+
+FILE: assets/objects/creatures/util/tree.py
+  Tree + map/fold/zip/iter utilities backing the genome data structure (structural, rarely edited)
+
+FILE: assets/objects/creatures/__init__.py
+  exports all creature factories including BirdFactory, FlyingBirdFactory (registration only)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material palettes (material_assignments.bird) sampled for plumage
+  assets/materials/creature/__init__.py -> creature_materials.tongue/bone/eyeball/beak/Beak shaders
+  assets/materials/* (ceramic/fabric/metal/plastic/wood/plant/terrain/...) -> shader libraries for material assignment
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> procedural wear overlays
+  assets/utils/geometry/lofting.py, curve.py, __init__.py -> skeleton→surface lofting used by part meshing
+  assets/utils/nodegroups/hair.py -> hair grooming geometry nodegroups (comb/clump/snap/noise)
+  assets/utils/object.py -> object utilities
+  core/placement/factory.py -> AssetFactory base class
+  core/placement/animation_policy.py -> AnimPolicyRandomForwardWalk + bezier flight path creation
+  core/placement/detail.py -> adaptive mesh resolution/remeshing
+  core/placement/path_finding.py -> path planning for flight
+  core/nodes

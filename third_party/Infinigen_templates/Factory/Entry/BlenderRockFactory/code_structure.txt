@@ -1,0 +1,29 @@
+SUMMARY: BlenderRockFactory wraps the Blender "extra_mesh_objects" add-on (add_mesh_rock) to procedurally generate a single rock mesh per create_asset() call. The upper-level file only sets up randomized rock-shape parameters, retries on the add-on's known sampling failures, applies modifiers, and tags the result. Note: this factory produces a generic rock and does NOT model the requested cave column / stalactite-stalagmite / flowstone / mineral banding — no such geometry or material logic exists here.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/rocks/blender_rock.py
+  BlenderRockFactory.__init__:
+    knobs: detail(default 1) -> mesh resolution / subdivision density of rock (higher = finer, slower)
+  BlenderRockFactory.create_asset: builds one rock via bpy.ops.mesh.add_mesh_rock, retry loop guards against add-on IndexError/RuntimeError (~1.111% sampling failure), then shade_flat + apply_modifiers + tag "blender_rock"
+    knobs:
+      seed(randint 0..99999) -> random rock variation per call
+      zscale(U(0.2,0.8)) -> overall vertical scale factor of rock
+      zrand(U(0,0.7)) -> randomness of lower Z-scale bound (scale_Z=(zrand*zscale, zscale)), flatter vs taller
+      scale_X(fixed (1.00,1.01)) -> near-uniform X extent (tweaking too far triggers add-on bug)
+      scale_Y(fixed (1.00,1.01)) -> near-uniform Y extent
+      scale_fac(fixed (1,1,1)) -> base scale multiplier
+      deform(U(2,10)) -> amount of surface deformation/lumpiness
+      rough(U(0.5,1.0)) -> surface roughness/detail noise (>1.0 causes self-intersection)
+      display_detail/detail(=self.detail) -> viewport & mesh detail level
+    note: no material, no color, no banding/flowstone/column geometry — would need new node/material code to satisfy the cave-column request
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/init.py -> require_blender_addon(): loads/verifies the "extra_mesh_objects" add-on providing add_mesh_rock
+  core/placement/factory.py -> AssetFactory base class + __repr__, seed management, create_asset contract
+  core/placement/detail.py -> detail/LOD scaling utilities
+  core/tagging.py, core/tags.py -> tag_object() semantic tagging of output mesh
+  core/util/blender.py -> butil.apply_modifiers and Blender helpers
+  core/surface.py, core/nodes/node_info.py, core/nodes/node_wrangler.py -> shader/geometry node graph infrastructure (unused here)
+  assets/utils/object.py -> object creation/manipulation helpers
+  core/util/math.py, core/util/organization.py, core/util/logging.py -> math, naming/constants, logging utilities
+  __init__.py, assets/__init__.py, core/__init__.py, core/placement/__init__.py, core/util/__init__.py -> package init/exports

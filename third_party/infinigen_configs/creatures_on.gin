@@ -1,0 +1,32 @@
+# Force creatures to actually spawn.
+#
+# The official biome configs roll most creatures off by default:
+#   under_water.gin  fish_school_chance = 0.3   (70% of seeds have no fish)
+#                    ground_creatures_chance = 0.4
+#                    jellyfish_chance = 0.0     (disabled outright)
+# while corals/kelp/seaweed sit at 0.8-1.0. So a plain rerun is a coin flip
+# on whether any creature appears at all.
+#
+# This file only touches spawn probabilities -- no RRT / camera / render
+# settings -- so it is safe to append to any biome for a survey run.
+compose_nature.fish_school_chance = 1.0
+compose_nature.ground_creatures_chance = 1.0
+compose_nature.creatures_chance = 1.0
+# Jellyfish: every official underwater config ships jellyfish_chance = 0.0
+# (base_nature.gin:66, under_water.gin:27, coral_reef.gin:9, kelp_forest.gin:18
+# -- the factory is disabled everywhere in the repo) because
+# JellyfishFactory could not be saved: jellyfish.py cloned an object that
+# already had shapekeys, orphaning the copies, and saving then raised
+#     RuntimeError: Shapekey KEKey.001 has an invalid 'from' pointer
+# which aborted the save before MaskTag.json was written, killing populate.
+#
+# We fixed that in jellyfish.py (build the temp mesh with
+# bpy.data.meshes.new_from_object instead of deep_clone_obj, so the shapekey
+# block is never copied). Verified: 1 jellyfish now yields 1 shapekey and
+# 0 orphans, and save_as_mainfile succeeds.
+#
+# So we can re-enable an asset the official pipeline had to switch off.
+compose_nature.jellyfish_chance = 0.6
+
+# land biomes
+compose_nature.flying_creatures_chance = 1.0

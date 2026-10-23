@@ -1,0 +1,62 @@
+SUMMARY: DeformedTreeFactory generates exactly one dead/deformed tree per create_asset() call by randomly picking one of four sub-factory variants (fallen, rotten, truncated, hollow), each of which deforms a base procedural tree (bark, no leaves) into a distinct broken/decayed snag. The base module builds the underlying tree, assigns a bark material, and defines the concentric wood-ring shader used for exposed inner wood; each variant module carves/cuts/hollows the trunk via geometry nodes and boolean/cut operations. For a "desert snag" look, tune the base hue/shader toward bleached grey and pick the truncated or hollow variant.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/deformed_trees/generate.py
+  DeformedTreeFactory: dispatches to one variant sub-factory (single object output)
+    knobs: maker_factories([Fallen,Rotten,Truncated,Hollow]) -> which deformation styles are possible; weights([1,1,1,1]) -> per-variant selection probability (raise Truncated/Hollow weight for snag-like results); maker_factory(np.random.choice, seeded) -> variant chosen randomly per factory_seed
+
+FILE: assets/objects/deformed_trees/base.py
+  BaseDeformedTreeFactory.__init__: builds base tree + materials shared by all variants
+    knobs: skinning Scaling(0.2 fixed) -> trunk thickness/skin scale; trunk_surface(weighted_sample of material_assignments.bark, random) -> outer bark look (bleached vs brown); base_hue(uniform 0.02-0.08, random) -> overall wood/bark warmth (lower/desaturate for grey desert bleaching)
+  BaseDeformedTreeFactory.shader_rings: concentric growth-ring shader for exposed inner wood
+    knobs: WaveTexture Scale(uniform 10-20) -> ring density; Distortion(uniform 4-10) -> ring waviness/cracks; bright_color=hsv2rgba(base_hue, sat 0.4-0.8, val log 0.2-0.8, random) -> light ring color; dark_color=hsv(base_hue±0.02, sat 0.4-0.8, val log 0.02-0.05, random) -> dark ring color; wave_type RINGS/direction Z/profile SAW(fixed) -> ring pattern shape
+  BaseDeformedTreeFactory.build_tree: spawns base GenericTreeFactory asset (no leaves via NoApply)
+  BaseDeformedTreeFactory.geo_xyz: stores x/y/z position attributes for ring shader (structural; don't change)
+
+FILE: assets/objects/deformed_trees/fallen.py
+  FallenTreeFactory.create_asset: splits trunk into upper+lower, tips upper over (fallen snag)
+    knobs: cut_center z(uniform 0.6-1.2, random) -> break height; cut_normal([uniform 0.1-0.2,0,1]) -> break tilt; noise_strength(uniform 0.3-0.5) -> break jaggedness; noise_scale(uniform 10-15) -> break detail frequency; highest offsets(uniform 0.05-0.15) -> gap/overlap between fallen halves; upper rotation arcsin term(uniform 0-0.2) -> lean angle of fallen top; remove z<-0.5 -> ground clipping
+  FallenTreeFactory.geo_cutter: displaces cut face to form torn break profile
+    knobs: Clamp(0.3,0.7) -> noise displacement clamp; radius falloff curve -> break spread; anchors metric curve((-1,0)...(1,0)) -> break profile shape
+  FallenTreeFactory.build_half: performs plane cut, hole fill, material assign on inner wood (structural helper)
+
+FILE: assets/objects/deformed_trees/truncated.py
+  TruncatedTreeFactory.create_asset: single standing broken-off trunk (best for desert snag)
+    knobs: cut_center z(uniform 0.8-1.5, random) -> stump/break height; cut_normal([uniform -0.4-0.4,0,1]) -> break plane tilt; noise_strength(uniform 0.6-1.0) -> break roughness; noise_scale(uniform 10-15) -> break detail frequency
+  TruncatedTreeFactory.geo_cutter: raised/torn central break profile (anchors peak at 0)
+
+FILE: assets/objects/deformed_trees/rotten.py
+  RottenTreeFactory.create_asset: boolean-carves a decayed hollow/cavity in trunk
+    knobs: height(uniform 0.8-1.6) -> cavity vertical position; bridge_edge_loops number_cuts(10) -> inner-wall smoothness; noise_strength(cutter.scale.z * uniform 0.5-0.8) -> cavity edge roughness; noise_scale(uniform 10-15) -> cavity detail
+  RottenTreeFactory.build_cutter: icosphere cavity cutter shape/placement
+    knobs: subdivisions(6) -> cutter resolution; angle(uniform -pi-0, random) -> cavity direction; depth(radius*uniform 0.4-0.9) -> cavity offset from center; cutter_scale x,y(radius*uniform 0.8-1.2), z(log_uniform 1.0-1.2) -> cavity size/shape
+  RottenTreeFactory.geo_cutter: displaces rot boundary, normal-signed offset (jagged rot edges)
+    knobs: anchors((0,1),(1.02,1),(1.05,0),(2,0)) -> rot falloff sharpness
+
+FILE: assets/objects/deformed_trees/hollow.py
+  HollowTreeFactory.create_asset: creates open standing hollow trunk with cracks/holes
+    knobs: scale(uniform 0.8-1.0) -> hollow-hole noise frequency; threshold(uniform 0.36-0.4) -> hole density (lower=more/larger holes/cracks); z_lower(0.1 + noise*0.4) -> bottom cutoff; z_upper(3.5 - noise*0.4) -> top opening height; bridge_edge_loops number_cuts(10) -> wall thickness smoothing
+  HollowTreeFactory.geo_texture: musgrave displacement of inner wall (bark texture on hollow)
+    knobs: musgrave scale(uniform 10-20) -> wall texture frequency; displacement(-uniform 0.03-0.06) -> wall carving depth
+  HollowTreeFactory.filter_lower: keeps largest lower trunk piece (structural)
+
+FILE: assets/objects/deformed_trees/__init__.py
+  module exports of all five factory classes (no tunables)
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> read/write vertex coords & material indices, remove_vertices helpers
+  assets/utils/draw.py -> cut_plane geometry cutting operation
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/nodegroup.py -> geo_selection geometry-node selection modifier
+  assets/utils/object.py -> join_objects, separate_loose, new_icosphere object ops
+  core/nodes/node_info.py -> Nodes enum (node type identifiers)
+  core/nodes/node_wrangler.py -> NodeWrangler geometry/shader node graph builder API
+  core/placement/factory.py -> AssetFactory base class + spawn_asset lifecycle
+  core/placement/detail.py -> level-of-detail / face_size handling
+  core/surface.py -> shaderfunc_to_material, add_geomod, eval_argument, NoApply
+  core/tagging.py -> tag_object semantic tagging
+  core/util/blender.py -> ViewportMode, apply_modifiers, deep_clone_obj, split_object, transform utils
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform, weighted_sample random samplers
+  assets/objects/trees/generate.py (via base) -> GenericTreeFactory, random_species base tree generation

@@ -1,0 +1,60 @@
+SUMMARY: This factory builds a single spiral observation staircase: a central steel column with triangular treads winding upward around it, continuous curved handrails, posts/bars forming an open cage, and a top platform. SpiralStaircaseFactory subclasses CurvedStaircaseFactory (which subclasses StraightStaircaseFactory), overriding size configuration to force a compact spiral radius, adding the central column, and coiling all generated straight geometry into a helix via make_spiral. The base StraightStaircaseFactory holds nearly all tunable geometry/material logic; spiral/curved only re-parametrize a subset.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/elements/staircases/spiral.py
+  SpiralStaircaseFactory: the entry factory; produces one spiral tower with central column.
+    knobs: support_types("column", fixed) -> forces central column instead of side/rail supports; column_radius(self.radius - self.step_width + uniform(0.05,0.08), sampled) -> thickness of central steel column; has_column(True, fixed) -> enables column assembly; handrail_alphas([1 - handrail_offset/step_width], derived) -> single handrail placed at outer edge of treads.
+  build_size_config: samples spiral geometry until compact tower forms.
+    knobs: full_angle(randint(1,5)*pi/2, sampled) -> total rotation/turns of the spiral; n(randint(13,21), sampled) -> number of steps/treads; step_height(wall_height/n, derived) -> vertical spacing per tread; step_length(step_height*log_uniform(1,1.2), sampled) -> tangential tread depth; radius(step_length/theta, derived, gated 0.9<radius<1.5) -> spiral column-to-edge radius; step_width(radius*uniform(0.9,0.95), sampled) -> radial tread length.
+  make_column: geo_radius(column_radius, 16 verts) -> column geometry; height = step_height*n + post_height.
+  unmake_spiral: margin(0.1, fixed) -> half-selection cut when unrolling for guardrail generation.
+
+FILE: assets/objects/elements/staircases/curved.py
+  CurvedStaircaseFactory: parent providing spiral coil/uncoil math (make_spiral/unmake_spiral).
+    knobs: support_types(weighted: single-rail 2, double-rail 2, side 4, solid 4, hole 4) -> overridden to "column" in spiral; handrail_types(weighted: horizontal-post 2, vertical-post 2) -> cage rail style (no glass); has_spiral(True, fixed) -> enables coiling.
+  build_size_config: curved variant (overridden by spiral); step_length log_uniform(1,1.5), step_width log_uniform(0.9,1.5), radius/step_width>1.5 gate.
+  upper: pi/2 + full_angle -> door-clearance angle span.
+
+FILE: assets/objects/elements/staircases/straight.py
+  StraightStaircaseFactory: base class; all geometry builders and material assignment.
+    knobs (sampled unless noted):
+      support_types / handrail_types(weighted_choice) -> support and rail archetype (overridden by spiral).
+      hole_size(log_uniform(0.6,1.0)) -> stair opening for "hole" support.
+      rail_offset(step_width*uniform(0.15,0.3)); is_rail_circular(<0.5); rail_width(log_uniform(0.08,0.2)); rail_height(log_uniform(0.08,0.12)) -> rail profile.
+      has_tread(0.75 prob); tread_height(0.01-0.02 stepped, 0.06-0.08 else); tread_length(step_length+0.01-0.02); tread_width(step_width+0.01-0.02 @0.8 prob) -> triangular tread slabs.
+      side_type(zig-zag/straight); side_height(step_height*log_uniform(0.2,0.8)); side_thickness(uniform(0.03,0.08)) -> stringer sides (unused in spiral).
+      handrail_type; is_handrail_circular(<0.7); handrail_width(log_uniform(0.02,0.06)); handrail_height(log_uniform(0.02,0.06)); handrail_offset(width*log_uniform(1,2)); handrail_extension(uniform(0.1,0.2)) -> continuous rail geometry/overhang.
+      post_height(log_uniform(0.8,1.2)); post_k(ceil(step_width/step_length)); post_width(handrail_width*log_uniform(0.6,0.8)); post_minor_width(post_width*log_uniform(0.3,0.5)); is_post_circular(<0.5) -> lattice cage posts.
+      bar_size(log_uniform(0.1,0.2)); n_bars(floor(post_height/bar_size*uniform(0.35,0.75))) -> horizontal cage bars.
+      glass_height(post_height-uniform(0,0.05)); glass_margin(step_height/2+uniform(0,0.05)) -> glass panels (disabled for spiral).
+      mirror(<0.5); rot_z(randint(4)*pi/2); end_margin(step_length*8) -> overall orientation/placeholder extent.
+    build_size_config(base): n(randint(13,21)); step_width(uniform(0.8,1.6)); step_length(step_height*log_uniform(0.8,1.2)).
+    triangulate: SUBSURF levels(1, fixed) -> mesh density.
+    make_steps/make_rails/make_treads/make_sides/make_column/make_handrails/make_posts/make_bars/make_glasses -> component builders (called per has_* flags).
+    finalize_assets: assigns material_assignments.{step,tread,rail,side,handrail,post,glasses} per face tag -> all surface materials (edit material_assignments to change colors/finishes).
+    lower/upper/valid_contour: door-clearance angles for placement.
+
+FILE: assets/objects/elements/staircases/__init__.py
+  random_staircase_factory: picks a staircase type.
+    knobs: door_probs([2,2,2,0.5,2,2]) -> relative selection probability (spiral = 0.5, index 3).
+
+FILE: assets/objects/elements/__init__.py
+  Re-export hub; no tunables.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> read/write vertex coords & attributes, mirror, remove verts/faces, subsurf.
+  assets/utils/nodegroup.py -> geo_radius geometry-node group (sweeps line into round bars/columns).
+  assets/utils/object.py -> primitive builders (new_line, new_cube, new_circle), join/separate/mesh2obj helpers.
+  assets/utils/mesh.py -> canonicalize_ls, convert2ls line-string mesh conversions.
+  assets/utils/shapes.py -> cut_polygon_by_line for vertical step cutting.
+  assets/composition/material_assignments.py -> material palettes for step/tread/rail/side/handrail/post/glasses.
+  core/surface.py -> add_geomod, assign_material, attribute read/write.
+  core/nodes/* -> Nodes, NodeWrangler node-graph construction (geo_extrude).
+  core/tags.py -> Subpart tags (Wall, Ceiling, Visible, SupportSurface) for room integration.
+  core/constraints/constraint_language/constants.py -> RoomConstants (wall_height, wall_thickness, door_size defaults).
+  core/placement/factory.py -> AssetFactory base class (create_asset/placeholder/cutter interface).
+  core/placement/detail.py -> sharp_remesh_with_attrs for wall remeshing.
+  core/util/blender.py -> modify_mesh, transforms, ViewportMode, deep_clone, delete utilities.
+  core/util/math.py -> FixedSeed, normalize.
+  core/util/random.py -> log_uniform, weighted_sample, random_general (rg) samplers.

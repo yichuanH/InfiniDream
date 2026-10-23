@@ -1,0 +1,39 @@
+SUMMARY: BowlFactory procedurally generates a single revolved (spun) bowl mesh — one coherent tableware object per create_asset() call. It builds a 2D profile of anchor points, spins it into a surface of revolution, solidifies it with an optional distinct inside surface, then bevels, subdivides, and smooth-shades it. The base TablewareFactory handles material assignment (surface, inside, optional wood guard) plus scratch/edge-wear weathering.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tableware/bowl.py
+  BowlFactory.__init__: profile shape, size, thickness, and material flags (all sampled with FixedSeed for repeatability)
+    knobs: allow_transparent(True) -> permits transparent glass-like materials; x_end(0.5 fixed) -> outer rim radius reference; z_length(log_uniform 0.4-0.8) -> bowl height/depth; z_bottom(log_uniform 0.02-0.05) -> base thickness/foot height; x_bottom(uniform 0.2-0.3 * x_end) -> base disc radius; x_mid(uniform 0.8-0.95 * x_end) -> mid-wall bulge radius (flare vs straight); has_guard(False) -> disables wood-rim guard; has_inside(uniform<0.5) -> ~50% chance of separate inside material; scale(log_uniform 0.15-0.4) -> overall bowl size; thickness(uniform 0.01-0.03 * scale) -> wall thickness; edge_wear(None) -> forces no edge-wear weathering
+  BowlFactory.create_placeholder: bounding box for placement
+    knobs: radius(=x_end*scale) and height(=z_length*scale) -> collision/placement bbox
+  BowlFactory.create_asset: mesh construction
+    knobs: x_anchors/z_anchors tuples -> profile control points defining wall curve (edit to reshape); spin(anchors,[2,3]) -> which anchors get smoothing during revolution; BEVEL width(thickness/2) & segments(randint 2-5) -> rim edge rounding; subsurf(obj,1) -> smoothing subdivision level
+
+FILE: assets/objects/tableware/base.py
+  TablewareFactory.__init__: material and weathering setup (sampled with FixedSeed)
+    knobs: thickness(0.01, overridden by bowl) -> default wall; surface material (weighted_sample material_assignments.cup) -> outer look; inside_surface (weighted_sample cup) -> inner look; guard_surface (weighted_sample woods) -> wood guard look; scratch_prob/edge_wear_prob (material_assignments.wear_tear_prob) -> chance of weathering; lower_thresh(uniform 0.5-0.8) -> z fraction below which inside is "lower_inside"; scale(1.0) -> default; metal_color("bw+natural") -> metal palette
+  TablewareFactory.add_guard: extrudes a raised rim guard when has_guard (unused for bowl)
+    knobs: guard_depth(=thickness) -> guard extrusion depth
+  TablewareFactory.finalize_assets: applies surface, inside, guard materials + scratch/edge_wear
+  TablewareFactory.solidify_with_inside: gives mesh thickness and tags inside/lower_inside faces
+    knobs: thickness (passed in) -> shell thickness; lower_thresh -> inside-material extent
+
+FILE: assets/objects/tableware/__init__.py
+  Module exports: registers all tableware factories (BowlFactory etc.); edit to expose/rename factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material palettes (cup, woods) and wear_tear probabilities/generators
+  assets/utils/draw.py -> spin() surface-of-revolution builder from profile anchors
+  assets/utils/decorate.py -> set_shade_smooth, subsurf, read_co, write_attribute helpers
+  assets/utils/object.py -> new_bbox placeholder box creator
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/mesh.py -> mesh utility support
+  core/surface.py -> add_geomod, assign_material, eval_argument for geometry-node materials/attrs
+  core/nodes/node_wrangler.py, core/nodes/node_info.py -> geometry-node graph construction (ExtrudeMesh, StoreNamedAttribute, etc.)
+  core/placement/factory.py -> AssetFactory base class (create_asset/placeholder lifecycle)
+  core/placement/detail.py -> level-of-detail/subdivision integration
+  core/util/blender.py -> modify_mesh (SOLIDIFY, BEVEL) and Blender ops wrappers
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> weighted_sample, log_uniform samplers
+  core/util/logging.py, core/util/__init__.py, __init__ files -> package/logging infrastructure

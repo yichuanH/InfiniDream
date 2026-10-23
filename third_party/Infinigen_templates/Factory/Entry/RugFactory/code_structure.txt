@@ -1,0 +1,26 @@
+SUMMARY: RugFactory builds a single flat floor rug as one thin extruded mesh. The upper-level rug.py samples the rug's shape, dimensions, thickness, and surface material at init time, then constructs the 2D outline, applies a fabric/art material via UV wrapping, and solidifies it into a low-profile slab. Only rug.py is editable; all shape utilities, materials, and the factory base are linked to infinigen.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/elements/rug.py
+  RugFactory.__init__: samples rug dimensions, shape, and material (all random per factory_seed via FixedSeed).
+    knobs: width(clip_gaussian(3,1,2,6)) -> rug width; length(width*uniform(1,1.5)) -> rug length/aspect; rug_shape(random choice ["rectangle","circle","rounded","ellipse"]) -> outline type (circle forces length=width); rounded_buffer(width*uniform(0.1,0.5)) -> bevel radius for "rounded" corners; thickness(uniform(0.01,0.02)) -> pile/slab height (keep small for "thin, low pile"); surface(weighted_sample(material_assignments.rug_fabric)) -> fabric/ArtRug material texture
+  RugFactory.build_shape: constructs the 2D outline per rug_shape.
+    knobs: circle vertices(128, fixed) -> smoothness of circle/ellipse outline; BEVEL segments(16, fixed) -> corner rounding smoothness for "rounded"; scale(length/2, width/2, 1) -> plane extent
+  RugFactory.create_placeholder: axis-aligned bbox from length/width/thickness (fixed formula, no knobs).
+  RugFactory.create_asset: wraps material and extrudes.
+    knobs: wrap_sides axes("z","x","y", fixed) -> UV projection orientation; SOLIDIFY thickness(self.thickness) and offset(1, fixed, one-sided upward) -> raises geometry above floor plane
+
+Note for this contract: single rug is produced per call already; to strictly satisfy "thin rectangular, low pile, no raised edges/fringe" force rug_shape="rectangle" and clamp thickness low.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class and per-instance seeding
+  assets/composition/material_assignments.py -> rug_fabric material pool and weights
+  assets/materials/art.py -> ArtRug procedural rug pattern material
+  assets/materials/fabric/rug.py -> fabric rug shader/texture
+  assets/utils/object.py -> new_plane, new_base_circle, new_bbox mesh primitives
+  assets/utils/uv.py -> wrap_sides UV projection of material onto mesh
+  core/util/blender.py -> modify_mesh (BEVEL/SOLIDIFY), apply_transform, ViewportMode
+  core/util/math.py -> clip_gaussian clamped sampling
+  core/util/random.py -> weighted_sample material selection, FixedSeed seeding
+  assets/materials/* -> fabric/wood/metal/etc. shader library backing material pool
+  core/placement/detail.py, core/surface.py, core/nodes/* -> shading/detail pipeline support

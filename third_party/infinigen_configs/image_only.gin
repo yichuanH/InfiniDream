@@ -1,0 +1,15 @@
+# Render the final beauty pass ONLY -- no ground-truth channels.
+#
+# By default base.gin makes full/render_image save ~16 extra passes
+# (DiffCol, DiffDir, DiffInd, GlossCol, GlossDir, GlossInd, TransCol,
+# TransDir, TransInd, Emit, Env, AO, VolumeDir, Materials,
+# MaterialSegmentation, ...). For the forest run those cost 1.4G on top of
+# 1.1G of actual images.
+#
+# Emptying passes_to_save is an officially supported usage -- upstream's own
+# asset_demo.gin does exactly this.
+#
+# NOTE: this only controls the passes written by the render task. The separate
+# "blendergt" ground-truth task comes from the --pipeline_configs blender_gt
+# flag; drop that flag from the command line to skip that task entirely.
+full/render_image.passes_to_save = []

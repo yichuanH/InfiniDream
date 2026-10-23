@@ -1,0 +1,52 @@
+SUMMARY: RackFactory builds a single multi-level warehouse storage rack: four vertical perforated steel stands, diagonal cross-supports between them, horizontal beam frames per level, and wooden pallets placed on each shelf. The upper-level files are the rack generator, its helper PalletFactory (used to populate shelves), and the package __init__ files that export these factories. All geometry is procedurally generated from randomly sampled dimensions; materials are assigned from infinigen's metal/wood libraries. (Note: the source-object description is a highway gantry, but this factory produces a warehouse rack.)
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/elements/warehouses/rack.py
+  RackFactory.__init__: samples overall rack dimensions, structure counts, materials (all under FixedSeed).
+    knobs: depth(uniform 1–1.2) -> rack front-to-back depth; width(uniform 4.0–5.0) -> shelf span length; height(uniform 1.6–1.8) -> per-level vertical spacing; steps(randint 3–6) -> number of shelf levels; thickness(uniform 0.06–0.08) -> steel bar/stand thickness; hole_radius(thickness/2 * uniform 0.5–0.6) -> perforation hole size in stands; support_angle(uniform π/6–π/4) -> diagonal brace slant; is_support_round(uniform<0.5 bool) -> round vs flat cross-supports; frame_height(thickness * uniform 3–4) -> horizontal beam height; frame_count(randint 20–30) -> number of transverse cross-bars per level; stand/support/frame_surface(weighted_sample from material_assignments.metals) -> metal material of rack; margin_range(fixed 0.3, 0.5) -> pallet inset from shelf ends.
+  RackFactory.create_placeholder: builds bbox + one plane per level tagged as SupportSurface for object placement.
+    knobs: derived from depth/width/height/steps/thickness (no independent constants).
+  RackFactory.create_asset: assembles stands+supports+frames, clips height, places 2 pallets per level, rotates 90° about Z.
+    knobs: pallets count(steps*2, fixed 2 per level) -> pallets per shelf; pallet x/y placement(margin uniform sampled, i%2 alternates left/right) -> pallet positions; final rotation_euler[-1](π/2, fixed).
+  RackFactory.make_stands: perforated vertical posts via cube+cylinder boolean, arrayed vertically, cloned to 4 corners.
+    knobs: cylinder scale(hole_radius, thickness*2) -> hole geometry; array count(ceil(height/thickness*steps)) -> stand segment repetition; corner offsets((0,1),(1,1),(1,0)) -> 4-post layout.
+  RackFactory.make_supports: diagonal zig-zag braces via new_line, round(geo_radius r=thickness/2, 16 segs) or solidified(width 1, thickness).
+    knobs: n(floor of height*steps/depth/tan(support_angle)) -> number of brace segments; radius/thickness from thickness.
+  RackFactory.make_frames: x-bars along width (front+back) and arrayed y-bars across depth per level.
+    knobs: x_bar scale(width, thickness, frame_height); y_bar scale(thickness, depth, thickness); array count(frame_count-1), spacing(margin=width/frame_count); levels(steps-1 clones).
+  RackFactory.finalize_assets: assigns stand/support/frame metal materials (commented per-tag apply variant available).
+
+FILE: assets/objects/elements/warehouses/pallet.py
+  PalletFactory.__init__: samples wooden pallet dimensions and wood material.
+    knobs: depth(uniform 1.2–1.4); width(uniform 1.2–1.4); thickness(uniform 0.01–0.015) -> plank thickness; tile_width(uniform 0.06–0.1) -> plank/board width; tile_slackness(uniform 1.5–2) -> spacing between boards (higher=fewer boards); height(uniform 0.2–0.25) -> pallet total height; surface(wood.Wood()) -> wood material.
+  PalletFactory.create_placeholder: bbox tagged SupportSurface on top faces.
+  PalletFactory.create_asset: stacks two horizontal + two vertical plank layers over support blocks.
+    knobs: layer vertical offsets derived from thickness/height.
+  PalletFactory.make_vertical / make_horizontal: arrays of top/bottom deck boards; count from width/depth/tile_width/tile_slackness.
+  PalletFactory.make_support: 3x3 grid of support blocks; scale from tile_width, height; grid count(3x3 fixed).
+  PalletFactory.finalize_assets: assigns wood material to each pallet.
+
+FILE: assets/objects/elements/warehouses/__init__.py
+  exports PalletFactory, RackFactory.
+
+FILE: assets/objects/elements/__init__.py
+  package-level re-export of warehouse (and other element) factories; edit to expose/rename factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides metals material pool (weighted_sample source).
+  assets/materials/metal/__init__.py -> metal shader materials for stands/supports/frames.
+  assets/materials/wood/wood.py, wood/__init__.py -> Wood material for pallets.
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> optional surface wear shaders.
+  assets/utils/decorate.py -> read_co/write_co, remove_faces, solidify, write_attribute, read_normal helpers.
+  assets/utils/nodegroup.py -> geo_radius node group (round-profile supports).
+  assets/utils/object.py -> join_objects, new_cube/plane/line/bbox/base_cylinder primitives.
+  core/placement/factory.py -> AssetFactory base class (create_asset/create_placeholder interface).
+  core/placement/detail.py -> level-of-detail / mesh processing.
+  core/surface.py -> assign_material, add_geomod, write_attr_data.
+  core/tagging.py, core/tags.py -> PREFIX and Subpart.SupportSurface tagging system.
+  core/nodes/* -> node graph construction (node_wrangler, node_info, utils).
+  core/util/blender.py -> butil transforms, modifiers (ARRAY/BOOLEAN), deep_clone_obj, delete.
+  core/util/math.py -> FixedSeed deterministic sampling context.
+  core/util/random.py -> weighted_sample material selection.
+  core/util/logging.py -> logging utilities.

@@ -1,0 +1,32 @@
+SUMMARY: FoodBagFactory builds a single crumpled food/snack bag (either a wide "packet" like a chip bag, or a narrower sachet), created from a scaled cylinder that is pinched along its profile, given extruded top/bottom seals, UV-wrapped with a random graphic-design packaging material, subdivided, and finally distorted with a noise-based extension to give the crumpled look. Each create_asset() call yields exactly one bag object with resampled proportions and packaging graphics.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/objects/tableware/food_bag.py
+  FoodBagFactory.__init__: samples all shape/material parameters (under FixedSeed)
+    knobs: length(uniform 0.1-0.3) -> overall bag height/size; is_packet(uniform()<0.6 prob) -> chooses wide chip-bag vs narrow sachet form
+    knobs (packet branch): width(length*log_uniform 0.6-1.0) -> bag width; depth(width*uniform 0.5-0.8) -> bag thickness; curve_profile(uniform 2-4) -> how sharply the body pinches toward seals (lower=rounder)
+    knobs (non-packet branch): width(length*log_uniform 0.2-0.4) -> narrower body; depth(width*uniform 0.6-1.0) -> thickness; curve_profile(uniform 4-8) -> sharper taper
+    knobs: extrude_length(uniform 0.05-0.1) -> length of top/bottom crimped seal flaps
+    knobs: surface(weighted_sample(material_assignments.graphicdesign)) -> packaging material/graphics; Text special-cased with factory_seed
+    knobs: texture_shared(uniform()<0.2 prob) -> whether front/back faces share the same graphic
+  FoodBagFactory.create_asset: assembly pipeline
+    knobs: subsurf(obj, 2) -> smoothing level; geo_extension musgrave_dimensions="2D" -> crumple/wrinkle noise distortion (fixed)
+  FoodBagFactory.make_base: builds pinched cylinder body
+    knobs: subdivide_edge_ring(obj, 64) -> ring resolution/smoothness; ratio exponent uses curve_profile; WELD merge_threshold(1e-3) -> vertex merge tolerance
+  FoodBagFactory.add_seal: extrudes seal edges at ±length/2 by extrude_length*length
+  FoodBagFactory.build_uv: rotates non-packet bags 90° before/after wrap_front_back UV mapping
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> provides graphicdesign material pool for packaging surfaces
+  assets/materials/text.py -> Text graphic material requiring a seed
+  assets/materials/plastic/__init__.py, metal/, ceramic/, fabric/, etc. -> material shader libraries
+  assets/utils/decorate.py -> geo_extension, read_co/write_co, subdivide_edge_ring, subsurf mesh ops
+  assets/utils/object.py -> new_base_cylinder base primitive
+  assets/utils/uv.py -> wrap_front_back UV projection onto front/back faces
+  core/surface.py -> add_geomod geometry-node modifier application
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle
+  core/util/blender.py -> ViewportMode, modify_mesh, apply_transform helpers
+  core/util/math.py -> FixedSeed deterministic sampling
+  core/util/random.py -> log_uniform, weighted_sample samplers
+  core/nodes/* , core/tags.py, core/placement/detail.py -> node graph / tagging / detail infra
+  assets/materials/wear_tear/* , art.py, lamp_shaders.py -> auxiliary shader/wear utilities

@@ -1,0 +1,43 @@
+SUMMARY: This factory builds a single side table / desk consisting of a rectangular top with four cylindrical hairpin-style legs, generated via geometry nodes. The upper-level file defines the node groups (table top, table legs), the geometry assembly, and factory classes that sample dimensions and materials. `SidetableDeskFactory` produces a compact near-square side table; `SimpleDeskFactory` produces a wider desk. NOTE: the current implementation emits ONE table per create_asset() call, not three nesting tables — realizing the "three nesting side tables" contract would require adding a loop/stacking assembly.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/shelves/simple_desk.py
+  nodegroup_table_legs(nw): builds 4 cylindrical legs positioned at table corners.
+    knobs: Vertices(128, fixed) -> leg cylinder smoothness; radius(input) -> leg thickness; dist(input) -> inset of legs from edges; height/thickness(inputs) -> leg length; 4-corner layout fixed (mirror by ±X, ±Y).
+  nodegroup_table_top(nw, tag_support=True): builds tabletop cube at given height.
+    knobs: tag_support(True) -> whether top surface is tagged as SupportSurface (True uses tagged_cube, False uses plain MeshCube with 10×10×10 verts); width/depth/thickness/height(inputs) -> tabletop size and elevation.
+  geometry_nodes(nw, **kwargs): assembles top + legs, sets materials, triangulates, rotates 90° (Z=1.5708).
+    knobs: depth/width/height/thickness -> overall dimensions; leg_radius/leg_dist -> leg geometry; top_material/leg_material -> surface shaders; Z-rotation(1.5708, fixed).
+  SimpleDeskBaseFactory.get_asset_params: samples all unset params (randomized).
+    knobs: depth(clip(normal(0.6,0.05),0.45,0.7)) -> table front-back; width(clip(normal(1.0,0.1),0.7,1.3)) -> side-to-side; height(clip(normal(0.73,0.05),0.6,0.83)) -> table height; top_material(choice["white","black_wood"]) -> tabletop look; leg_material(choice["white","black"]) -> metallic leg color; leg_radius(uniform(0.01,0.025)) -> leg thickness; leg_dist(uniform(0.035,0.07)) -> leg corner inset; thickness(uniform(0.01,0.03)) -> tabletop thickness.
+  SimpleDeskBaseFactory.get_material_func: maps material name strings to shader materials.
+    knobs: top "white"->shader_shelves_white, "black_wood"->shader_shelves_black_wood; leg "white"->shader_shelves_white_metallic, "black"->shader_shelves_black_metallic (add cases to expand palette).
+  SimpleDeskFactory.sample_params: desk variant dimensions.
+    knobs: Dimensions=(depth uniform(0.5,0.75), width uniform(0.8,2), height uniform(0.6,0.8)) -> wide desk proportions.
+  SidetableDeskFactory.sample_params: compact side-table variant (ENTRY).
+    knobs: w=0.55*normal(1,0.1) -> base footprint scale; Dimensions=(w, w, w*normal(1,0.05)) -> near-square top, height ≈ width (randomized). Change here to make it a taller/shorter or multi-table nesting set.
+
+FILE: assets/objects/shelves/utils.py
+  nodegroup_tagged_cube(nw): cube whose top face (index==2 compare) is tagged SupportSurface.
+    knobs: Compare index 3:2 -> which face gets the support tag; commented SubdivideMesh available.
+  get_nodegroup_assets(func, params): helper to extract geometry outputs from a nodegroup into meshes.
+  blender_rotate(vec): coordinate-frame rotation helper (3- or 4-vectors).
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/materials/wood/plywood.py -> provides shader_shelves_white, shader_shelves_black_wood, shader_shelves_white_metallic, shader_shelves_black_metallic material shaders.
+  assets/materials/wood/wood.py -> wood grain shader support.
+  assets/materials/metal/*.py -> metal shader variants (brushed/galvanized/polished/hammered/basic).
+  assets/materials/ceramic/glass.py, plastic/plastic_rough.py -> additional material shaders.
+  assets/materials/utils/common.py -> shared material node helpers.
+  assets/utils/extract_nodegroup_parts.py -> extract_nodegroup_geo used by get_nodegroup_assets.
+  assets/utils/object.py -> object creation utilities.
+  core/nodes/node_wrangler.py -> NodeWrangler / Nodes API for building geometry node graphs.
+  core/nodes/node_utils.py -> to_nodegroup decorator and node helpers.
+  core/nodes/node_info.py, compatibility.py, utils.py -> node type metadata and compatibility shims.
+  core/surface.py -> add_geomod, shaderfunc_to_material (applies geometry nodes and materials).
+  core/tagging.py, core/tags.py -> tag_system, tag_nodegroup, Subpart.SupportSurface semantic tagging.
+  core/placement/factory.py -> AssetFactory base class.
+  core/placement/detail.py -> level-of-detail / meshing support.
+  core/util/blender.py -> butil.TemporaryObject and Blender helpers.
+  core/util/{math,random,color,logging}.py -> math/random/color/logging utilities.

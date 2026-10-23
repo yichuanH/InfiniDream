@@ -1,0 +1,44 @@
+SUMMARY:
+This factory builds a wheat plant: a curved stem carrying leaves plus a terminal wheat "ear" (spike) whose grains are instanced along a curve. The upper-level files define the growth engine (growth.py: a curve of instanced leaf/grain geometry with per-point rotation/scale, plus stem building, deformation, and shading) and the specific grass species (grasses.py). WheatMonocotFactory combines a GrassesMonocotFactory stem+leaves with a WheatEarMonocotFactory ear head. To realize the requested DNA-double-helix ear (two intertwined helical grain strands with straight rungs and an open central gap), you would modify the ear's placement curve/geometry in growth.py's make_geo_flower and WheatEarMonocotFactory.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/grasses.py
+  WheatMonocotFactory: top-level wheat assembler (stem+leaves+ear).
+    knobs: scale_curve([(0,1.0),(1,0.6)]) -> leaf size taper along stem; leaf_range((0.1,0.7)) -> fraction of stem bearing leaves; ear bend angle(uniform(0, ear.bend_angle)) -> curvature of ear head (random); ear.location[-1](stem_offset-0.02) -> vertical placement of ear on stem; build_base_hue(uniform(0.08,0.12)) -> golden/green hue.
+  WheatEarMonocotFactory: the ear/spike (grain head) — KEY for DNA-helix request.
+    knobs: stem_offset(uniform(0.4,0.5)) -> ear length; angle(uniform(pi/6,pi/4)) -> azimuthal turn between successive grains (helical winding rate — set to control double-helix pitch); min_y_angle(uniform(pi/4,pi/3)),max_y_angle(pi/2) -> grain tilt from stem (random min); leaf_prob(uniform(0.9,1)) -> grain fill density (random); count(int(log_uniform(96,128))) -> number of grains (random); bend_angle(pi) -> max ear curvature; base_hue(uniform(0.12,0.28)) -> ear color (random).
+    build_leaf: grain shape — convex hull of 4-5 bezier ribs; x_anchors([0,0.05,0.1]) -> grain length; y_anchors([0,uniform(0.01,0.015),0]) -> grain width (random); polygon_angles(randint(4,6)) -> grain cross-section lobe count (random).
+    NOTE: to make two intertwined helical strands with rungs and a central gap, override make_geo_flower (from growth) or create_raw here to place grains on two offset helices and add straight bridge cylinders; the open gap = radial offset of grain instances from the central line.
+  GrassesMonocotFactory: base grass stem/leaf class (parent of Wheat).
+    knobs: stem_offset(uniform(1.5,2.0)) -> stem height (random); angle(uniform(pi/6,pi/3)) -> leaf phyllotaxis spin; z_drag(uniform(0,0.2)) -> droop; min_y_angle(uniform(pi*0.35,pi*0.45)),max_y_angle(uniform(pi*0.45,pi*0.5)) -> leaf tilt (random); count(int(log_uniform(16,64))) -> leaf count (random); scale_curve([(0,1.0),(1,0.2)]) -> leaf taper; bend_angle(pi/2) -> stem bend.
+    build_leaf: blade shape; x_anchors/y_anchors random widths; cut_prob(0.4) -> chance of cut-off blade tip; x_cutoff(uniform(0.5,1.0)),angle(uniform(-pi/3,pi/3)) -> cut position/orientation (random).
+  MaizeMonocotFactory / ReedEar/Branch/ReedMonocotFactory: sibling species (not used by wheat); reference for husk/branch/ear techniques and shader_ear color (hsv2rgba(uniform(0.06,0.1),...)).
+
+FILE: assets/objects/monocot/growth.py
+  MonocotGrowthFactory: shared growth engine (stem, instancing, deform, shader).
+    knobs: count(128),perturb(0.05) -> point count & per-instance jitter; angle(pi/6) -> spin increment per point (helix rate); min/max_y_angle(0..pi/2) -> instance pitch range; leaf_prob(uniform(0.8,0.9)) -> instance placement probability; leaf_range((0,1)) -> active span; stem_offset(0.2) -> curve length; scale_curve([(0,1),(1,1)]) -> instance size along curve; radius(0.01) -> stem thickness; bend_angle(pi/4),twist_angle(pi/6) -> whole-plant deform (random applied); z_drag(0.0) -> downward droop; z_scale(uniform(1.0,1.2)) -> vertical stretch; align_factor(0),align_direction((1,0,0)) -> instance alignment.
+    make_geo_flower: KEY node graph — CurveLine of length stem_offset, ResampleCurve to count points, per-point y_rotation (SplineParameter->float curve), AccumulateField z_rotation (the winding), InstanceOnPoints of grain collection. Edit here to build the double helix (duplicate/offset the point curve, add radial gap, join a rung mesh).
+    build_stem: SUBSURF levels(9), DISPLACE noise_scale(0.1)/strength(0.01) -> stem smoothness/bumpiness.
+    decorate_leaf: y_ratio(4),y_bend_angle(pi/6),z_bend_angle(pi/6),noise_scale(0.1),strength(0.02) -> leaf curl/wrinkle (random bends).
+    color setup: base_hue,bright_color(hsv2rgba(hue,uniform(0.6,0.8),log_uniform(0.05,0.1))),dark_color(sat uniform(0.8,1.0),val log_uniform(0.05,0.2)) -> two-tone plant color (random).
+    shader_monocot: specular(uniform(0,0.2)),clearcoat(0.2-0.5 @20%),musgrave color ramp stops[0,0.3,0.7,1.0],roughness float curve[(0,0.5),(1,0.8)],subsurface(0.01) -> surface finish.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> vertex displacement, remove_vertices, write_attribute/material_index, geo_extension.
+  assets/utils/draw.py -> bezier_curve, leaf, spin curve-mesh generators.
+  assets/utils/mesh.py -> polygon_angles (radial angle distribution for cross-sections).
+  assets/utils/misc.py -> assign_material helper.
+  assets/utils/nodegroup.py -> geo_radius (curve-to-tube thickness node).
+  assets/utils/object.py -> data2mesh, mesh2obj, origin2leftmost, join_objects.
+  assets/utils/shapes.py -> shape primitives.
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> geometry/shader node graph API (build_float_curve, musgrave, InstanceOnPoints, etc.).
+  core/nodes/nodegroups/transfer_attributes.py -> attribute transfer node groups.
+  core/placement/detail.py -> remesh_with_attrs, adapt_mesh_resolution.
+  core/placement/factory.py -> AssetFactory base, make_asset_collection.
+  core/surface.py -> add_geomod, shaderfunc_to_material, read/eval attributes.
+  core/tagging.py, core/tags.py -> tag_object semantic labeling.
+  core/util/blender.py -> modify_mesh, ViewportMode, apply_transform, delete_collection.
+  core/util/color.py -> hsv2rgba.
+  core/util/math.py -> FixedSeed (deterministic per-seed randomness).
+  core/util/random.py -> log_uniform sampling.

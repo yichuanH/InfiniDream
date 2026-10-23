@@ -1,0 +1,49 @@
+SUMMARY: This factory builds a procedural agave (century plant) monocot: a ground-level rosette of thick blue-grey succulent leaves with spined/toothed margins, generated as leaf instances distributed along a short stem curve. AgaveMonocotFactory subclasses MonocotGrowthFactory, overriding leaf-shape construction and the base color hue while inheriting the generic monocot growth pipeline (stem curve, per-point leaf instancing via geometry nodes, whole-plant deformation, and shading). Note: the current growth.py setup is tuned toward a compact rosette (short stem_offset); the requested tall flowering stalk with side branches near the top is NOT produced by these files as written.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/monocot/agave.py
+  AgaveMonocotFactory.__init__: samples per-plant agave parameters (FixedSeed on factory_seed).
+    knobs: stem_offset(uniform 0.0–0.5) -> height of rosette stem / vertical spread of leaves; angle(uniform pi/9–pi/6) -> azimuthal spacing between successive leaves (spiral tightness); z_drag(uniform 0.05–0.1) -> downward droop of whole plant with radius; min_y_angle(uniform 0.1pi–0.15pi) -> tilt of innermost/top leaves; max_y_angle(uniform 0.4pi–0.52pi) -> tilt of outermost leaves (rosette flatness); count(log_uniform 32–64, int) -> number of leaves; scale_curve([(0,0.8–1.0),(0.5,1),(1,0.6–1.0)]) -> leaf size along stem (base/mid/tip); bud_angle(uniform pi/8–pi/4) -> leaf base-to-tip curvature start direction; cut_prob(0 with prob 0.5, else uniform 0.2–0.4) -> chance a leaf tip is sliced off (broken/spiny look)
+    knobs: use_distance(True, fixed) -> enables distance-based leaf shading (bright center to dark margin)
+  AgaveMonocotFactory.build_base_hue: leaf color hue (random).
+    knobs: hue(uniform 0.12–0.32) -> green→yellow-green base color (raise toward blue for blue-grey succulent look)
+  AgaveMonocotFactory.build_leaf: constructs one leaf mesh outline + thickness + optional cut.
+    knobs: x_anchors(0, 0.2*cos(bud_angle), uniform 1.0–1.4, 1.5) -> leaf length/profile; y_anchors(0, 0.2*sin(bud_angle), uniform 0.1–0.15, 0) -> leaf width; z_offset(-log_uniform 0.08–0.16) -> leaf thickness/succulence; z_ratio(uniform 1.5–2.5) -> how thickness tapers toward margin; WELD merge_threshold(2e-4, fixed) -> seals doubled surface; cut angle(uniform -pi/3–pi/3) & cut_center x(uniform 1.0–1.4) -> where/how tip is cut when cutting occurs
+
+FILE: assets/objects/monocot/growth.py
+  MonocotGrowthFactory.__init__: generic monocot defaults (many overridden by agave subclass).
+    knobs: count(128) [overridden]; perturb(0.05) -> random jitter of leaf rotation/scale; leaf_prob(uniform 0.8–0.9) -> fraction of stem points bearing a leaf; leaf_range((0,1)) -> parametric span of stem that gets leaves; stem_offset(0.2) [overridden]; radius(0.01) -> stem thickness; bend_angle(pi/4) -> overall plant bend; twist_angle(pi/6) -> overall plant twist; z_drag(0.0) [overridden]; z_scale(uniform 1.0–1.2) -> vertical stretch of whole plant; align_factor(0) -> leaf alignment to align_direction; align_direction((1,0,0)); bright_color(hsv2rgba: hue=base_hue, sat uniform 0.6–0.8, val log_uniform 0.05–0.1); dark_color(hue=base_hue±0.03, sat uniform 0.8–1.0, val log_uniform 0.05–0.2)
+  MonocotGrowthFactory.decorate_leaf: adds bend/twist/wave/noise to each leaf.
+    knobs: y_ratio(4) -> longitudinal cupping; y_bend_angle(pi/6) & z_bend_angle(pi/6) -> per-leaf bend amounts; noise_scale(0.1) & strength(0.02) -> surface bumpiness; per-axis displace strength(uniform 0.01–0.02 * width) -> margin waviness (toothed-margin feel)
+  MonocotGrowthFactory.make_geo_flower: geometry-node layout of leaves on stem curve.
+    knobs: stem line End((0,0,stem_offset)) -> stem length; ResampleCurve count -> leaf attachment points; y_rotation curve [(0,-min_y_angle),(1,-max_y_angle)]; z_rotation accumulate step(uniform angle*0.95–1.05) -> spiral increment
+  MonocotGrowthFactory.build_stem: stem mesh from a 2-point line.
+    knobs: SUBSURF levels(9); DISPLACE noise_scale(0.1)/strength(0.01) -> stem surface texture
+  MonocotGrowthFactory.decorate_monocot: whole-plant post deformation.
+    knobs: z_drag term; geo_extension arg(0.4); TWIST angle(uniform ±twist_angle); BEND angle(uniform 0–bend_angle); scale(x,y uniform 0.8–1.2, z=z_scale); random z rotation(0–2pi)
+  MonocotGrowthFactory.shader_monocot: leaf/stem material.
+    knobs: specular(uniform 0.0–0.2); clearcoat(0 with prob 0.8, else uniform 0.2–0.5); distance exponent(uniform 1.8–3.5) -> center-to-margin color gradient sharpness; musgrave scale(10) & color_ramp stops([0,0.3,0.7,1] with bright/bright/dark/dark) -> non-distance mottling; noise Scale(50); roughness curve [(0,0.5),(1,0.8)]; Subsurface Weight(0.01) & Radius((0.01,0.01,0.01)) -> succulent translucency
+
+FILE: assets/objects/monocot/__init__.py
+  module exports: registers AgaveMonocotFactory and sibling monocot factories; edit to expose/rename factories.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/decorate.py -> displace_vertices, distance2boundary, geo_extension mesh deformation helpers
+  assets/utils/draw.py -> leaf() outline builder and cut_plane() slicing utility
+  assets/utils/mesh.py -> low-level mesh construction helpers
+  assets/utils/misc.py -> assign_material and misc helpers
+  assets/utils/nodegroup.py -> geo_radius node group (curve/stem thickness)
+  assets/utils/object.py -> data2mesh, mesh2obj, join_objects, origin2leftmost object utilities
+  core/nodes/node_info.py -> Nodes enum of geometry/shader node types
+  core/nodes/node_utils.py -> build_color_ramp and node helpers
+  core/nodes/node_wrangler.py -> NodeWrangler graph-building API
+  core/placement/detail.py -> adapt_mesh_resolution
+  core/placement/factory.py -> AssetFactory base class, make_asset_collection
+  core/surface.py -> add_geomod, shaderfunc_to_material, eval_argument
+  core/tagging.py, core/tags.py -> tag_object semantic tagging
+  core/util/blender.py -> butil mesh/modifier/transform operations
+  core/util/color.py -> hsv2rgba color conversion
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/random.py -> log_uniform sampling
+  core/util/logging.py, core/util/__init__.py, __init__.py, assets/__init__.py, assets/utils/__init__.py, core/__init__.py -> package init / utilities

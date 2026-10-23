@@ -1,0 +1,408 @@
+Infinigen AssetFactory list  — ROLE-tagged for factory selection
+source: PC_Blen/Infinigen/infinigen/infinigen/assets
+ROLES verified from Infinigen source (NOT guessed):
+  - ENTRY: the object is in infinigen's own standalone-asset test lists
+    (tests/assets/list_{nature,indoor}_meshes.txt) or is a whole placeable object
+    not instantiated as a sub-part of another factory.
+  - PART : a *Base* skeleton, a creatures/parts/* body part, a cached/util engine,
+    OR an ELEMENT (single leaf / blossom / berry / seed / needle / single fruit)
+    that a plant/tree [ENTRY] instances. Elements are generatable alone but the
+    director should NOT pick them as a whole object.
+======================================================================
+HOW TO SELECT (director): map a requested object to exactly ONE [ENTRY]. NEVER
+pick a [PART]; reach a part only by going deeper FROM its [ENTRY] template.
+e.g. "cherry blossom tree" -> TreeFactory [ENTRY] (which uses TreeFlowerFactory
+[PART] for blossoms + a leaf/fruit [PART]) — NOT TreeFlowerFactory (one flower).
+======================================================================
+
+
+## objects/creatures
+  AntSwarmFactory                    [ENTRY] a swarm of ants (many-instance)   assets/objects/creatures/beetle.py
+  BeetleFactory                      [ENTRY] a beetle   assets/objects/creatures/beetle.py
+  BirdFactory                        [ENTRY] a bird (standing/perched)   assets/objects/creatures/bird.py
+  BoidSwarmFactory                   [PART ] (engine / util) boid swarm controller (util)   assets/objects/creatures/util/boid_swarm.py
+  CarnivoreFactory                   [ENTRY] a carnivore quadruped (lion/wolf/etc.)   assets/objects/creatures/carnivore.py
+  ChameleonFactory                   [ENTRY] a chameleon   assets/objects/creatures/reptile.py
+  CrabBodyFactory                    [PART ] (body part — assembled by a creature [ENTRY]) crab body segment   assets/objects/creatures/parts/crustacean/body.py
+  CrabClawFactory                    [PART ] (body part — assembled by a creature [ENTRY]) crab claw   assets/objects/creatures/parts/crustacean/claw.py
+  CrabFactory                        [ENTRY] a crab   assets/objects/creatures/crustacean.py
+  CrabLegFactory                     [PART ] (body part — assembled by a creature [ENTRY]) crab leg   assets/objects/creatures/parts/crustacean/leg.py
+  CrustaceanEyeFactory               [PART ] (body part — assembled by a creature [ENTRY]) crustacean eye stalk   assets/objects/creatures/parts/crustacean/eye.py
+  CrustaceanFactory                  [ENTRY] a generic crustacean   assets/objects/creatures/crustacean.py
+  CrustaceanFinFactory               [PART ] (body part — assembled by a creature [ENTRY]) crustacean fin   assets/objects/creatures/parts/crustacean/fin.py
+  CrustaceanTailFactory              [PART ] (body part — assembled by a creature [ENTRY]) crustacean tail   assets/objects/creatures/parts/crustacean/tail.py
+  DragonflyFactory                   [ENTRY] a dragonfly   assets/objects/creatures/insects/dragonfly.py
+  FishFactory                        [ENTRY] a fish   assets/objects/creatures/fish.py
+  FishSchoolFactory                  [ENTRY] a school of fish (many-instance)   assets/objects/creatures/fish.py
+  FlyingBirdFactory                  [ENTRY] a bird in flight (wings spread)   assets/objects/creatures/bird.py
+  FrogFactory                        [ENTRY] a frog   assets/objects/creatures/reptile.py
+  GeonodePartFactory                 [PART ] (engine / util) generic geonode body part (util)   assets/objects/creatures/util/geonode_part.py
+  HerbivoreFactory                   [ENTRY] a herbivore quadruped (deer/etc.)   assets/objects/creatures/herbivore.py
+  JellyfishFactory                   [ENTRY] a jellyfish   assets/objects/creatures/jellyfish.py
+  LizardFactory                      [ENTRY] a lizard   assets/objects/creatures/reptile.py
+  LobsterAntennaFactory              [PART ] (body part — assembled by a creature [ENTRY]) lobster antenna   assets/objects/creatures/parts/crustacean/antenna.py
+  LobsterBodyFactory                 [PART ] (body part — assembled by a creature [ENTRY]) lobster body segment   assets/objects/creatures/parts/crustacean/body.py
+  LobsterClawFactory                 [PART ] (body part — assembled by a creature [ENTRY]) lobster claw   assets/objects/creatures/parts/crustacean/claw.py
+  LobsterFactory                     [ENTRY] a lobster   assets/objects/creatures/crustacean.py
+  LobsterLegFactory                  [PART ] (body part — assembled by a creature [ENTRY]) lobster leg   assets/objects/creatures/parts/crustacean/leg.py
+  PartFactory                        [PART ] (engine / util) creature-part assembly base (util)   assets/objects/creatures/util/creature.py
+  SnakeFactory                       [ENTRY] a snake   assets/objects/creatures/reptile.py
+  SpinyLobsterAntennaFactory         [PART ] (body part — assembled by a creature [ENTRY]) spiny lobster antenna   assets/objects/creatures/parts/crustacean/antenna.py
+  SpinyLobsterFactory                [ENTRY] a spiny lobster   assets/objects/creatures/crustacean.py
+
+## fluid
+  CachedBoulderFactory               [PART ] (cached sim wrapper) cached boulder wrapper (fluid sim)   assets/fluid/cached_factory_wrappers.py
+  CachedBushFactory                  [PART ] (cached sim wrapper) cached bush wrapper (fluid sim)   assets/fluid/cached_factory_wrappers.py
+  CachedCactusFactory                [PART ] (cached sim wrapper) cached cactus wrapper (fluid sim)   assets/fluid/cached_factory_wrappers.py
+  CachedCreatureFactory              [PART ] (cached sim wrapper) cached creature wrapper (fluid sim)   assets/fluid/cached_factory_wrappers.py
+  CachedTreeFactory                  [PART ] (cached sim wrapper) cached tree wrapper (fluid sim)   assets/fluid/cached_factory_wrappers.py
+  FlipFluidFactory                   [ENTRY] a flip-fluid simulation (liquid)   assets/fluid/generate.py
+  FluidFactory                       [ENTRY] a fluid/smoke simulation   assets/fluid/generate.py
+
+## lighting
+  CausticsLampFactory                [ENTRY] a caustics light source   assets/lighting/caustics_lamp.py
+  PointLampFactory                   [PART ] (sub-component) a point light source   assets/lighting/indoor_lights.py
+
+## objects/appliances
+  BeverageFridgeFactory              [ENTRY] a beverage fridge   assets/objects/appliances/beverage_fridge.py
+  DishwasherFactory                  [ENTRY] an articulated dishwasher   assets/objects/appliances/dishwasher.py
+  MicrowaveFactory                   [ENTRY] an articulated microwave   assets/objects/appliances/microwave.py
+  MonitorFactory                     [ENTRY] a computer monitor   assets/objects/appliances/tv.py
+  OvenFactory                        [ENTRY] an articulated oven   assets/objects/appliances/oven.py
+  TVFactory                          [ENTRY] a television   assets/objects/appliances/tv.py
+
+## objects/bathroom
+  BathroomSinkFactory                [ENTRY] a bathroom sink (counter-mounted)   assets/objects/bathroom/bathroom_sink.py
+  BathtubFactory                     [ENTRY] a bathtub   assets/objects/bathroom/bathtub.py
+  HardwareFactory                    [ENTRY] tap/handle hardware fitting   assets/objects/bathroom/hardware.py
+  StandingSinkFactory                [ENTRY] a pedestal standing sink   assets/objects/bathroom/bathroom_sink.py
+  ToiletFactory                      [ENTRY] a toilet   assets/objects/bathroom/toilet.py
+
+## objects/cactus
+  BaseCactusFactory                  [PART ] (base skeleton — used by its [ENTRY] variant) cactus base skeleton   assets/objects/cactus/base.py
+  CactusFactory                      [ENTRY] a cactus (random species)   assets/objects/cactus/generate.py
+  ColumnarBaseCactusFactory          [PART ] (base skeleton — used by its [ENTRY] variant) columnar cactus base shape   assets/objects/cactus/columnar.py
+  ColumnarCactusFactory              [ENTRY] a columnar (saguaro-like) cactus   assets/objects/cactus/generate.py
+  GlobularBaseCactusFactory          [PART ] (base skeleton — used by its [ENTRY] variant) globular cactus base shape   assets/objects/cactus/globular.py
+  GlobularCactusFactory              [ENTRY] a globular (ball) cactus   assets/objects/cactus/generate.py
+  KalidiumBaseCactusFactory          [PART ] (base skeleton — used by its [ENTRY] variant) kalidium cactus base shape   assets/objects/cactus/kalidium.py
+  KalidiumCactusFactory              [ENTRY] a kalidium (jointed) cactus   assets/objects/cactus/generate.py
+  PrickyPearCactusFactory            [ENTRY] a prickly-pear cactus   assets/objects/cactus/generate.py
+
+## objects/clothes
+  BlanketFactory                     [ENTRY] a folded/draped blanket   assets/objects/clothes/blanket.py
+  BoxComforterFactory                [PART ] (sub-component) a boxed/folded comforter   assets/objects/clothes/blanket.py
+  ComforterFactory                   [PART ] (sub-component) a comforter/duvet   assets/objects/clothes/blanket.py
+  PantsFactory                       [ENTRY] a pair of pants (cloth sim)   assets/objects/clothes/pants.py
+  ShirtFactory                       [ENTRY] a shirt (cloth sim)   assets/objects/clothes/shirt.py
+  TowelFactory                       [ENTRY] a towel   assets/objects/clothes/towel.py
+
+## objects/cloud
+  AltocumulusFactory                 [ENTRY] an altocumulus cloud   assets/objects/cloud/generate.py
+  CloudFactory                       [ENTRY] a cloud (random type)   assets/objects/cloud/generate.py
+  CumulonimbusFactory                [ENTRY] a cumulonimbus (storm) cloud   assets/objects/cloud/generate.py
+  CumulusFactory                     [ENTRY] a cumulus cloud   assets/objects/cloud/generate.py
+  StratocumulusFactory               [ENTRY] a stratocumulus cloud   assets/objects/cloud/generate.py
+
+## objects/corals  (27)   (each *CoralFactory in generate.py is ENTRY; each *BaseCoralFactory is its PART base shape)
+  BaseCoralFactory                   [PART ] (base skeleton — used by its [ENTRY] variant) coral base skeleton   assets/objects/corals/base.py
+  BrainBaseCoralFactory              [PART ] (base skeleton — used by its [ENTRY] variant) brain-coral base (reaction-diffusion)   assets/objects/corals/reaction_diffusion.py
+  BrainCoralFactory                  [ENTRY] a brain coral   assets/objects/corals/generate.py
+  BushBaseCoralFactory               [PART ] (base skeleton — used by its [ENTRY] variant) bushy coral base   assets/objects/corals/tree.py
+  BushCoralFactory                   [ENTRY] a bushy branching coral   assets/objects/corals/generate.py
+  CauliflowerCoralFactory            [ENTRY] a cauliflower coral   assets/objects/corals/generate.py
+  CoralFactory                       [ENTRY] a coral (random type)   assets/objects/corals/generate.py
+  DiffGrowthBaseCoralFactory         [PART ] (base skeleton — used by its [ENTRY] variant) differential-growth coral base   assets/objects/corals/diff_growth.py
+  ElkhornBaseCoralFactory            [PART ] (base skeleton — used by its [ENTRY] variant) elkhorn coral base   assets/objects/corals/elkhorn.py
+  ElkhornCoralFactory                [ENTRY] an elkhorn (flat-branch) coral   assets/objects/corals/generate.py
+  FanBaseCoralFactory                [PART ] (base skeleton — used by its [ENTRY] variant) sea-fan coral base   assets/objects/corals/fan.py
+  FanCoralFactory                    [ENTRY] a sea-fan coral   assets/objects/corals/generate.py
+  HoneycombBaseCoralFactory          [PART ] (base skeleton — used by its [ENTRY] variant) honeycomb coral base   assets/objects/corals/reaction_diffusion.py
+  HoneycombCoralFactory              [ENTRY] a honeycomb coral   assets/objects/corals/generate.py
+  LeatherBaseCoralFactory            [PART ] (base skeleton — used by its [ENTRY] variant) leather coral base   assets/objects/corals/diff_growth.py
+  LeatherCoralFactory                [ENTRY] a leather (folded) coral   assets/objects/corals/generate.py
+  ReactionDiffusionBaseCoralFactory  [PART ] (base skeleton — used by its [ENTRY] variant) reaction-diffusion coral base   assets/objects/corals/reaction_diffusion.py
+  StarBaseCoralFactory               [PART ] (base skeleton — used by its [ENTRY] variant) star coral base   assets/objects/corals/star.py
+  StarCoralFactory                   [ENTRY] a star (polyp-covered) coral   assets/objects/corals/generate.py
+  TableBaseCoralFactory              [PART ] (base skeleton — used by its [ENTRY] variant) table coral base   assets/objects/corals/diff_growth.py
+  TableCoralFactory                  [ENTRY] a table (flat-top) coral   assets/objects/corals/generate.py
+  TreeBaseCoralFactory               [PART ] (base skeleton — used by its [ENTRY] variant) tree-like coral base   assets/objects/corals/tree.py
+  TubeBaseCoralFactory               [PART ] (base skeleton — used by its [ENTRY] variant) tube coral base   assets/objects/corals/tube.py
+  TubeCoralFactory                   [ENTRY] a tube coral   assets/objects/corals/generate.py
+  TwigBaseCoralFactory               [PART ] (base skeleton — used by its [ENTRY] variant) twig coral base   assets/objects/corals/tree.py
+  TwigCoralFactory                   [ENTRY] a thin twig coral   assets/objects/corals/generate.py
+
+## objects/decor
+  AquariumTankFactory                [ENTRY] an aquarium tank   assets/objects/decor/aquarium_tank.py
+
+## objects/deformed_trees
+  BaseDeformedTreeFactory            [PART ] (base skeleton — used by its [ENTRY] variant) deformed-tree base skeleton   assets/objects/deformed_trees/base.py
+  DeformedTreeFactory                [ENTRY] a deformed/dead tree (random)   assets/objects/deformed_trees/generate.py
+  FallenTreeFactory                  [ENTRY] a fallen tree log   assets/objects/deformed_trees/fallen.py
+  HollowTreeFactory                  [ENTRY] a hollow standing tree   assets/objects/deformed_trees/hollow.py
+  RottenTreeFactory                  [ENTRY] a rotten/decayed tree   assets/objects/deformed_trees/rotten.py
+  TruncatedTreeFactory               [ENTRY] a truncated (cut) tree stump   assets/objects/deformed_trees/truncated.py
+
+## objects/elements
+  BaseDoorFactory                    [PART ] (base skeleton — used by its [ENTRY] variant) door base   assets/objects/elements/doors/base.py
+  CantileverStaircaseFactory         [ENTRY] a cantilever staircase   assets/objects/elements/staircases/cantilever.py
+  CurvedStaircaseFactory             [ENTRY] a curved staircase   assets/objects/elements/staircases/curved.py
+  DoorCasingFactory                  [PART ] (sub-component) door frame/casing   assets/objects/elements/doors/casing.py
+  DoorFactory                        [PART ] (sub-component) a door (random style)   assets/objects/elements/doors/__init__.py
+  GlassPanelDoorFactory              [ENTRY] a glass-panel door   assets/objects/elements/doors/panel.py
+  LShapedStaircaseFactory            [ENTRY] an L-shaped staircase   assets/objects/elements/staircases/l_shaped.py
+  LiteDoorFactory                    [ENTRY] a lite (windowed) door   assets/objects/elements/doors/lite.py
+  LouverDoorFactory                  [ENTRY] a louver door   assets/objects/elements/doors/louver.py
+  NatureShelfTrinketsFactory         [ENTRY] a set of nature-shelf trinkets   assets/objects/elements/nature_shelf_trinkets/generate.py
+  PalletFactory                      [ENTRY] a wooden pallet   assets/objects/elements/warehouses/pallet.py
+  PanelDoorFactory                   [ENTRY] a panel door   assets/objects/elements/doors/panel.py
+  PillarFactory                      [ENTRY] a pillar/column   assets/objects/elements/pillars.py
+  RackFactory                        [ENTRY] a warehouse storage rack   assets/objects/elements/warehouses/rack.py
+  RugFactory                         [ENTRY] a rug   assets/objects/elements/rug.py
+  SpiralStaircaseFactory             [ENTRY] a spiral staircase   assets/objects/elements/staircases/spiral.py
+  StaircaseFactory                   [PART ] (sub-component) a staircase (random type)   assets/objects/elements/staircases/generate.py
+  StraightStaircaseFactory           [ENTRY] a straight staircase   assets/objects/elements/staircases/straight.py
+  UShapedStaircaseFactory            [ENTRY] a U-shaped staircase   assets/objects/elements/staircases/u_shaped.py
+
+## objects/grassland
+  DandelionFactory                   [ENTRY] a dandelion plant   assets/objects/grassland/dandelion.py
+  DandelionSeedFactory               [PART ] (element — for the whole plant/tree pick its [ENTRY]) a single dandelion seed (instanced)   assets/objects/grassland/dandelion.py
+  FlowerFactory                      [ENTRY] a wildflower plant (whole bloom+stem)   assets/objects/grassland/flower.py
+  FlowerPlantFactory                 [ENTRY] a flowering plant   assets/objects/grassland/flowerplant.py
+  GrassTuftFactory                   [ENTRY] a tuft of grass (scatter object)   assets/objects/grassland/grass_tuft.py
+
+## objects/lamp
+  CeilingClassicLampFactory          [ENTRY] a classic ceiling lamp   assets/objects/lamp/ceiling_classic_lamp.py
+  CeilingLightFactory                [ENTRY] a ceiling light   assets/objects/lamp/ceiling_lights.py
+  DeskLampFactory                    [ENTRY] a desk lamp   assets/objects/lamp/lamp.py
+  FloorLampFactory                   [ENTRY] a floor lamp   assets/objects/lamp/lamp.py
+  LampFactory                        [ENTRY] an articulated lamp   assets/objects/lamp/lamp.py
+
+## objects/leaves
+  BerryFactory                       [PART ] (element — for the whole plant/tree pick its [ENTRY]) a berry (instanced on plants/trees)   assets/objects/leaves/leaf.py
+  LeafFactory                        [PART ] (element — for the whole plant/tree pick its [ENTRY]) a general leaf (instanced on plants)   assets/objects/leaves/leaf.py
+  LeafFactoryBroadleaf               [PART ] (element — for the whole plant/tree pick its [ENTRY]) a leaf broadleaf   assets/objects/leaves/leaf_broadleaf.py
+  LeafFactoryGinko                   [PART ] (element — for the whole plant/tree pick its [ENTRY]) a leaf ginko   assets/objects/leaves/leaf_ginko.py
+  LeafFactoryMaple                   [PART ] (element — for the whole plant/tree pick its [ENTRY]) a leaf maple   assets/objects/leaves/leaf_maple.py
+  LeafFactoryPine                    [PART ] (element — for the whole plant/tree pick its [ENTRY]) a leaf pine   assets/objects/leaves/leaf_pine.py
+  LeafFactoryV2                      [PART ] (element — for the whole plant/tree pick its [ENTRY]) a leaf v2   assets/objects/leaves/leaf_v2.py
+
+## objects/mollusk  (18)   (each *Factory in generate.py is ENTRY; each *BaseFactory is its PART base shell)
+  AugerBaseFactory                   [PART ] (base skeleton — used by its [ENTRY] variant) auger-shell base   assets/objects/mollusk/snail.py
+  AugerFactory                       [ENTRY] an auger sea snail shell   assets/objects/mollusk/generate.py
+  BaseMolluskFactory                 [PART ] (base skeleton — used by its [ENTRY] variant) mollusk base   assets/objects/mollusk/base.py
+  ClamBaseFactory                    [PART ] (base skeleton — used by its [ENTRY] variant) clam-shell base   assets/objects/mollusk/shell.py
+  ClamFactory                        [ENTRY] a clam shell   assets/objects/mollusk/generate.py
+  ConchBaseFactory                   [PART ] (base skeleton — used by its [ENTRY] variant) conch-shell base   assets/objects/mollusk/snail.py
+  ConchFactory                       [ENTRY] a conch shell   assets/objects/mollusk/generate.py
+  MolluskFactory                     [ENTRY] a mollusk shell (random type)   assets/objects/mollusk/generate.py
+  MusselBaseFactory                  [PART ] (base skeleton — used by its [ENTRY] variant) mussel-shell base   assets/objects/mollusk/shell.py
+  MusselFactory                      [ENTRY] a mussel shell   assets/objects/mollusk/generate.py
+  NautilusBaseFactory                [PART ] (base skeleton — used by its [ENTRY] variant) nautilus-shell base   assets/objects/mollusk/snail.py
+  NautilusFactory                    [ENTRY] a nautilus shell   assets/objects/mollusk/generate.py
+  ScallopBaseFactory                 [PART ] (base skeleton — used by its [ENTRY] variant) scallop-shell base   assets/objects/mollusk/shell.py
+  ScallopFactory                     [ENTRY] a scallop shell   assets/objects/mollusk/generate.py
+  ShellBaseFactory                   [PART ] (base skeleton — used by its [ENTRY] variant) generic shell base   assets/objects/mollusk/shell.py
+  SnailBaseFactory                   [PART ] (base skeleton — used by its [ENTRY] variant) snail-shell base   assets/objects/mollusk/snail.py
+  VoluteBaseFactory                  [PART ] (base skeleton — used by its [ENTRY] variant) volute-shell base   assets/objects/mollusk/snail.py
+  VoluteFactory                      [ENTRY] a volute sea snail shell   assets/objects/mollusk/generate.py
+
+## objects/monocot  (18)   (Monocot/Growth in generate.py are ENGINES; *Branch/*Ear are PART sub-pieces)
+  AgaveMonocotFactory                [ENTRY] an agave plant   assets/objects/monocot/agave.py
+  BananaMonocotFactory               [ENTRY] a banana plant   assets/objects/monocot/banana.py
+  GrassesMonocotFactory              [ENTRY] a grass clump (monocot)   assets/objects/monocot/grasses.py
+  KelpMonocotFactory                 [ENTRY] a kelp strand   assets/objects/monocot/kelp.py
+  MaizeMonocotFactory                [ENTRY] a maize/corn plant   assets/objects/monocot/grasses.py
+  MonocotFactory                     [ENTRY] a monocot plant (random)   assets/objects/monocot/generate.py
+  MonocotGrowthFactory               [PART ] (engine / util) monocot growth engine (util)   assets/objects/monocot/growth.py
+  PineconeFactory                    [ENTRY] a pinecone   assets/objects/monocot/pinecone.py
+  ReedBranchMonocotFactory           [PART ] (element — for the whole plant/tree pick its [ENTRY]) reed branch sub-piece   assets/objects/monocot/grasses.py
+  ReedEarMonocotFactory              [PART ] (element — for the whole plant/tree pick its [ENTRY]) reed ear/seed head   assets/objects/monocot/grasses.py
+  ReedMonocotFactory                 [ENTRY] a reed plant   assets/objects/monocot/grasses.py
+  TaroMonocotFactory                 [ENTRY] a taro plant   assets/objects/monocot/banana.py
+  TussockMonocotFactory              [ENTRY] a tussock grass clump   assets/objects/monocot/tussock.py
+  VeratrumBranchMonocotFactory       [PART ] (element — for the whole plant/tree pick its [ENTRY]) veratrum branch sub-piece   assets/objects/monocot/veratrum.py
+  VeratrumEarMonocotFactory          [PART ] (element — for the whole plant/tree pick its [ENTRY]) veratrum ear/flower spike   assets/objects/monocot/veratrum.py
+  VeratrumMonocotFactory             [ENTRY] a veratrum plant   assets/objects/monocot/veratrum.py
+  WheatEarMonocotFactory             [PART ] (element — for the whole plant/tree pick its [ENTRY]) wheat ear/seed head   assets/objects/monocot/grasses.py
+  WheatMonocotFactory                [ENTRY] a wheat plant   assets/objects/monocot/grasses.py
+
+## objects/mushroom
+  MushroomCapFactory                 [PART ] (element — for the whole plant/tree pick its [ENTRY]) mushroom cap   assets/objects/mushroom/cap.py
+  MushroomFactory                    [ENTRY] a mushroom (cap+stem)   assets/objects/mushroom/generate.py
+  MushroomGrowthFactory              [PART ] (engine / util) mushroom cluster growth engine (util)   assets/objects/mushroom/growth.py
+  MushroomStemFactory                [PART ] (element — for the whole plant/tree pick its [ENTRY]) mushroom stem   assets/objects/mushroom/stem.py
+
+## objects/organizer  (7)   (all *BaseFactory — assembled into kitchen/shelf scenes)
+  BasketBaseFactory                  [PART ] (base skeleton — used by its [ENTRY] variant) a basket base   assets/objects/organizer/basket.py
+  HookBaseFactory                    [PART ] (base skeleton — used by its [ENTRY] variant) a wall hook base   assets/objects/organizer/hook.py
+  PlateBaseFactory                   [PART ] (base skeleton — used by its [ENTRY] variant) a plate base   assets/objects/organizer/plate_rack.py
+  PlateOnRackBaseFactory             [PART ] (base skeleton — used by its [ENTRY] variant) a plate-on-rack arrangement base   assets/objects/organizer/plate_rack.py
+  PlateRackBaseFactory               [PART ] (base skeleton — used by its [ENTRY] variant) a plate rack base   assets/objects/organizer/plate_rack.py
+  SpatulaBaseFactory                 [PART ] (base skeleton — used by its [ENTRY] variant) a spatula base   assets/objects/organizer/hook.py
+  SpatulaOnHookBaseFactory           [PART ] (base skeleton — used by its [ENTRY] variant) a spatula-on-hook arrangement base   assets/objects/organizer/hook.py
+
+## objects/particles
+  DustMoteFactory                    [ENTRY] a dust mote (particle element)   assets/objects/particles/particles.py
+  LichenFactory                      [ENTRY] a lichen surface patch   assets/objects/particles/lichen.py
+  MossFactory                        [ENTRY] a moss surface patch   assets/objects/particles/moss.py
+  PineNeedleFactory                  [PART ] (element — for the whole plant/tree pick its [ENTRY]) a pine needle (instanced on conifers)   assets/objects/particles/pine_needle.py
+  RaindropFactory                    [ENTRY] a raindrop (particle element)   assets/objects/particles/particles.py
+  SnowflakeFactory                   [ENTRY] a snowflake (particle element)   assets/objects/particles/particles.py
+
+## objects/rocks
+  BlenderRockFactory                 [ENTRY] a rock (quick Blender rock)   assets/objects/rocks/blender_rock.py
+  BoulderFactory                     [ENTRY] a boulder   assets/objects/rocks/boulder.py
+  BoulderPileFactory                 [ENTRY] a pile of boulders   assets/objects/rocks/pile.py
+  GlowingRocksFactory                [ENTRY] glowing rocks   assets/objects/rocks/glowing_rocks.py
+
+## objects/seating
+  ArmChairFactory                    [ENTRY] an armchair   assets/objects/seating/sofa.py
+  BarChairFactory                    [ENTRY] a bar stool/chair   assets/objects/seating/chairs/bar_chair.py
+  BedFactory                         [ENTRY] a bed (frame+mattress)   assets/objects/seating/bed.py
+  BedFrameFactory                    [ENTRY] a bed frame   assets/objects/seating/bedframe.py
+  ChairFactory                       [ENTRY] a chair   assets/objects/seating/chairs/chair.py
+  MattressFactory                    [ENTRY] a mattress   assets/objects/seating/mattress.py
+  OfficeChairFactory                 [ENTRY] an office chair   assets/objects/seating/chairs/office_chair.py
+  PillowFactory                      [ENTRY] a pillow   assets/objects/seating/pillow.py
+  SofaFactory                        [ENTRY] a sofa   assets/objects/seating/sofa.py
+
+## objects/shelves  (25)   (each *Factory is ENTRY; each *BaseFactory is its PART base)
+  CabinetBaseFactory                 [PART ] (base skeleton — used by its [ENTRY] variant) cabinet base   assets/objects/shelves/cabinet.py
+  CabinetDoorBaseFactory             [PART ] (base skeleton — used by its [ENTRY] variant) cabinet door base   assets/objects/shelves/cabinet.py
+  CabinetDoorBaseFactory             [PART ] (base skeleton — used by its [ENTRY] variant) cabinet door base   assets/objects/shelves/doors.py
+  CabinetDoorIkeaFactory             [ENTRY] ikea-style cabinet door   assets/objects/shelves/cabinet.py
+  CabinetDrawerBaseFactory           [PART ] (base skeleton — used by its [ENTRY] variant) cabinet drawer base   assets/objects/shelves/drawers.py
+  CabinetFactory                     [PART ] (sub-component) an articulated cabinet   assets/objects/shelves/cabinet.py
+  CellShelfBaseFactory               [PART ] (base skeleton — used by its [ENTRY] variant) cell-shelf base   assets/objects/shelves/cell_shelf.py
+  CellShelfFactory                   [ENTRY] a cell/cube shelf   assets/objects/shelves/cell_shelf.py
+  CountertopFactory                  [ENTRY] a countertop   assets/objects/shelves/countertop.py
+  KitchenCabinetBaseFactory          [PART ] (base skeleton — used by its [ENTRY] variant) kitchen-cabinet base   assets/objects/shelves/kitchen_cabinet.py
+  KitchenCabinetFactory              [ENTRY] a kitchen cabinet   assets/objects/shelves/kitchen_cabinet.py
+  KitchenIslandFactory               [ENTRY] a kitchen island   assets/objects/shelves/kitchen_space.py
+  KitchenSpaceFactory                [ENTRY] a full kitchen space/run   assets/objects/shelves/kitchen_space.py
+  LargeShelfBaseFactory              [PART ] (base skeleton — used by its [ENTRY] variant) large-shelf base   assets/objects/shelves/large_shelf.py
+  LargeShelfFactory                  [ENTRY] a large shelving unit   assets/objects/shelves/large_shelf.py
+  SidetableDeskFactory               [ENTRY] a sidetable/small desk   assets/objects/shelves/simple_desk.py
+  SimpleBookcaseBaseFactory          [PART ] (base skeleton — used by its [ENTRY] variant) bookcase base   assets/objects/shelves/simple_bookcase.py
+  SimpleBookcaseFactory              [ENTRY] a simple bookcase   assets/objects/shelves/simple_bookcase.py
+  SimpleDeskBaseFactory              [PART ] (base skeleton — used by its [ENTRY] variant) desk base   assets/objects/shelves/simple_desk.py
+  SimpleDeskFactory                  [ENTRY] a simple desk   assets/objects/shelves/simple_desk.py
+  SingleCabinetBaseFactory           [PART ] (base skeleton — used by its [ENTRY] variant) single-cabinet base   assets/objects/shelves/single_cabinet.py
+  SingleCabinetFactory               [ENTRY] a single cabinet   assets/objects/shelves/single_cabinet.py
+  TVStandFactory                     [ENTRY] a TV stand   assets/objects/shelves/cell_shelf.py
+  TriangleShelfBaseFactory           [PART ] (base skeleton — used by its [ENTRY] variant) triangle-shelf base   assets/objects/shelves/triangle_shelf.py
+  TriangleShelfFactory               [ENTRY] a corner triangle shelf   assets/objects/shelves/triangle_shelf.py
+
+## objects/small_plants
+  FernFactory                        [ENTRY] a fern   assets/objects/small_plants/fern.py
+  LeafFactory                        [PART ] (element — for the whole plant/tree pick its [ENTRY]) a general leaf (instanced on plants)   assets/objects/small_plants/leaf_general.py
+  LeafHeartFactory                   [PART ] (element — for the whole plant/tree pick its [ENTRY]) a heart-shaped leaf   assets/objects/small_plants/leaf_heart.py
+  NumLeafGrassFactory                [PART ] (element — for the whole plant/tree pick its [ENTRY]) a few-leaf grass blade cluster   assets/objects/small_plants/num_leaf_grass.py
+  SnakePlantFactory                  [ENTRY] a snake plant (sansevieria)   assets/objects/small_plants/snake_plant.py
+  SpiderPlantFactory                 [ENTRY] a spider plant   assets/objects/small_plants/spider_plant.py
+  SucculentFactory                   [ENTRY] a succulent   assets/objects/small_plants/succulent.py
+
+## objects/table_decorations
+  BookColumnFactory                  [ENTRY] a column of books (sub-arrangement)   assets/objects/table_decorations/book.py
+  BookFactory                        [ENTRY] a book   assets/objects/table_decorations/book.py
+  BookStackFactory                   [ENTRY] a stack of books   assets/objects/table_decorations/book.py
+  SinkFactory                        [ENTRY] a kitchen sink   assets/objects/table_decorations/sink.py
+  TapFactory                         [ENTRY] a tap/faucet fitting   assets/objects/table_decorations/sink.py
+  VaseFactory                        [ENTRY] a vase   assets/objects/table_decorations/vase.py
+
+## objects/tables
+  CoffeeTableFactory                 [ENTRY] a coffee table   assets/objects/tables/dining_table.py
+  SideTableFactory                   [ENTRY] a side table   assets/objects/tables/dining_table.py
+  TableCocktailFactory               [ENTRY] a cocktail table   assets/objects/tables/cocktail_table.py
+  TableDiningFactory                 [ENTRY] a dining table   assets/objects/tables/dining_table.py
+  TableTopFactory                    [ENTRY] a tabletop surface (no legs)   assets/objects/tables/table_top.py
+
+## objects/tableware
+  BottleFactory                      [ENTRY] a bottle   assets/objects/tableware/bottle.py
+  BowlFactory                        [ENTRY] a bowl   assets/objects/tableware/bowl.py
+  CanFactory                         [ENTRY] a can   assets/objects/tableware/can.py
+  ChopsticksFactory                  [ENTRY] a pair of chopsticks   assets/objects/tableware/chopsticks.py
+  CupFactory                         [ENTRY] a cup   assets/objects/tableware/cup.py
+  FoodBagFactory                     [ENTRY] a food bag   assets/objects/tableware/food_bag.py
+  FoodBoxFactory                     [ENTRY] a food box/carton   assets/objects/tableware/food_box.py
+  ForkFactory                        [ENTRY] a fork   assets/objects/tableware/fork.py
+  FruitContainerFactory              [ENTRY] a fruit container/bowl of fruit   assets/objects/tableware/fruit_container.py
+  JarFactory                         [ENTRY] a jar   assets/objects/tableware/jar.py
+  KnifeFactory                       [ENTRY] a knife   assets/objects/tableware/knife.py
+  LargePlantContainerFactory         [ENTRY] a large plant container/planter   assets/objects/tableware/plant_container.py
+  LidFactory                         [ENTRY] a lid (for a pot/jar)   assets/objects/tableware/lid.py
+  PanFactory                         [ENTRY] a frying pan   assets/objects/tableware/pan.py
+  PlantContainerFactory              [ENTRY] a plant container/pot   assets/objects/tableware/plant_container.py
+  PlantPotFactory                    [ENTRY] a plant pot   assets/objects/tableware/plant_container.py
+  PlateFactory                       [ENTRY] a plate   assets/objects/tableware/plate.py
+  PotFactory                         [ENTRY] a cooking pot   assets/objects/tableware/pot.py
+  SpatulaFactory                     [ENTRY] a spatula   assets/objects/tableware/fork.py
+  SpoonFactory                       [ENTRY] a spoon   assets/objects/tableware/spoon.py
+  TablewareFactory                   [PART ] (engine / util) tableware base (util)   assets/objects/tableware/base.py
+  WineglassFactory                   [ENTRY] a wineglass   assets/objects/tableware/wineglass.py
+
+## objects/trees
+  BranchFactory                      [PART ] (element — for the whole plant/tree pick its [ENTRY]) a twig/branch with leaves (instanced)   assets/objects/trees/branch.py
+  BushFactory                        [ENTRY] a bush/shrub   assets/objects/trees/generate.py
+  GenericTreeFactory                 [ENTRY] a tree (configurable base engine)   assets/objects/trees/generate.py
+  TreeFactory                        [ENTRY] a whole tree: trunk+branches+foliage(+fruit)   assets/objects/trees/generate.py
+  TreeFlowerFactory                  [PART ] (element — for the whole plant/tree pick its [ENTRY]) a single blossom (instanced on a tree)   assets/objects/trees/tree_flower.py
+
+## objects/tropic_plants
+  CoconutTreeFactory                 [ENTRY] a coconut palm tree   assets/objects/tropic_plants/coconut_tree.py
+  LeafBananaTreeFactory              [PART ] (element — for the whole plant/tree pick its [ENTRY]) a banana-tree leaf   assets/objects/tropic_plants/leaf_banana_tree.py
+  LeafPalmPlantFactory               [PART ] (element — for the whole plant/tree pick its [ENTRY]) a palm-plant frond   assets/objects/tropic_plants/leaf_palm_plant.py
+  LeafPalmTreeFactory                [PART ] (element — for the whole plant/tree pick its [ENTRY]) a palm-tree frond   assets/objects/tropic_plants/leaf_palm_tree.py
+  PalmTreeFactory                    [ENTRY] a palm tree   assets/objects/tropic_plants/palm_tree.py
+  PlantBananaTreeFactory             [ENTRY] a banana plant/tree   assets/objects/tropic_plants/leaf_banana_tree.py
+
+## objects/underwater
+  SeaweedFactory                     [ENTRY] a seaweed strand   assets/objects/underwater/seaweed.py
+  UrchinFactory                      [ENTRY] a sea urchin   assets/objects/underwater/urchin.py
+
+## objects/wall_decorations
+  BalloonFactory                     [ENTRY] a balloon   assets/objects/wall_decorations/balloon.py
+  MirrorFactory                      [ENTRY] a wall mirror   assets/objects/wall_decorations/wall_art.py
+  RangeHoodFactory                   [ENTRY] a kitchen range hood   assets/objects/wall_decorations/range_hood.py
+  WallArtFactory                     [ENTRY] a framed wall art piece   assets/objects/wall_decorations/wall_art.py
+  WallShelfFactory                   [ENTRY] a wall shelf   assets/objects/wall_decorations/wall_shelf.py
+
+## objects/windows
+  WindowFactory                      [ENTRY] an articulated window   assets/objects/windows/window.py
+
+## sim_objects  (18)   (articulated objects for simulation; *Handle/Drawer are PART sub-pieces)
+  BoxFactory                         [ENTRY] an articulated box   assets/sim_objects/box.py
+  CabinetFactory                     [PART ] (sub-component) an articulated cabinet   assets/sim_objects/cabinet.py
+  DishwasherFactory                  [ENTRY] an articulated dishwasher   assets/sim_objects/dishwasher.py
+  DoorHandleFactory                  [ENTRY] a door handle   assets/sim_objects/door_handle.py
+  DrawerFactory                      [ENTRY] a drawer (part of a cabinet)   assets/sim_objects/drawer.py
+  FaucetFactory                      [ENTRY] an articulated faucet   assets/sim_objects/faucet.py
+  LampFactory                        [ENTRY] an articulated lamp   assets/sim_objects/lamp.py
+  MicrowaveFactory                   [ENTRY] an articulated microwave   assets/sim_objects/microwave.py
+  OvenFactory                        [ENTRY] an articulated oven   assets/sim_objects/oven.py
+  PepperGrinderFactory               [ENTRY] a pepper grinder   assets/sim_objects/pepper_grinder.py
+  PlierFactory                       [ENTRY] a pair of pliers   assets/sim_objects/plier.py
+  RefrigeratorFactory                [ENTRY] an articulated refrigerator   assets/sim_objects/refrigerator.py
+  SimDoorFactory                     [ENTRY] an articulated door   assets/sim_objects/door.py
+  SoapDispenserFactory               [ENTRY] a soap dispenser   assets/sim_objects/soap_dispenser.py
+  StovetopFactory                    [ENTRY] a stovetop   assets/sim_objects/stovetop.py
+  ToasterFactory                     [ENTRY] a toaster   assets/sim_objects/toaster.py
+  TrashFactory                       [ENTRY] a trash can   assets/sim_objects/trash.py
+  WindowFactory                      [ENTRY] an articulated window   assets/sim_objects/window.py
+
+## static_assets
+  StaticAssetFactory                 [PART ] (engine / util) loads a static asset file (util)   assets/static_assets/base.py
+  StaticCategoryFactory              [PART ] (engine / util) loads a static asset category (util)   assets/static_assets/static_category.py
+
+## objects/fruits   (added — were missing; single fruits are ELEMENTS)
+  FruitFactoryApple                  [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit apple   assets/objects/fruits/apple.py
+  FruitFactoryBlackberry             [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit blackberry   assets/objects/fruits/blackberry.py
+  FruitFactoryCoconutgreen           [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit coconutgreen   assets/objects/fruits/coconutgreen.py
+  FruitFactoryCoconuthairy           [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit coconuthairy   assets/objects/fruits/coconuthairy.py
+  FruitFactoryCompositional          [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit compositional   assets/objects/fruits/compositional_fruit.py
+  FruitFactoryDurian                 [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit durian   assets/objects/fruits/durian.py
+  FruitFactoryPineapple              [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit pineapple   assets/objects/fruits/pineapple.py
+  FruitFactoryStarfruit              [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit starfruit   assets/objects/fruits/starfruit.py
+  FruitFactoryStrawberry             [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit strawberry   assets/objects/fruits/strawberry.py
+  FruitFactoryGeneralFruit           [PART ] (element — for the whole plant/tree pick its [ENTRY]) a fruit general fruit   assets/objects/fruits/general_fruit.py

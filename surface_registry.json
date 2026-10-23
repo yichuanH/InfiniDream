@@ -1,0 +1,63 @@
+{
+  "vocabulary": [
+    "liquid", "ice", "snow", "rock", "sand", "soil", "grass",
+    "river_bank", "underwater_ground",
+    "floor", "tabletop", "countertop", "shelf", "bed_top", "seat"
+  ],
+  "scenes": {
+    "arctic": {"liquid": ["^liquid(?:\\.\\d+)?$"], "ice": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "snow": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "canyon": {"rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "sand": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "soil": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "cave": {"rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "soil": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "cliff": {"rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "soil": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "coast": {"liquid": ["^liquid(?:\\.\\d+)?$"], "sand": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "coral_reef": {"underwater_ground": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "desert": {"sand": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "forest": {"soil": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "grass": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "kelp_forest": {"underwater_ground": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "mountain": {"rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "soil": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "grass": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "plain": {"grass": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "soil": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "river": {"liquid": ["^liquid(?:\\.\\d+)?$"], "river_bank": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "grass": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "soil": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "snowy_mountain": {"snow": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "under_water": {"underwater_ground": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"], "rock": ["^(?:CollectiveTransparentTerrain|OpaqueTerrain)$"]},
+    "bedroom": {
+      "floor": ["^(?:bathroom|bedroom|dining-room|kitchen|living-room)_\\d+/\\d+\\.floor$"],
+      "tabletop": ["^(?:CoffeeTableFactory|SideTableFactory|TableCocktailFactory|TableDiningFactory|TableTopFactory|SidetableDeskFactory|SimpleDeskFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "countertop": ["^(?:BathroomSinkFactory|CountertopFactory|KitchenCabinetFactory|KitchenIslandFactory|KitchenSpaceFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "shelf": ["^(?:CabinetFactory|CellShelfFactory|LargeShelfFactory|SingleCabinetFactory|TriangleShelfFactory|TVStandFactory|WallShelfFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "bed_top": ["^(?:BedFactory|BedFrameFactory|BlanketFactory|BoxComforterFactory|ComforterFactory|MattressFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "seat": ["^(?:ArmChairFactory|BarChairFactory|ChairFactory|OfficeChairFactory|SofaFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"]
+    },
+    "living-room": {
+      "floor": ["^(?:bathroom|bedroom|dining-room|kitchen|living-room)_\\d+/\\d+\\.floor$"],
+      "tabletop": ["^(?:CoffeeTableFactory|SideTableFactory|TableCocktailFactory|TableDiningFactory|TableTopFactory|SidetableDeskFactory|SimpleDeskFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "countertop": ["^(?:BathroomSinkFactory|CountertopFactory|KitchenCabinetFactory|KitchenIslandFactory|KitchenSpaceFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "shelf": ["^(?:CabinetFactory|CellShelfFactory|LargeShelfFactory|SingleCabinetFactory|TriangleShelfFactory|TVStandFactory|WallShelfFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "bed_top": ["^(?:BedFactory|BedFrameFactory|BlanketFactory|BoxComforterFactory|ComforterFactory|MattressFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "seat": ["^(?:ArmChairFactory|BarChairFactory|ChairFactory|OfficeChairFactory|SofaFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"]
+    },
+    "kitchen": {
+      "floor": ["^(?:bathroom|bedroom|dining-room|kitchen|living-room)_\\d+/\\d+\\.floor$"],
+      "tabletop": ["^(?:CoffeeTableFactory|SideTableFactory|TableCocktailFactory|TableDiningFactory|TableTopFactory|SidetableDeskFactory|SimpleDeskFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "countertop": ["^(?:BathroomSinkFactory|CountertopFactory|KitchenCabinetFactory|KitchenIslandFactory|KitchenSpaceFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "shelf": ["^(?:CabinetFactory|CellShelfFactory|LargeShelfFactory|SingleCabinetFactory|TriangleShelfFactory|TVStandFactory|WallShelfFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "bed_top": ["^(?:BedFactory|BedFrameFactory|BlanketFactory|BoxComforterFactory|ComforterFactory|MattressFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "seat": ["^(?:ArmChairFactory|BarChairFactory|ChairFactory|OfficeChairFactory|SofaFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"]
+    },
+    "bathroom": {
+      "floor": ["^(?:bathroom|bedroom|dining-room|kitchen|living-room)_\\d+/\\d+\\.floor$"],
+      "tabletop": ["^(?:CoffeeTableFactory|SideTableFactory|TableCocktailFactory|TableDiningFactory|TableTopFactory|SidetableDeskFactory|SimpleDeskFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "countertop": ["^(?:BathroomSinkFactory|CountertopFactory|KitchenCabinetFactory|KitchenIslandFactory|KitchenSpaceFactory|StandingSinkFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "shelf": ["^(?:CabinetFactory|CellShelfFactory|LargeShelfFactory|SingleCabinetFactory|TriangleShelfFactory|TVStandFactory|WallShelfFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "bed_top": ["^(?:BedFactory|BedFrameFactory|BlanketFactory|BoxComforterFactory|ComforterFactory|MattressFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "seat": ["^(?:ArmChairFactory|BarChairFactory|ChairFactory|OfficeChairFactory|SofaFactory|ToiletFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"]
+    },
+    "dining-room": {
+      "floor": ["^(?:bathroom|bedroom|dining-room|kitchen|living-room)_\\d+/\\d+\\.floor$"],
+      "tabletop": ["^(?:CoffeeTableFactory|SideTableFactory|TableCocktailFactory|TableDiningFactory|TableTopFactory|SidetableDeskFactory|SimpleDeskFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "countertop": ["^(?:BathroomSinkFactory|CountertopFactory|KitchenCabinetFactory|KitchenIslandFactory|KitchenSpaceFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "shelf": ["^(?:CabinetFactory|CellShelfFactory|LargeShelfFactory|SingleCabinetFactory|TriangleShelfFactory|TVStandFactory|WallShelfFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "bed_top": ["^(?:BedFactory|BedFrameFactory|BlanketFactory|BoxComforterFactory|ComforterFactory|MattressFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"],
+      "seat": ["^(?:ArmChairFactory|BarChairFactory|ChairFactory|OfficeChairFactory|SofaFactory)\\(\\d+\\)\\.(?:bbox_placeholder|spawn_asset|spawn_placeholder)\\(\\d+\\)$"]
+    }
+  }
+}

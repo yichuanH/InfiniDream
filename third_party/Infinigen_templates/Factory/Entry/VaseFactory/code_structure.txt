@@ -1,0 +1,43 @@
+SUMMARY: VaseFactory procedurally builds a ceramic/glass vase as a single lofted surface generated from a stacked set of scaled star-profile rings (foot, body, shoulder, neck), then solidified and subdivided. The upper-level files define the profile-ring layout (vase.py) and the reusable geometry-node building blocks for star profiles, cylinder-side meshing, curve lofting, and warp-around-curve deformation (utils.py). NOTE: the current implementation produces an open-top upright vase (top face deleted for the mouth); it does NOT yet build the requested Klein-bottle bent/self-intersecting neck — achieving that would require adding a curved neck path (e.g. via nodegroup_warp_around_curve) and removing the top-face deletion.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/table_decorations/vase.py
+  VaseFactory.__init__: sets overall vase bounding dimensions.
+    knobs: z=uniform(0.17,0.5)(random height m) -> taller/shorter vase; x=z*uniform(0.3,0.6)(random) -> slimmer/wider footprint; dimensions=(x,x,z) -> overall size/aspect.
+  VaseFactory.get_material_params: picks glazed surface material + wear.
+    knobs: Material=weighted_sample(marble+tableware) -> ceramic/marble glaze appearance; scratch_prob/edge_wear_prob (from material_assignments.wear_tear_prob) -> chance of surface wear overlays; scratch/edge_wear applied in finalize_assets.
+  VaseFactory.sample_parameters: defines the vase silhouette via profile rings (all random unless noted).
+    knobs: U_resolution(64 fixed) -> radial mesh density/smoothness; V_resolution(64 fixed) -> vertical mesh density; Profile Inner Radius(choice([1.0, uniform(0.8,1.0)])) -> round vs star-fluted cross-section (1.0=circle); Profile Star Points(randint(16,33)) -> number of flutes/lobes; Height(=z) -> vase height; Diameter(=x) -> body width; neck_scale(uniform(0.2,0.8)) -> base neck narrowness; Top Scale(neck_scale*uniform(0.8,1.2)) -> mouth opening width; Neck Mid Position(uniform(0.7,0.95)) -> neck bulge midpoint height fraction; Neck Position(0.5*neck_scale+0.5±0.05) -> where neck starts up the height; Neck Scale(=neck_scale) -> neck radius; Shoulder Position(uniform(0.3,0.7)) -> shoulder height fraction; Shoulder Thickness(uniform(0.1,0.25)) -> shoulder taper zone; Foot Scale(uniform(0.4,0.6)) -> foot/base radius; Foot Height(uniform(0.01,0.1)) -> foot elevation; Material(choice(["glass","ceramic"]) — unused, overridden by material_params).
+  VaseFactory.create_asset: mesh finalization.
+    knobs: SOLIDIFY thickness(0.002) -> wall thickness; SUBSURF levels/render_levels(2) -> surface smoothness.
+  nodegroup_vase_profile: assembles the ordered stack of transformed profile rings (foot_bottom/top, body_bottom/top, neck/neck_middle/neck_top) that get lofted; edit ring translations/scales here to change silhouette segments or add a bent neck path.
+  geometry_vases: wires star profile -> vase profile -> lofting -> deletes Top face (open mouth) -> assigns Material.
+    knobs: lofting U/V Resolution(64,64 hardcoded) -> loft mesh density; DeleteGeometry Selection=lofting Top -> removes top cap (delete this node to close/seal the mouth, needed for a rimless continuous surface).
+
+FILE: assets/objects/table_decorations/utils.py
+  nodegroup_star_profile: generates the cross-section curve.
+    knobs: Resolution(64) -> ring vertex count; Points(64) -> star lobe count; Inner Radius(0.9)/Outer Radius(1.0 fixed) -> flute depth.
+  nodegroup_flip_index: index-remapping helper for loft grid ordering (no visual knobs).
+  nodegroup_cylinder_side: builds the U×V grid mesh (with uv_map) that the loft warps.
+    knobs: U/V Resolution -> mesh grid density.
+  nodegroup_shifted_circle: circle profile at given Z/Rot Z (unused by vase; available profile alt).
+    knobs: Resolution, Radius, Z, Rot Z.
+  nodegroup_lofting / nodegroup_lofting_poly: skins the stacked profile curves into a surface; Use Nurb switches CATMULL_ROM (lofting) or POLY (lofting_poly) vs NURBS interpolation.
+    knobs: U Resolution, V Resolution, Use Nurb(False) -> surface smoothness/interpolation between rings.
+  nodegroup_warp_around_curve: bends geometry along an arbitrary guide curve using tangent/normal frames (NOT currently used by vase — the key building block to create the bent, plunging Klein-bottle neck).
+    knobs: Curve Resolution(1024) -> bend fidelity; input Curve -> the arc the neck follows.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  core/placement/factory.py -> AssetFactory base class (seed handling, asset spawn lifecycle).
+  core/surface.py -> add_geomod to attach geometry-node graphs to an object.
+  core/nodes/node_wrangler.py -> NodeWrangler / Nodes API for building node graphs.
+  core/nodes/node_utils.py -> to_nodegroup decorator wrapping functions as reusable node groups.
+  core/nodes/node_info.py, compatibility.py, utils.py -> node metadata/socket/version compatibility helpers.
+  core/util/blender.py -> butil.modify_mesh (SOLIDIFY/SUBSURF) and mesh utilities.
+  core/util/math.py -> FixedSeed for deterministic per-seed sampling.
+  core/util/random.py -> weighted_sample for material selection.
+  assets/composition/material_assignments.py -> marble/tableware material lists and wear_tear probabilities.
+  assets/materials/ceramic/, metal/, plastic/, wood/, etc. -> glaze/surface shader implementations.
+  assets/materials/wear_tear/scratches.py, edge_wear.py -> surface aging overlays applied in finalize_assets.
+  assets/utils/object.py, core/placement/detail.py, core/tags.py, core/util/{color,logging}.py -> supporting object/tagging/detail/logging utilities.

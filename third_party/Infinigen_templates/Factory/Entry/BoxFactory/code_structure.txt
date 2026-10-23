@@ -1,0 +1,29 @@
+SUMMARY: BoxFactory procedurally builds a foldable cardboard-style box with articulated flaps/lids connected by hinge joints (a "sim object" whose panels can open/close). Despite the polar-bear request, the code only produces boxes. The bulk of box.py is transpiled geometry-node groups that construct the four faces (F1-F4), their flaps, lids, and folding edges; the `BoxFactory` class at the bottom samples the box dimensions/version/material and joint physics parameters, then applies the `geometry_nodes` network to a mesh.
+
+EDITABLE (upper-level files — change these to alter the result):
+FILE: assets/sim_objects/box.py
+  BoxFactory.sample_parameters: samples the per-box shape/material passed into the geometry node tree (called once per asset).
+    knobs: version = randint(0,7) -> chooses box style/flap configuration (0-6, sampled random); w,d,h = uniform(0.2,1) each -> box Dimensions (width/depth/height, random); thickness = uniform(0.01,0.04)*min(w,d,h) -> cardboard wall thickness (random, scaled to smallest dim); open_space_slid = uniform(0.1,0.13)*w/thickness -> "V45 Space Open For Cap", tuck-cap opening size (random); V3 Fraction of Width Covered = uniform(0.2,0.45) -> how far the V3 side flap covers the width; V5 Fraction Length Side Flap = uniform(0.2,0.6) -> length of side flaps; V345 Depth Flaps Fraction Height = uniform(0.2,0.6) -> depth of flaps as fraction of height; BoxMaterial = weighted_sample(material_assignments.woods)()() -> surface material (random from wood set; swap list to change look).
+  BoxFactory.sample_joint_parameters (gin-configurable, module="BoxFactory"): stiffness/damping for every hinge axis; all sampled uniform(min,max).
+    knobs: *_stiffness_min/_max (all default 0.0) -> joint resistance for each fold/lid axis; *_damping_min/_max (default 0.5-2.0) -> joint damping. Axes include F1/F2/F3/F4 top/bottom lids, F12/F34/F1234 folding edges, top-flap left/right flap axes.
+  BoxFactory.options: {"timestep":"0.001","integrator":"RK4"} -> physics sim settings (fixed).
+  geometry_nodes: top-level node tree; exposes inputs Dimensions(1,1,2), Box Thickness, Version, V3 Fraction of Width Covered, V45 Space Open For Cap, Bottom Closed(False), V5 Fraction Length Side Flap, V345 Depth Flaps Fraction Height, BoxMaterial. Assembles all faces, attaches lids/flaps via nodegroup_hinge_joint, sets material, flips faces. Hinge joint Min/Max angles are fixed at +/-3.1416 (full fold range); some initial "Value" positions fixed (e.g. F12 -0.5, F3 top lid 0.7).
+  nodegroup_node_group_006 (Calculate Face Dimensions): derives F1/F2/F3/F4 heights and F1/3, F2/4 widths from Dimensions, Thickness, Version. Version==6 subtracts extra thickness (knob: multipliers 2.0/4.0/6.0 on thickness -> panel heights).
+  nodegroup_node_group_021 (Face 1 Components) / nodegroup_node_group (Face 2) / nodegroup_node_group_019 (Face 3) / nodegroup_node_group_020 (Face 4): build each face's body, top/bottom flaps and lids; contain fixed multipliers (e.g. thickness*2.5, *3.5, *4.0, flap height *1.2) controlling flap sizing.
+  nodegroup_node_group_004 / _022 (Flap Length Calculator): switch logic choosing flap fraction cover / inward strength per Version, Face Number, Side Number; fixed Value nodes 0.0/0.5/1.0 set flap coverage fractions.
+  nodegroup_node_group_007/_011/_017/_018 (Prism/Flaps): build individual flap geometry from Width, Thickness, Flap Fraction Cover, Distance to Opposite Side, Flap Inward Strength/Start.
+  nodegroup_node_group_009/_012 (Rotators) + _013 (Corners) + _008/_010 (Pivot) + _001/_002/_003: build the rounded/beveled corner "rotator" geometry via convex-hull extrusions used at panel edges.
+  nodegroup_add_jointed_geometry_metadata_001..004: tag geometry parts with named-attribute labels (e.g. "complete_F1") for the sim/joint system.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/utils/joints.py -> nodegroup_hinge_joint: creates articulated hinge joints (parent/child, axis, min/max, position) used to attach flaps/lids.
+  assets/composition/material_assignments.py -> material category lists (e.g. `.woods`) for weighted material sampling.
+  core/placement/factory.py -> AssetFactory base class (seeding, asset creation lifecycle).
+  core/nodes/node_wrangler.py, node_utils.py, node_info.py, nodes/utils.py, compatibility.py -> geometry-node graph construction API (Nodes, NodeWrangler, to_nodegroup).
+  core/util/blender.py -> butil.spawn_vert / modify_mesh (apply NODES modifier).
+  core/util/random.py -> weighted_sample (probabilistic material choice).
+  core/surface.py, core/placement/detail.py -> surface/material application and detail handling.
+  assets/materials/** -> material shader implementations referenced by material_assignments.
+  assets/materials/wear_tear/edge_wear.py, scratches.py -> optional surface wear effects.
+  core/util/{color,math,logging}.py, assets/utils/object.py -> misc helpers.
+  __init__.py / assets/__init__.py / core/**/__init__.py -> package wiring.

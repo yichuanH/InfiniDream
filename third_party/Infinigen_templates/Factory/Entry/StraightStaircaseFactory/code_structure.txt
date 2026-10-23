@@ -1,0 +1,74 @@
+SUMMARY: This factory builds a single straight staircase flight rising to a landing, composed of steps/treads, stringer sides or rails, tubular handrails with posts (and optional horizontal bars or glass panels), and configurable support types. The upper-level `straight.py` file defines the entire `StraightStaircaseFactory`, sampling geometry dimensions, support/handrail styles, and materials, then procedurally builds and assembles all parts in `create_asset()`. The `__init__.py` files expose this factory alongside sibling staircase variants and provide a weighted random staircase selector.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/elements/staircases/__init__.py
+  random_staircase_factory(): weighted random pick among staircase variants.
+    knobs: door_probs([2,2,2,0.5,2,2] for Straight/L/U/Spiral/Curved/Cantilever) -> relative likelihood each style is chosen (Spiral rare).
+
+FILE: assets/objects/elements/staircases/straight.py
+  StraightStaircaseFactory.support_types: weighted choice of stringer/support style.
+    knobs: weights (single-rail 2, double-rail 2, side 3, solid 3, hole 3) -> chance of rail-supported vs solid/hole stringer vs open side.
+  StraightStaircaseFactory.handrail_types: weighted choice of infill style.
+    knobs: weights (glass 2, horizontal-post 2, vertical-post 2) -> chance of glass panel / horizontal bars / vertical balusters.
+
+  __init__ (sampled attributes; most randomized per factory_seed):
+    knobs: hole_size(log_uniform 0.6–1.0) -> size of cut opening under stairs when support_type="hole".
+    knobs: rail_offset(step_width*uniform 0.15–0.3) -> inset of double rails from edges.
+    knobs: is_rail_circular(uniform<0.5) -> round vs flat rail cross-section.
+    knobs: rail_width(log_uniform 0.08–0.2), rail_height(log_uniform 0.08–0.12) -> rail thickness/depth.
+    knobs: has_tread(True if no step else uniform<0.75) -> whether flat tread caps exist.
+    knobs: tread_height(0.01–0.02 with step else 0.06–0.08) -> tread slab thickness.
+    knobs: tread_length(step_length+0.01–0.02), tread_width(step_width+0.01–0.02 at 80% else exact) -> tread overhang.
+    knobs: side_type(choice zig-zag/straight) -> stringer profile shape.
+    knobs: side_height(step_height*log_uniform 0.2–0.8) -> stringer depth below steps.
+    knobs: side_thickness(uniform 0.03–0.08) -> stringer plate thickness.
+    knobs: is_handrail_circular(uniform<0.7) -> round vs beveled-box handrail.
+    knobs: handrail_width(log_uniform 0.02–0.06), handrail_height(log_uniform 0.02–0.06) -> handrail tube size.
+    knobs: handrail_offset(handrail_width*log_uniform 1–2) -> inset of handrails from step edge.
+    knobs: handrail_extension(uniform 0.1–0.2) -> horizontal overhang of handrail past ends.
+    knobs: post_height(log_uniform 0.8–1.2) -> height of vertical posts/balusters.
+    knobs: post_k(ceil(step_width/step_length)) -> post spacing grouping factor.
+    knobs: post_width(handrail_width*log_uniform 0.6–0.8), post_minor_width(post_width*log_uniform 0.3–0.5) -> main vs minor post thickness.
+    knobs: is_post_circular(uniform<0.5) -> round vs square post cross-section.
+    knobs: bar_size(log_uniform 0.1–0.2) -> vertical spacing of horizontal bars.
+    knobs: n_bars(floor(post_height/bar_size*uniform 0.35–0.75)) -> number of horizontal bars.
+    knobs: glass_height(post_height-uniform 0–0.05), glass_margin(step_height/2+uniform 0–0.05) -> glass panel top/bottom extents.
+    knobs: mirror(uniform<0.5) -> left/right flip of whole assembly.
+    knobs: rot_z(randint(4)*π/2) -> 90° yaw orientation.
+    knobs: end_margin(step_length*8) -> length of top landing extension (placeholder).
+    knobs: bevel width(handrail_width*uniform 0.2–0.5), segments(randint 4–7) -> box handrail edge rounding.
+    knobs: geo_radius resolution args (rail 16, handrail 32, post 32) -> tube smoothness.
+
+  build_size_config(): base staircase dimensions (fixed vs sampled).
+    knobs: n(randint 13–21) -> number of steps.
+    knobs: step_height(wall_height/n) -> per-step rise (derived from RoomConstants).
+    knobs: step_width(uniform 0.8–1.6) -> stair width.
+    knobs: step_length(step_height*log_uniform 0.8–1.2) -> per-step run/depth.
+
+  Material assignments (sampled via weighted_sample from material_assignments):
+    knobs: step_surface, tread_surface, rail_surface, side_surface, handrail_surface, post_surface, glass_surface -> per-part material (change the weighted lists in material_assignments.py to alter appearance).
+
+  make_steps/make_rails/make_treads/make_inner_sides/make_outer_sides/make_handrails/make_posts/make_bars/make_glasses: build each geometry component; edit to change part shapes/construction.
+  create_asset(): assembles enabled parts into one joined object then applies mirror/rotation — order and inclusion of parts controlled by has_* flags.
+  make_guardrail()/decorate_line()/create_placeholder()/create_cutter(): integration with room constraint system (wall tags, cutter, placeholder); edit only for constraint behavior.
+  make_column()/make_spiral()/unmake_spiral(): no-op stubs for straight variant (has_column/has_spiral always False).
+  valid_contour()/lower/upper: placement validity against doors.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> weighted material pools (step/tread/rail/side/handrail/post/glasses) sampled for surfaces.
+  assets/materials/** -> concrete shader/material generators (metal, ceramic, wood, etc.) used by the pools.
+  assets/utils/decorate.py -> mesh ops: mirror, read_co/write_co, remove_faces/vertices, subsurf, write_attribute.
+  assets/utils/mesh.py -> shapely linestring helpers (canonicalize_ls, convert2ls).
+  assets/utils/nodegroup.py -> geo_radius node group for tube extrusion.
+  assets/utils/object.py -> primitive/object builders (new_line, new_cube, new_circle, mesh2obj, join_objects, separate_loose).
+  assets/utils/shapes.py -> cut_polygon_by_line for slicing step/side polygons.
+  core/constraints/constraint_language/constants.py -> RoomConstants (wall_height, wall_thickness, door_size) driving stair sizing.
+  core/nodes/** -> Nodes, NodeWrangler for geometry-node offset/extrude operations.
+  core/placement/detail.py -> sharp_remesh_with_attrs for wall placeholder remeshing.
+  core/placement/factory.py -> AssetFactory base class / asset lifecycle.
+  core/surface.py -> add_geomod, assign_material, attribute read/eval helpers.
+  core/tagging.py, core/tags.py -> Subpart tagging (Wall/Ceiling/Visible etc.) and PREFIX for constraint metadata.
+  core/util/blender.py -> butil mesh/modifier/transform utilities.
+  core/util/math.py -> FixedSeed, normalize.
+  core/util/random.py -> log_uniform, weighted_sample, random_general (rg) for sampling.

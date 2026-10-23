@@ -1,0 +1,68 @@
+SUMMARY: This factory builds a full coconut palm tree: a tall curved trunk (with bark cracks/vein grooves) topped by a cluster of arching pinnate palm fronds, plus green coconut fruits and truncated leaf stems near the crown. The upper-level files fit together as: `coconut_tree.py` (entry) assembles trunk + crown geometry and instances a leaf asset (`leaf_palm_tree.py`, which uses `tropic_plant_utils.py` for leaf-shape node groups) and a coconut fruit asset (`coconutgreen.py`, built on the generic `general_fruit.py` procedural-fruit pipeline). To satisfy the "bottle palm" request you would shorten `trunk_height`, add a bottle-shaped swell to the trunk-radius curve, narrow the crownshaft, reduce frond count, and remove/disable the coconut fruits.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tropic_plants/coconut_tree.py
+  geometry_coconut_tree_nodes: assembles trunk curve, crown sphere, leaf/coconut/stem instancing.
+    knobs: trunk_height(fixed 5.0) -> overall tree height (lower for short bottle palm); top_x/top_y(normal(0,1)) -> trunk lean/curvature at top; QuadraticBezier Middle Z(uniform(1.5,3.0)) -> mid-trunk bend height; resample Length(0.02) -> trunk mesh resolution; top_segment(randint(8,14)) & top_ring(randint(8,11)) -> crown sphere ring/segment counts (drive number/arrangement of fronds & coconuts); uv_sphere Radius(uniform(0.15,0.2)) -> crown head size; transform Scale Z(uniform(0.8,2.0)) -> crown vertical stretch; instance_on_points Scale value(0.2) -> coconut cluster scale; random_value 5:randint(1,3) & later selections -> how many coconuts culled; truncatedstemgeometry appended prob(uniform<0.3) -> chance of dead leaf stems at crown; leaf_x_curvature(uniform(0.3,0.8)) passed to leaf factory -> frond arch.
+  CoconutTreeFactory.create_asset: builds & deletes temp leaf/coconut assets, sets trunk_radius.
+    knobs: trunk_radius(uniform(0.2,0.3)) -> trunk thickness (for bottle belly, drive this via a swelling curve instead of constant).
+  nodegroup_trunk_radius: trunk radius profile along height (main lever for bottle shape).
+    knobs: FloatCurve points [(0,0.0969),(0.5864,0.1406),(1.0,0.2906)] -> trunk taper shape (edit to create low bulging belly then narrow neck); MapRange 3:1.0/4:0.2 -> base-to-top radius scale; multiply_1 factor(uniform(0.1,0.25)) -> ridge amplitude; random_value(0.01,0.05) -> per-vertex radius noise.
+  nodegroup_trunk_radius_001: radius profile for coconut-vein sub-geometry (minor).
+    knobs: FloatCurve points -> vein bulge shape.
+  nodegroup_tree_cracks: bark crack displacement.
+    knobs: voronoi Scale(400.0)/Randomness(10.0) -> crack density; colorramp positions(0.6091/0.6818) -> crack width/threshold; offset multiply(-0.01,-0.01,-0.01) -> crack depth.
+  nodegroup_leaf_on_top: instances fronds on crown, rotates them downward.
+    knobs: scale random_value(0.9,1.2) -> frond size variation; leaf_instance_selection_bottom_remove Segment-4 threshold -> how many bottom fronds removed (raise to keep only few stiff top fronds); random_value scale-to-zero -> extra frond culling.
+  nodegroup_leaf_instance_selection_bottom_remove: culls lower crown fronds.
+    knobs: subtract Segment-4.0 -> cutoff ring (increase to leave sparse crown of few fronds).
+  nodegroup_coconut_group / nodegroup_coconut_instance_on_points: coconut placement & counts.
+    knobs: uv_sphere_1 Segments8/Rings6/Radius0.15 -> coconut cluster resolution/spread; random_value_2 scale(0.15,0.4) -> coconut size; less_than index 20/30 selections -> coconut/vein count culling; Ring-4/Ring-2 band -> which crown rings bear fruit (set to remove all coconuts for bottle palm).
+  nodegroup_petal_z_contour / nodegroup_petal_stem_curvature / nodegroup_coutour_cross_geometry / nodegroup_truncated_leaf_stem: dead-frond stem shapes.
+    knobs: petal_z_coutour_scale(uniform(0.2,0.4)) -> stem width; petal_cross_coutour_x/y(0.3) -> stem cross-section; curvature FloatCurve -> stem bend.
+  nodegroup_truncated_stem_geometry: dead leaf stem instancing/rotation.
+    knobs: truncated_leaf_selection multipliers(uniform(0.92,0.98), normal(0.8,0.1)) -> which/how many dead stems; scale_instances random_value(0.6) -> size; modulo randint(8,12) -> culling.
+  shader_trunk: trunk bark material.
+    knobs: d_hsv/b_hsv hue(0.02-0.05) sat(random) value(0.03-0.09 / 0.1-0.3) -> trunk grey/brown color (raise value & drop sat for smooth grey bottle-palm trunk); wave Scale(uniform(1,3)) -> vertical banding; voronoi Scale(20/100) -> speckle detail; colorramp_1 dark speckle color(0.5284,0.5034,0.4327).
+  shader_top_core: crownshaft/core material (green shaft above trunk).
+    knobs: d_hsv/b_hsv (hue 0.02-0.05, sat, value) -> crownshaft color (set green for slim green crownshaft); voronoi Scale(uniform(100,400)); wave Scale2.0/Distortion5.0.
+  shader_coconut_green_shader: green coconut fruit color.
+    knobs: colorramp element colors((0.0908,0.2664,0.013),(0.2462,0.4125,0.0044)) -> coconut green tone; map_range hue/value bands.
+  nodegroup_node_group_002: hue/voronoi color variation helper for coconut shader.
+    knobs: voronoi scale(50), noise scale(10)/amount(1.4), hue min(0.6)/max(1.085) -> color mottling.
+
+FILE: assets/objects/tropic_plants/leaf_palm_tree.py
+  LeafPalmTreeFactory.update_params: default frond parameters.
+    knobs: leaf_x_curvature(uniform(0.0,0.8)) -> frond arch (raise for stiff arching fronds); leaf_instance_curvature_ratio(uniform(0.3,0.6)) -> leaflet vs midrib bend; leaf_instance_width(uniform(0.07,0.15)) -> leaflet width; num_leaf_samples(randint(6,10)/width) -> leaflet count per frond; plant_z_rotate(uniform(-0.4,0.4)); versions(3); plant_scale(uniform(0.8,1.5)) -> overall frond size.
+  nodegroup_palm_leaf_instance: single pinnate leaflet shape.
+    knobs: leaf_gen Vein Asymmetry(uniform(0.2,0.4)), Midrib Width(uniform(0.9,1.5)), Stem Length(uniform(0.55,0.65)), Midrib Length(0.3336) -> leaflet silhouette; sub_vein multiply(0.0005) -> vein relief.
+  nodegroup_leaf_on_stem: distributes leaflets along frond rachis (both sides).
+    knobs: rotation_scale(uniform(0.6,1.2)), rotation_gap(uniform(0.2,0.6)), scale_gap(uniform(0.2,0.5)), in_out_scale(normal(0,0.7)) -> leaflet spread/taper; final random scale(0.7).
+  nodegroup_stem_geometry: rachis/stem tube.
+    knobs: map_range radius(uniform(0.1,0.3)->0.8) -> rachis taper; curve_circle Radius(uniform(0.03,0.06)) -> rachis thickness.
+  nodegroup_stem_curvature: rachis bend along frond.
+    knobs: Y Stem Rotate (=leaf_x_curvature) & X Stem Rotate(normal(0,0.15)) -> frond droop/curve.
+  shader_leaf_material: frond color.
+    knobs: main_leaf_hsv(hue uniform(0.3,0.36), sat uniform(0.8,1.0), value uniform(0.25,0.45)) -> frond green; stem_color_hsv value offset(uniform(0.05,0.15)).
+
+FILE: assets/objects/tropic_plants/tropic_plant_utils.py
+  Leaf node-group library (midrib, veins, jigsaw edge, shape) used by leaf factory.
+    knobs: nodegroup_nodegroup_shape leaf_contour_control_points (default curve pts) -> leaflet outline; nodegroup_nodegroup_sub_vein voronoi Scale(30/150) -> sub-vein density; shader_stem_material stem_color_hsv(hue uniform(0.25,0.32), sat uniform(0.6,0.9), value uniform(0.2,0.6)) -> stem green.
+
+FILE: assets/objects/fruits/coconutgreen.py
+  FruitFactoryCoconutgreen.sample_cross_section_params: coconut cross-section roundness.
+    knobs: rad_small(uniform(0.65,0.75)); radius(normal(1.8,0.1)); noise scale(20.0)/amount(0.02).
+  sample_shape_params: coconut longitudinal profile.
+    knobs: radius_control_points (bulge positions uniform(0.2,0.3)/uniform(0.6,0.7)) -> fruit fatness; Start Z(normal(-1.0,0.1)).
+  sample_surface_params: coconut green skin color.
+    knobs: bottom_color hsv(0.282,0.951,0.266)+noise, basic_color hsv(0.235,0.989,0.413)+noise; scale_multiplier(1.5).
+  sample_stem_params: coconut calyx/stem.
+    knobs: calyx width(uniform(0.2,0.25)); Count(randint(4,6)); stem_radius(normal(0.04,0.005)); stem_end Z(uniform(0.3,0.5)); edge color hsv(0.039,0.96,0.037).
+
+FILE: assets/objects/fruits/general_fruit.py
+  FruitFactoryGeneralFruit / general_fruit_geometry_nodes: generic fruit assembly pipeline (cross-section -> shape -> surface -> stem -> align). Rarely edited directly.
+    knobs: create_asset final scale(normal(1,0.1)*scale*scale_multiplier) -> coconut size.
+
+FILE: assets/objects/fruits/__init__.py , assets/objects/tropic_plants/__init__.py
+  Package exports only

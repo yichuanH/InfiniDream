@@ -1,0 +1,35 @@
+SUMMARY: This factory builds a single procedurally-generated plate (a spun, solidified surface-of-revolution disc). The upper-level files define the plate profile geometry and material/wear assignment; `base.py` provides shared tableware machinery (materials, guard/inside face groups, solidify) and `plate.py` specializes it into a plate profile via `spin`. Note: the current implementation produces one plate mesh per `create_asset()` call — it does not itself assemble a tray with multiple food-laden plates.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/tableware/plate.py
+  PlateFactory.__init__: sets plate profile shape, size, and surface options
+    knobs: allow_transparent(True) -> permits glass/transparent materials; x_end(0.5, fixed) -> outer radius extent of profile; z_length(log_uniform 0.05-0.2) -> total plate height/rim depth; x_mid(uniform 0.3-1.0 * x_end) -> radius of the inner ledge/bowl transition; z_mid(uniform 0.3-0.8 * z_length) -> height of mid ledge (curvature of rim rise); has_guard(False) -> disables raised guard edge; pre_level(1) -> pre-solidify subsurf smoothness; has_inside(uniform<0.2, ~20% chance) -> whether interior surface gets separate inside material; scale(log_uniform 0.2-0.4) -> overall plate size multiplier; thickness(uniform 0.01-0.03 * scale) -> wall/plate thickness; scratch/edge_wear(None, forced off) -> disables wear effects for plates
+  PlateFactory.create_asset: constructs the spun mesh
+    knobs: x_anchors(0, x_mid, x_mid, x_end) & z_anchors(0, 0, z_mid, z_length) -> control-point profile defining the plate cross-section (edit to reshape rim/base); spin(anchors,[1,2]) -> revolves profile with smoothing at points 1,2; subsurf(obj,1) -> final smoothing level
+
+FILE: assets/objects/tableware/base.py
+  TablewareFactory.__init__: shared material/wear defaults for all tableware
+    knobs: is_fragile(False), allow_transparent(False) -> overridden by plate; thickness(0.01, default) -> overridden by plate; surface/inside_surface (sampled via weighted_sample(material_assignments.cup)) -> body & interior material, random per seed; guard_surface (sampled from material_assignments.woods) -> guard material (unused for plate); scratch_prob/edge_wear_prob & wear_tear (from material_assignments) -> probabilistic surface wear (disabled for plate); lower_thresh(uniform 0.5-0.8) -> z fraction below which faces count as "lower inside"; scale(1.0 default), metal_color("bw+natural") -> metal tint choice
+  TablewareFactory.add_guard: extrudes a raised guard rim on selected faces (guard_depth = thickness); inactive when has_guard False
+  TablewareFactory.make_double_sided: helper restricting selection to near-vertical-normal faces (|normal.z|>0.8)
+  TablewareFactory.finalize_assets: assigns body/inside/guard materials and applies scratch/edge_wear if present
+  TablewareFactory.solidify_with_inside: SOLIDIFY modifier (thickness arg), tags "inside" and "lower_inside" face attributes for material selection
+
+FILE: assets/objects/tableware/__init__.py
+  module exports: registers PlateFactory and sibling tableware factories (BowlFactory, CupFactory, FoodBoxFactory, etc.) — add here to expose new factories
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/composition/material_assignments.py -> material palettes (cup, woods) and wear_tear probability tables sampled for surfaces
+  assets/utils/draw.py -> spin(): revolves a 2D profile into a surface-of-revolution mesh
+  assets/utils/decorate.py -> subsurf, read_co, write_attribute mesh helpers
+  assets/utils/misc.py -> assign_material helper
+  assets/utils/mesh.py, assets/utils/object.py -> mesh/object construction utilities
+  core/nodes/node_info.py, core/nodes/node_wrangler.py -> geometry-node graph building (extrude, store attribute, etc.)
+  core/surface.py -> add_geomod, assign_material, eval_argument for shader/geo-node application
+  core/placement/factory.py -> AssetFactory base class and asset lifecycle
+  core/placement/detail.py -> level-of-detail / subdivision handling
+  core/util/blender.py -> modify_mesh (SUBSURF/SOLIDIFY) and Blender object utilities
+  core/util/math.py -> FixedSeed (deterministic per-seed sampling)
+  core/util/random.py -> weighted_sample, log_uniform sampling helpers
+  core/util/logging.py, core/__init__.py, assets/__init__.py, __init__.py -> package/logging infrastructure

@@ -1,0 +1,72 @@
+SUMMARY: This factory builds procedural cactus assets; the ColumnarCactusFactory produces a columnar (organ-pipe-like) cactus with a shared base, ribbed vertical columns, distributed spine clusters, and a green cactus shader. The upper-level files define per-species base factories (columnar/globular/pricky_pear/kalidium) that generate the core mesh via radius-trees and geometry-node "star" rib profiles, while generate.py wraps them with remesh, noise displacement, material assignment, and spike instancing. columnar.py is the primary file for the requested organ-pipe architecture (columns, ribs), spike.py controls spines, and generate.py controls color/material and the overall pipeline. Note: no dedicated flower geometry exists in these files — flowers must be added.
+
+EDITABLE (upper-level files — change these to alter the result):
+
+FILE: assets/objects/cactus/generate.py
+  CactusFactory.__init__: species selection + material setup
+    knobs: factory_methods(list of 3 base factories; Kalidium commented out) -> which cactus type; weights(all 1, normalized) -> selection probability; base_hue(uniform 0.2-0.4) -> overall green/yellow tint of body
+  CactusFactory.create_asset: assembly pipeline
+    knobs: face_size(0.01) -> mesh resolution; noise texture t(random STUCCI/MARBLE) -> surface bumpiness style; texture.noise_scale(log_uniform 0.1-0.15) -> displacement grain; strength=factory.noise_strength -> bump depth; density>0 & face_size<=0.05 gate -> whether spikes are applied
+  CactusFactory.shader_cactus: body material
+    knobs: shift(uniform -0.15..0.15) -> hue variation of bright color; bright_color(hsv (hue+shift,1.0,0.02)) -> ridge highlight; dark_color(hsv (hue,0.8,0.01)) -> valley shade; fresnel_color(hsv (hue-0.05..0.1,0.9,0.3..0.5)) -> rim color; specular(0.25) -> gloss; fresnel mult(log_uniform 0.6-1.0) -> rim intensity; color ramp stops[0,0.3,0.7,1.0] -> dark/bright split; musgrave scale(log_uniform 10-50) -> rib/mottle frequency; roughness curve[(0,0.5),(1,0.8)] -> matte-ness
+
+FILE: assets/objects/cactus/columnar.py  (PRIMARY for organ-pipe columns & ribs)
+  ColumnarBaseCactusFactory.spike_distance(0.08): spacing between spine clusters
+  ColumnarBaseCactusFactory.radius_fn: per-column thickness profile
+    knobs: radius_decay(uniform 0.5-0.8) -> overall column thickness; radius_decay_root(uniform 0.7-0.9) -> base taper; leaf_alpha(uniform 2-3) -> tip rounding sharpness
+  ColumnarBaseCactusFactory.branch_config: multi-column architecture
+    knobs: n_major(16) -> vertical points of trunk (column height smoothness); n_minor(randint 10-14) -> points per side column (column length); b_minor(randint 2-4) -> number of side columns per trunk (cluster density); angles(uniform 0..2pi, rejection-sampled >pi/3 apart) -> radial column spacing; minor path std(0.4)/momentum(0.1)/sz(0.2) -> column wiggle/length; pull_dir([0,0,1])/pull_factor(4.0) -> upward parallel growth; ang_min(pi/2.5)/ang_max(pi/2) -> column emergence angle; rng[0.2,0.6] -> spawn height along trunk; major momentum(0.99)/sz(0.3) -> trunk straightness
+  ColumnarBaseCactusFactory.create_asset:
+    knobs: resolution(16) -> column mesh smoothness; base_radius(0.25) -> overall cactus size
+  ColumnarBaseCactusFactory.geo_star: vertical rib profile
+    knobs: perturb(0.1) -> rib jaggedness; star_resolution(randint 5-8) -> number of ribs; scale(uniform 0.8-1.0 x/y) -> cross-section ovality; SetPosition mult(uniform 1.15-1.25) -> rib depth/prominence; align_tilt noise_strength(uniform pi/4..pi/2) -> rib spiral/twist
+
+FILE: assets/objects/cactus/spike.py  (spines)
+  build_spikes: individual spine cluster geometry
+    knobs: n_branch(4) -> spines per cluster; n_major(9) -> spine segment count; sz(uniform 0.005-0.01) -> spine length; init_vec=sample_direction(0.8) -> spine splay; radius_fn 0.5^... -> spine taper; geo_radius arg 0.001 -> spine base thickness
+  make_default_selections: where spines go
+    knobs: cap_percentage -> extra spine density near top cap; spike_distance -> min spacing; density -> spines per area; float_curve [(0,1),(cap_percentage,0.5),(1,0)] -> cap vs body distribution
+  geo_spikes: spine placement/orientation
+    knobs: rotation random angle(uniform 0..2pi) -> spine roll; align jitter(uniform 0.2-0.5) -> alignment to normal; add jitter([-0.05,0.05]) -> orientation noise; Scale(uniform 0.5-1.0) -> spine size variance; Pick Instance True -> random cluster choice
+  shader_spikes: spine material
+    knobs: roughness(0.8); specular(0.25); mix_ratio(0.9) -> translucency blend; color(hsv 0.2-0.4,0.1-0.3,0.8) -> pale spine tint; Subsurface Weight(0.1)
+  build_spikes make_asset_collection count(5) -> variety of spine cluster prototypes
+
+FILE: assets/objects/cactus/base.py
+  BaseCactusFactory: shared defaults (overridden per species)
+    knobs: spike_distance(0.025); cap_percentage(0.1); noise_strength(0.02); base_radius(0.002 spine radius); density(5e4)
+
+FILE: assets/objects/cactus/globular.py
+  GlobularBaseCactusFactory: barrel/globe cactus (not used by Columnar)
+    knobs: spike_distance(0.08); star_resolution(randint 6-12) -> ribs; resolution(64); frequency(uniform -0.2..0.2) -> rib spiral; SetPosition mult(uniform 1.1-1.2) -> rib depth; radius anchors -> body silhouette; obj.scale(uniform 0.8-1.5)
+
+FILE: assets/objects/cactus/pricky_pear.py
+  PrickyPearBaseCactusFactory: paddle cactus (not used by Columnar)
+    knobs: spike_distance(0.08); radius anchors -> pad shape; recursion level(2) -> number of pad generations; n(randint 1-3) -> pads per node; branch angles(±pi/3..pi/2) -> pad spread; child scale(uniform 0.5-0.75); pad scale y(uniform 0.2-0.25) -> pad flatness
+
+FILE: assets/objects/cactus/kalidium.py
+  KalidiumBaseCactusFactory: succulent-twig cactus (commented out of selection)
+    knobs: cap_percentage/noise_strength/density all 0; resolution(20); twig branch n_pts(5)/sz(0.01); geo_radius(0.006); twig density(2e3); count 5
+
+FILE: assets/objects/cactus/__init__.py
+  Module exports only — no tunables.
+
+NOTE: No flower geometry is implemented for the columnar cactus. To satisfy "large pale flowers near the top," add flower-mesh generation (e.g., a new geo function + placement near column tips) — most naturally in columnar.py create_asset or a new spike-like instancer, plus a pale-flower shader in generate.py.
+
+LINKED TO INFINIGEN (infra — do NOT edit, resolved from the original package):
+  assets/objects/trees/tree.py -> radius-tree skeleton builder (build_radius_tree, recursive_path, rand_path) used for columns and spines
+  assets/utils/decorate.py -> geo_extension mesh warp, vertex read/displace/remove helpers
+  assets/utils/nodegroup.py -> align_tilt, geo_radius node groups
+  assets/utils/object.py -> new_cube, join_objects, mesh2obj, separate_loose, origin2lowest
+  assets/utils/misc.py -> assign_material, sample_direction, toggle_show/hide
+  assets/utils/shortest_path.py -> geo_shortest_path (kalidium veins)
+  core/surface.py -> add_geomod, shaderfunc_to_material, eval_argument, write_attr_data
+  core/nodes/node_wrangler.py, node_info.py, node_utils.py -> geometry/shader node graph API (Nodes, build_color_ramp, etc.)
+  core/placement/factory.py -> AssetFactory base, make_asset_collection
+  core/placement/detail.py -> remesh_with_attrs, subsurface2face_size
+  core/tagging.py, core/tags.py -> tag_object / semantic tagging
+  core/util/color.py -> hsv2rgba
+  core/util/random.py -> log_uniform sampling
+  core/util/math.py -> FixedSeed deterministic seeding
+  core/util/blender.py -> modify_mesh, ViewportMode, apply_transform, deep_clone_obj, delete_collection
+  core/nodes/nodegroups/*, compatibility.py, utils.py -> node graph support/versioning

@@ -1,0 +1,18 @@
+# runtime outputs
+output/
+scenes/*/
+!scenes/README.md
+.env
+__pycache__/
+*.pyc
+*.blend
+*.blend1
+*.log
+scratchpad/
+
+# never ship the lab-internal subscription shim or login tokens
+subscription_backend/
+pipeline/run_e2e_sub.sh
+pipeline/.run_e2e_sub.generated.*
+oauth_token
+.credentials.json
