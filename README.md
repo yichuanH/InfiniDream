@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo_dark.png">
-    <img src="assets/logo_light.png" alt="InfiniDream" width="220">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo_dark.png">
+    <img src="docs/assets/logo_light.png" alt="InfiniDream" width="220">
   </picture>
 </p>
 
@@ -35,7 +35,7 @@ InfiniDream turns a single text prompt into a photorealistic, open-ended 3D worl
 
 ## From a sentence to a living world
 
-<p align="center"><img src="assets/teaser.gif" width="720" alt="Scene build-up"></p>
+<p align="center"><img src="docs/assets/teaser.gif" width="720" alt="Scene build-up"></p>
 
 Objects are planned, generated, and placed one by one into a living, animated scene.
 
@@ -245,10 +245,11 @@ director/                 Step 4: prompt + scene scan → edit plan (Claude, vis
 asset_generator/          Step 5: reference image → coding agent rewrites an Infinigen factory → verifier
 planner/                  Step 7–8: Composer decides placement; critics review it
 stage_exec/               Steps 8–12: placement, populate, validation, rendering (bpy)
-photographer/             camera selection
-scene_picker/             baseline scene selection
+tools/                    photographer (camera selection), scene_picker (baseline selection), scene_bank, preview/video helpers
 third_party/              infinigen.patch, extra gin configs, prebuilt factory reference library
 examples/cases/           sample prompts
+docs/                     README media
+tests/                    unit tests (pytest)
 scenes/                   your baseline scenes (built, not shipped)
 output/                   everything the pipeline writes
 ```

@@ -16,7 +16,7 @@
 ⚠️ ★只能在小幅範圍內挑★ —— 地形網格精度是 fine_terrain 照當時那台相機烤死的
    (in-view 0.53 / 遮擋 0.13 / 視野外 0.07 marching cube per pixel，★8 倍粗★)。
    相機轉太多，那層粗殼會轉進畫面變成可見的平面三角形。
-   speed_up_render/preview_angles.py 的五個 preset 就是為此刻意都貼著 infinigen
+   tools/speed_up_render/preview_angles.py 的五個 preset 就是為此刻意都貼著 infinigen
    自己的 pose(註解寫 `keep these nudges SMALL`)，所以這裡直接沿用那五個。
    ★要真正自由選視角，必須在生場景時做(fine_terrain 之前)，不是事後改現成場景。★
 
@@ -42,8 +42,8 @@ from pathlib import Path
 from dotenv import dotenv_values
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
-PREVIEW = ROOT / "speed_up_render" / "preview_angles.py"
+ROOT = HERE.parent.parent   # repo root (this file lives in tools/<x>/)
+PREVIEW = ROOT / "tools" / "speed_up_render" / "preview_angles.py"
 BPY_PYTHON = os.environ.get("BPY_PYTHON", os.environ.get("BI_PYTHON", sys.executable))
 OPUS_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-4-8")
 

@@ -71,11 +71,11 @@ if [ -n "$ANGLE" ]; then
     # and let Claude pick one; writes preview/camera_choice.json.
     log "pick camera (agent) ..."
     VIS=""; [ -s "$D/fine/scene.blend" ] && VIS="--visual-blend $D/fine/scene.blend"
-    $PY photographer/pick_camera.py "$D/coarse/scene.blend" "$D/preview" $VIS > "$D/preview.log" 2>&1 \
+    $PY tools/photographer/pick_camera.py "$D/coarse/scene.blend" "$D/preview" $VIS > "$D/preview.log" 2>&1 \
       || { tail -20 "$D/preview.log"; log "pick_camera FAILED"; exit 1; }
     cp "$D/preview/camera_choice.json" "$D/camera_choice.json"
   else
-    $PY experiments/scene_bank/make_camera_choice.py "$ANGLE" "$D/camera_choice.json" \
+    $PY tools/scene_bank/make_camera_choice.py "$ANGLE" "$D/camera_choice.json" \
       --scene "$BIOME/seed$SEED" --blend "$D/coarse/scene.blend"
   fi
   log "camera_choice.json -> $(python3 -c "import json;print(json.load(open('$D/camera_choice.json'))['angle'])")"

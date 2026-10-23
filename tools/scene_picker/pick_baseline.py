@@ -21,7 +21,7 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
+ROOT = HERE.parent.parent   # repo root (this file lives in tools/<x>/)
 SCENES = ROOT / "scenes"
 SCENES_INSIDE = ROOT / "scenes_inside"
 CAMERA_MANIFEST = SCENES / "CAMERA_MANIFEST.tsv"

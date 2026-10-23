@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PREVIEW = ROOT / "run_baseline" / "preview_angles.py"
+PREVIEW = ROOT / "tools" / "run_baseline" / "preview_angles.py"
 
 
 def load_angles() -> dict:

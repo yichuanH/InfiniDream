@@ -7,7 +7,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
-    "baseline_picker", ROOT / "scene_picker" / "pick_baseline.py")
+    "baseline_picker", ROOT / "tools" / "scene_picker" / "pick_baseline.py")
 BASELINE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(BASELINE)

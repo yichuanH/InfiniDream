@@ -387,7 +387,7 @@ if [ "$FROM" -le 1 ]; then
     echo "  ★固定場景★ $SCENE_CHOICE${SCENE_DIR:+ @ $SCENE_DIR}"
     echo "     不呼叫 Scene Picker / seed 挑選"
   elif [ "$E2E_BASELINE_PICKER" = 1 ] && [ -z "${SCENE_CHOICE:-}" ] && [ -z "${SCENE_DIR:-}" ]; then
-    "$PY" scene_picker/pick_baseline.py "$PROMPT" --out-dir "$W/pick" \
+    "$PY" tools/scene_picker/pick_baseline.py "$PROMPT" --out-dir "$W/pick" \
       > "$L"_pick.log 2>&1 || { tail -30 "$L"_pick.log; die "pick_baseline rc=$?"; }
     if ! "$PY" - "$W/pick/baseline_pick.json" "$W/pick/pick.json" <<'PY'
 import json
@@ -433,7 +433,7 @@ print(f"  baseline picker: {groups}")
 print(f"  selected baseline: {p.get('candidate_id')} score={p.get('score')} dir={p.get('scene_dir')}")
 PY
   else
-    "$PY" scene_picker/pick_scene.py "$PROMPT" --out-dir "$W/pick" --dry-run > "$L"_pick.log 2>&1 \
+    "$PY" tools/scene_picker/pick_scene.py "$PROMPT" --out-dir "$W/pick" --dry-run > "$L"_pick.log 2>&1 \
       || die "pick_scene rc=$?"
   fi
 fi
@@ -558,7 +558,7 @@ if [ "$FROM" -le 3 ]; then
   if [ -n "$CHOICE" ]; then
     [ -s "$CHOICE" ] || die "指定的 CAMERA_CHOICE 不存在: $CHOICE"
     cp "$CHOICE" "$W/0_camera/camera_choice.json"
-    CUDA_VISIBLE_DEVICES=${GPUS%%,*} "$PY" photographer/bake_camera.py -- \
+    CUDA_VISIBLE_DEVICES=${GPUS%%,*} "$PY" tools/photographer/bake_camera.py -- \
         "$SB" "$BAKED" "$W/0_camera/camera_choice.json" > "$L"_bake.log 2>&1 \
       || { tail -20 "$L"_bake.log; die "bake_camera rc=$?"; }
     VISUAL_BLEND=$BAKED
@@ -566,7 +566,7 @@ if [ "$FROM" -le 3 ]; then
     # populated fine scene 不增加任何 placement 訊息，反而容易吃掉整張 GPU。
     if [ "$PLACEMENT_ONLY_E2E" != 1 ] && [ -s "$FB" ]; then
       VISUAL_BLEND=$W/0_camera/baked_visual.blend
-      CUDA_VISIBLE_DEVICES=${GPUS%%,*} "$PY" photographer/bake_camera.py -- \
+      CUDA_VISIBLE_DEVICES=${GPUS%%,*} "$PY" tools/photographer/bake_camera.py -- \
           "$FB" "$VISUAL_BLEND" "$W/0_camera/camera_choice.json" \
           > "$L"_bake_visual.log 2>&1 \
         || { tail -20 "$L"_bake_visual.log; die "visual camera bake rc=$?"; }

@@ -25,7 +25,7 @@ from pathlib import Path
 from dotenv import dotenv_values
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent                                   # BeyondInfinigen/
+ROOT = HERE.parent.parent                            # repo root (tools/scene_picker/)
 sys.path.insert(0, str(HERE))
 from catalog import INDOOR, OUTDOOR, as_prompt_block  # noqa: E402
 
@@ -202,7 +202,7 @@ def build_commands(pick: dict, out_dir: Path, seed: int, lightweight: bool) -> l
     # ---- indoor ----
     # ★ Room type cannot be specified natively ★: generate_indoors.py:167-176 hardcodes
     # np.random.choice over 5 room types. We pass the choice through a gin override that
-    # room_overlay.gin consumes; see scene_picker/README.md for the one-line patch it needs.
+    # room_overlay.gin consumes; see tools/scene_picker/ for the one-line patch it needs.
     sem = INDOOR[pick["scene"]]["semantics"]
     base = [INFINIGEN_PY, "-m", "infinigen_examples.generate_indoors",
             "--seed", str(seed)]
@@ -298,7 +298,7 @@ def main():
         return
     if result["location"] == "indoor":
         print("\n[picker] ⚠ indoor needs the one-line force_roomtype patch — see "
-              "scene_picker/README.md. Without it the room type will be RANDOM.")
+              "tools/scene_picker. Without it the room type will be RANDOM.")
     ok = run(cmds, out_dir, args.gpu)
     print(f"\n[picker] {'done' if ok else 'FAILED'} -> {out_dir}")
 
