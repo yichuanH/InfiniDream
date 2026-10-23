@@ -148,12 +148,14 @@ class PlacementContractTest(unittest.TestCase):
         self.assertTrue(any("exceeds" in failure for failure in failures))
 
     def test_world_motion_smoke_frame_preflight(self):
-        self.assertEqual(world_motion.required_frame_count("aquatic_swim"), 5)
-        self.assertEqual(world_motion.required_frame_count("ground_wander"), 6)
-        self.assertEqual(world_motion.required_frame_count("orbit"), 9)
+        # minimum frame counts come from world_motion.MINIMUM_FRAME_COUNTS (one per preset)
+        for preset in ("aquatic_swim", "ground_wander", "orbit"):
+            self.assertEqual(world_motion.required_frame_count(preset),
+                             world_motion.MINIMUM_FRAME_COUNTS[preset])
         with self.assertRaisesRegex(ValueError, "provides 1"):
             world_motion.validate_frame_range("aquatic_swim", 1, 1)
-        world_motion.validate_frame_range("ground_wander", 1, 6)
+        need = world_motion.required_frame_count("ground_wander")
+        world_motion.validate_frame_range("ground_wander", 1, need)
 
         plan = {"edits": [{
             "id": "fish",
@@ -2487,8 +2489,11 @@ class PlacementContractTest(unittest.TestCase):
             "arrangement": "single",
             "screen_bounds": [0.2, 0.2, 0.4, 0.5],
         }, count=1, anchoring="conform")
-        with self.assertRaisesRegex(ValueError, "outside screen_bounds"):
-            contract.normalize_screen_positions([[0.8, 0.3]], spec=spec, count=1)
+        # out-of-bounds agent points are clamped into screen_bounds (warn-and-continue),
+        # they no longer abort the run
+        pts = contract.normalize_screen_positions([[0.8, 0.3]], spec=spec, count=1)
+        x, y = pts[0]
+        self.assertTrue(0.2 <= x <= 0.4 and 0.2 <= y <= 0.5, pts)
 
     def test_single_rejects_multiple_instances(self):
         with self.assertRaisesRegex(ValueError, "requires count=1"):

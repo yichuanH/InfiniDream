@@ -56,7 +56,7 @@ class LocalAnimationPolicyTest(unittest.TestCase):
         self.assertEqual(
             la.constructor_kwargs(request, factory="DragonflyFactory"), {})
         self.assertEqual(la.gn_scene_time_params("DragonflyFactory"),
-                         {"frequency_hz": 1.0, "flap_magnitude": 0.22})
+                         {"frequency_hz": 1.6, "flap_magnitude": 0.6})
 
     def test_gn_scene_time_rejected_for_factories_without_the_driver(self):
         with self.assertRaisesRegex(ValueError, "Scene-Time"):

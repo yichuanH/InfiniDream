@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 
-CATALOG_PATH = Path(__file__).with_name("director") / "animation_catalog.json"
+CATALOG_PATH = Path(__file__).resolve().parent.parent / "director" / "animation_catalog.json"
 POLICIES = {"none", "inherit", "gn_scene_time"}
 
 

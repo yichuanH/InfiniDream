@@ -240,6 +240,7 @@ config.sh                 paths / switches (sourced by every script)
 scripts/build_scene.sh    make a baseline Infinigen scene
 scripts/run_case.sh       prompt → edited scene → video
 pipeline/run_e2e.sh       the 12-step pipeline itself (called by run_case.sh)
+core/                     shared modules: placement contracts, master pool, world motion, scatter catalog, paths
 director/                 Step 4: prompt + scene scan → edit plan (Claude, vision)
 asset_generator/          Step 5: reference image → coding agent rewrites an Infinigen factory → verifier
 planner/                  Step 7–8: Composer decides placement; critics review it

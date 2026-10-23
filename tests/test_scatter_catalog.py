@@ -6,6 +6,7 @@
   - 選不到 key 的 tag 要能事前判出來(否則是撒 0 個的靜默失敗)
   - director 不再把 ground_scatter 的三個動作一律判死
 """
+import os
 import argparse
 import ast
 import json

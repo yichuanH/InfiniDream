@@ -17,7 +17,7 @@ import random
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent   # repo root (this file lives in core/)
 CATALOG_PATH = ROOT / "director" / "animation_catalog.json"
 
 # Director only sees the compact public vocabulary.  The legacy names remain

@@ -25,7 +25,7 @@ OUT=${ASSET_OUT:-$ROOT/output/assets_standalone}/$NAME
 mkdir -p "$OUT"
 [ -s "$ROOT/.env" ] || [ "$LLM_BACKEND" != claude ] || { echo "⛔ .env missing (CLAUDE_API_KEY)"; exit 1; }
 export CUDA_VISIBLE_DEVICES="${GPUS%%,*}"
-export PYTHONPATH="$INFINIGEN_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$ROOT/core:$INFINIGEN_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 cd "$ROOT"
 ARGS=(--prompt "$PROMPT" --name "$NAME" --factory "$FACTORY" --rounds "$ROUNDS" --out-dir "$OUT" --no-turntable --no-seed-check)
 [ -n "$TARGET" ] && ARGS+=(--target "$(readlink -f "$TARGET")")

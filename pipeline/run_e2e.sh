@@ -36,6 +36,8 @@
 set -u
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
+# shared modules (core/) must be importable by every python we launch, including ones that set their own PYTHONPATH below
+export PYTHONPATH="$ROOT/core${PYTHONPATH:+:$PYTHONPATH}"
 CASE=${1:?用法: run_e2e.sh <case名> [起始步驟]}
 FROM=${2:-1}
 # ★Release★: interpreter / Infinigen checkout / tool paths come from config.sh or the
@@ -570,7 +572,7 @@ if [ "$FROM" -le 3 ]; then
         || { tail -20 "$L"_bake_visual.log; die "visual camera bake rc=$?"; }
     fi
     CAMERA_VIEW=$W/0_camera/selected.png
-    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" "$PY" stage_exec/render_view.py -- \
+    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" "$PY" stage_exec/render_view.py -- \
         "$VISUAL_BLEND" "$CAMERA_VIEW" --as-is --frame 1 --res 960 540 --samples 32 \
         > "$L"_selected_camera.log 2>&1 \
       || { tail -20 "$L"_selected_camera.log; die "指定 camera preview 失敗"; }
@@ -589,7 +591,7 @@ Path('$W/0_camera/camera_choice.json').write_text(json.dumps({
       CAMERA_VIEW=$W/0_camera/official.png
       VISUAL_BLEND=$FB
       [ -s "$VISUAL_BLEND" ] || VISUAL_BLEND=$SB
-      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" "$PY" stage_exec/render_view.py -- \
+      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" "$PY" stage_exec/render_view.py -- \
           "$VISUAL_BLEND" "$CAMERA_VIEW" --as-is --frame 1 --res 960 540 --samples 32 \
           > "$L"_official_camera.log 2>&1 \
         || { tail -20 "$L"_official_camera.log; die "官方 camera preview 失敗"; }
@@ -600,7 +602,7 @@ Path('$W/0_camera/camera_choice.json').write_text(json.dumps({
   cp "$CAMERA_VIEW" "$INPUT_DIR/render.png"
   echo "  director 將看 $CAMERA_VIEW"
 
-  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" "$PY" director/scan_scene.py -- \
+  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" "$PY" director/scan_scene.py -- \
       "$BAKED" "$W/scene_manifest.json" --scene "$SCENE" > "$L"_scan.log 2>&1 \
     || die "scan_scene rc=$?"
   "$PY" -c "
@@ -635,7 +637,7 @@ fi
 # contract。Placement-only Step 8 不 author motion，故不受此 gate 影響。
 if [ "$PLACEMENT_ONLY_E2E" != 1 ] && [ "$STOP_AFTER_PLACEMENT_REVIEW" != 1 ]; then
   MOTION_CONTRACT_RC=0
-  PYTHONPATH="$ROOT" "$PY" stage_exec/check_world_motion_frames.py \
+  PYTHONPATH="$ROOT/core:$ROOT" "$PY" stage_exec/check_world_motion_frames.py \
     --plan "$W/1_director/edit_plan.json" \
     --frame-start "$FRAME_START" --frame-end "$FRAME_END" \
     || MOTION_CONTRACT_RC=$?
@@ -802,7 +804,7 @@ if [ "$FROM" -le 8 ]; then
     cp "$W/3_composer/edit_plan.json" "$SIMPLE_DIR/edit_plan_before.json"
     echo "  BI_HERO_SIMPLE=1: surface AND volume heroes use the three-rule depth ladder (no region map)"
     CUDA_VISIBLE_DEVICES=${GPUS%%,*} \
-      PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" \
+      PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" \
       "$PY" stage_exec/simple_volume_placement.py -- \
         "$BAKED" "$W/3_composer/edit_plan.json" "$SIMPLE_DIR" "$FRAME_START" \
         --scene "$SCENE" \
@@ -815,7 +817,7 @@ if [ "$FROM" -le 8 ]; then
   if [ "$COMPOSER_IMAGE_PLACEMENT" = 1 ]; then
     mkdir -p "$IMAGE_PLACEMENT_DIR"
     IMAGE_PROBE_LOG="$IMAGE_PLACEMENT_DIR/image_placement_probe.log"
-    PYTHONPATH="$ROOT:$INF" "$PY" - "$W/3_composer/edit_plan.json" \
+    PYTHONPATH="$ROOT/core:$ROOT:$INF" "$PY" - "$W/3_composer/edit_plan.json" \
       > "$IMAGE_PROBE_LOG" 2>&1 <<'PY'
 import json
 import sys
@@ -853,7 +855,7 @@ PY
         MAP_BUILD_EXTRA_ARGS+=("--no-indoor-surface-fallback")
       fi
       CUDA_VISIBLE_DEVICES=${GPUS%%,*} \
-        PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" \
+        PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" \
         "$PY" stage_exec/build_placement_region_map.py -- \
           "$BAKED" "$W/3_composer/edit_plan.json" - \
           "$IMAGE_PLACEMENT_DIR" "$PLACEMENT_REGION_MAP_COLUMNS" \
@@ -867,7 +869,7 @@ PY
         die "composer-image feasibility map infeasible (rc=$image_map_rc)"
       fi
       IMAGE_REGION_MAP_INDEX="$IMAGE_PLACEMENT_DIR/region_map_index.json"
-      PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" "$PY" \
+      PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" "$PY" \
         planner/composer_image_placement_selector.py \
         --plan "$W/3_composer/edit_plan.json" \
         --scene-render "$INPUT_DIR/render.png" \
@@ -881,7 +883,7 @@ PY
         || { tail -30 "$IMAGE_PLACEMENT_DIR/composer_image_selection.log"; \
              die "Composer image placement selection failed"; }
       mkdir -p "$IMAGE_PLACEMENT_DIR/selected_maps"
-      PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" "$PY" \
+      PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" "$PY" \
         stage_exec/annotate_placement_region_map.py \
         --map-index "$IMAGE_REGION_MAP_INDEX" \
         --application "$IMAGE_PLACEMENT_DIR/composer_image_application.json" \
@@ -898,7 +900,7 @@ PY
   elif [ "$MACHINE_COMPOSER_REGION_MAP" = 1 ]; then
     mkdir -p "$INITIAL_MAP_DIR"
     MAP_FIRST_PROBE_LOG="$INITIAL_MAP_DIR/map_first_probe.log"
-    PYTHONPATH="$ROOT:$INF" "$PY" - "$W/3_composer/edit_plan.json" \
+    PYTHONPATH="$ROOT/core:$ROOT:$INF" "$PY" - "$W/3_composer/edit_plan.json" \
       > "$MAP_FIRST_PROBE_LOG" 2>&1 <<'PY'
 import json
 import sys
@@ -928,7 +930,7 @@ PY
       MAP_BUILD_EXTRA_ARGS+=("--no-indoor-surface-fallback")
     fi
     CUDA_VISIBLE_DEVICES=${GPUS%%,*} \
-      PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" \
+      PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" \
       "$PY" stage_exec/build_placement_region_map.py -- \
         "$BAKED" "$W/3_composer/edit_plan.json" - \
         "$INITIAL_MAP_DIR" "$PLACEMENT_REGION_MAP_COLUMNS" \
@@ -954,7 +956,7 @@ PY
       fi
     fi
     if [ "$MAP_FIRST_ACTIVE" = 1 ]; then
-      PYTHONPATH="$ROOT:$INF" "$PY" \
+      PYTHONPATH="$ROOT/core:$ROOT:$INF" "$PY" \
         stage_exec/apply_placement_region_selection.py \
         --plan "$W/3_composer/edit_plan.json" \
         --map-index "$INITIAL_MAP_DIR/region_map_index.json" \
@@ -966,7 +968,7 @@ PY
         > "$INITIAL_MAP_DIR/region_application.log" 2>&1 \
         || { tail -30 "$INITIAL_MAP_DIR/region_application.log"; \
              die "initial deterministic region selection infeasible"; }
-      PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" "$PY" \
+      PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" "$PY" \
         stage_exec/annotate_placement_region_map.py \
         --map-index "$INITIAL_MAP_DIR/region_map_index.json" \
         --application "$INITIAL_MAP_DIR/region_application.json" \
@@ -1015,7 +1017,7 @@ PY
     INITIAL_PREVIEW_OUT="$INITIAL_MAP_DIR/selected_placement_preview.png"
     INITIAL_TOP_OUT="$INITIAL_MAP_DIR/selected_placement_preview_top.png"
   fi
-  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" \
+  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" \
     BI_FRAME_START="$FRAME_START" BI_FRAME_END="$FRAME_END" \
     "$PY" stage_exec/run_initial_placement_batch.py -- \
       "$BAKED" "$W/work/scene.blend" \
@@ -1029,7 +1031,7 @@ PY
     "$PY" stage_exec/prepare_nonconverged_preview.py \
       "$W/3_composer/edit_plan.json" "$INITIAL_MAP_DIR/diagnostic_edit_plan.json" \
       || die "prepare initial map diagnostic plan failed"
-    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" \
+    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" \
       BI_FRAME_START="$FRAME_START" BI_FRAME_END="$FRAME_END" \
       "$PY" stage_exec/run_initial_placement_batch.py -- \
         "$BAKED" "$INITIAL_MAP_DIR/diagnostic_scene.blend" \
@@ -1084,7 +1086,7 @@ PY
       "$PY" stage_exec/prepare_nonconverged_preview.py \
         "$W/3_composer/edit_plan.json" "$DIAGNOSTIC_PLAN" \
         || die "prepare nonconverged diagnostic plan failed"
-      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" \
+      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" \
         BI_FRAME_START="$FRAME_START" BI_FRAME_END="$FRAME_END" \
         "$PY" stage_exec/run_initial_placement_batch.py -- \
           "$BAKED" "$W/placement_review/nonconverged_scene.blend" \
@@ -1145,7 +1147,7 @@ PY
       "$PY" stage_exec/prepare_nonconverged_preview.py \
         "$W/3_composer/edit_plan.json" "$revision_dir/diagnostic_edit_plan.json" \
         || die "prepare round $machine_round projection diagnostic plan failed"
-      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" \
+      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" \
         BI_FRAME_START="$FRAME_START" BI_FRAME_END="$FRAME_END" \
         "$PY" stage_exec/run_initial_placement_batch.py -- \
           "$BAKED" "$revision_dir/diagnostic_scene.blend" \
@@ -1181,7 +1183,7 @@ PY
     REGION_MAP_ELIGIBLE=0
     if [ "$MACHINE_COMPOSER_REGION_MAP" = 1 ] && \
        [ "$MAP_FIRST_ACTIVE" = 1 ]; then
-      if PYTHONPATH="$ROOT:$INF" "$PY" -c \
+      if PYTHONPATH="$ROOT/core:$ROOT:$INF" "$PY" -c \
         'import json,sys; from placement_region_contract import map_managed_failed_instances; result=map_managed_failed_instances(json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))); raise SystemExit(0 if result else 1)' \
         "$W/3_composer/edit_plan.json" \
         "$W/placement_review/placement_review.json" \
@@ -1198,7 +1200,7 @@ PY
       echo "  REUSE_INITIAL_REGION_MAP: only the tried-cell mask changes"
       REGION_MAP_INDEX="$INITIAL_MAP_DIR/region_map_index.json"
       mkdir -p "$revision_dir/selected_maps"
-      PYTHONPATH="$ROOT:$INF" "$PY" \
+      PYTHONPATH="$ROOT/core:$ROOT:$INF" "$PY" \
         stage_exec/apply_placement_region_selection.py \
         --plan "$W/3_composer/edit_plan.json" \
         --review "$W/placement_review/placement_review.json" \
@@ -1212,7 +1214,7 @@ PY
         > "$revision_dir/region_application.log" 2>&1 \
         || { tail -30 "$revision_dir/region_application.log"; \
              die "no fresh machine-feasible region cell remains"; }
-      PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" "$PY" \
+      PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" "$PY" \
         stage_exec/annotate_placement_region_map.py \
         --map-index "$REGION_MAP_INDEX" \
         --application "$revision_dir/region_application.json" \
@@ -1232,7 +1234,7 @@ PY
       else
         echo "  PLACEMENT_AGENT_CALL: structured retry is limited to unsupported non-conform failures"
       fi
-      PYTHONPATH="$ROOT:$INF" "$PY" planner/composer_machine_reviser.py \
+      PYTHONPATH="$ROOT/core:$ROOT:$INF" "$PY" planner/composer_machine_reviser.py \
         --plan "$W/3_composer/edit_plan.json" \
         --review "$W/placement_review/placement_review.json" \
         "${REVISION_CONTEXT_ARGS[@]}" \
@@ -1240,7 +1242,7 @@ PY
         > "$revision_dir/composer_revision.log" 2>&1 \
         || { tail -30 "$revision_dir/composer_revision.log"; die "Composer machine revision failed"; }
       if [ "$COMPOSER_IMAGE_PLACEMENT" = 1 ] && [ -n "$IMAGE_REGION_MAP_INDEX" ]; then
-        PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" "$PY" \
+        PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" "$PY" \
           planner/composer_image_placement_selector.py \
           --plan "$W/3_composer/edit_plan.json" \
           --scene-render "$INPUT_DIR/render.png" \
@@ -1266,7 +1268,7 @@ PY
       REBUILD_PREVIEW_OUT="$revision_dir/selected_placement_preview.png"
       REBUILD_TOP_OUT="$revision_dir/selected_placement_preview_top.png"
     fi
-    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" \
+    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" \
       BI_FRAME_START="$FRAME_START" BI_FRAME_END="$FRAME_END" \
       "$PY" stage_exec/run_initial_placement_batch.py -- \
         "$BAKED" "$W/work/scene.blend" \
@@ -1281,7 +1283,7 @@ PY
         "$W/3_composer/edit_plan.json" \
         "$revision_dir/selected_diagnostic_edit_plan.json" \
         || die "prepare round $machine_round selected diagnostic plan failed"
-      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$INF" \
+      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$ROOT/core:$INF" \
         BI_FRAME_START="$FRAME_START" BI_FRAME_END="$FRAME_END" \
         "$PY" stage_exec/run_initial_placement_batch.py -- \
           "$BAKED" "$revision_dir/selected_diagnostic_scene.blend" \
@@ -1321,7 +1323,7 @@ PY
   if [ "$MAP_FIRST_ACTIVE" = 1 ]; then
     FINAL_PLACEMENT_DIR="$W/placement_review/final"
     mkdir -p "$FINAL_PLACEMENT_DIR/selected_maps"
-    PYTHONPATH="$ROOT:$ROOT/stage_exec:$INF" "$PY" \
+    PYTHONPATH="$ROOT/core:$ROOT:$ROOT/stage_exec:$INF" "$PY" \
       stage_exec/annotate_placement_region_map.py \
       --map-index "$INITIAL_MAP_DIR/region_map_index.json" \
       --application "$LAST_APPLICATION" \
@@ -1391,7 +1393,7 @@ if [ "$FROM" -le 9 ]; then
   mkdir -p "$W/populated"
   T0=$(date +%s)
   # 一次 populate：replacement 是整個 factory 類別，無須隔離兩種 TreeFactory。
-  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$INF" \
+  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$ROOT/core:$INF" \
     BI_FRAME_START="$FRAME_START" BI_FRAME_END="$FRAME_END" \
     BI_ALLOW_UNQUALIFIED_OUTPUT="$CONNECTIVITY_SMOKE" \
     "$PY" stage_exec/placer.py -- \
@@ -1458,7 +1460,7 @@ if [ "$FROM" -le 10 ]; then
   mkdir -p "$W/contracts" "$W/fine"
 
   # fine 前先把不變量存證；它也提供實際 camera FOV 給 auto mesher routing。
-  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$INF" "$PY" \
+  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$ROOT/core:$INF" "$PY" \
       stage_exec/snapshot_scene.py -- "$W/populated/scene.blend" \
       "$W/contracts/populated.json" --frames "$CONTRACT_FRAMES" \
       > "$L"_snapshot_populated.log 2>&1 \
@@ -1481,7 +1483,7 @@ if [ "$FROM" -le 10 ]; then
 
   T0=$(date +%s)
   ( cd "$INF" && \
-    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$INF" "$PY" \
+    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$ROOT/core:$INF" "$PY" \
       -m infinigen_examples.generate_nature --seed "$SEED" --task fine_terrain \
       --input_folder "$W/populated" --output_folder "$W/fine" -g "$SCENE" \
       -p execute_tasks.frame_range=[$FRAME_START,$FRAME_END] \
@@ -1504,12 +1506,12 @@ if [ "$FROM" -le 11 ]; then
   [ -f "$W/fine/MaskTag.json" ] || die "fine stage 缺 MaskTag.json"
   [ -f "$W/fine/assets/info.pickle" ] || die "fine stage 缺 assets/info.pickle"
   mkdir -p "$W/contracts"
-  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$INF" "$PY" \
+  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$ROOT/core:$INF" "$PY" \
       stage_exec/snapshot_scene.py -- "$W/populated/scene.blend" \
       "$W/contracts/populated.json" --frames "$CONTRACT_FRAMES" \
       > "$L"_snapshot_populated.log 2>&1 \
     || { tail -25 "$L"_snapshot_populated.log; die "populated snapshot 失敗"; }
-  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$INF" "$PY" \
+  CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$ROOT/core:$INF" "$PY" \
       stage_exec/snapshot_scene.py -- "$W/fine/scene.blend" \
       "$W/contracts/fine.json" --frames "$CONTRACT_FRAMES" \
       > "$L"_snapshot_fine.log 2>&1 \
@@ -1565,7 +1567,7 @@ if [ "$FROM" -le 12 ]; then
   # ★共用卡 OOM 就等再試★(2026-10-20)：1019 重跑 12/15 都死於 "System is out of GPU memory"
   RENDER_OOM_RETRIES=${RENDER_OOM_RETRIES:-3}; RENDER_OOM_WAIT=${RENDER_OOM_WAIT:-600}
   for _try in $(seq 0 "$RENDER_OOM_RETRIES"); do
-    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$INF" "$PY" stage_exec/render_view.py -- \
+    CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$ROOT/core:$INF" "$PY" stage_exec/render_view.py -- \
         "$W/fine/scene.blend" "$RENDER_OUTPUT" --as-is \
         --frame "$FRAME_START" --res "$STILL_RENDER_WIDTH" "$STILL_RENDER_HEIGHT" \
         --samples "$STILL_RENDER_SAMPLES" --view AgX \
@@ -1585,7 +1587,7 @@ if [ "$FROM" -le 12 ]; then
 
   if [ "$RENDER_VIDEO" = 1 ]; then
     for _try in $(seq 0 "${RENDER_OOM_RETRIES:-3}"); do
-      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$INF" "$PY" \
+      CUDA_VISIBLE_DEVICES=${GPUS%%,*} PYTHONPATH="$OV:$ROOT/core:$INF" "$PY" \
           stage_exec/render_animation.py -- "$W/fine/scene.blend" "$W/render/frames" \
           --frame-start "$FRAME_START" --frame-end "$FRAME_END" \
           --fps "$VIDEO_FPS" --samples "$VIDEO_SAMPLES" --res "$VIDEO_RES" --view AgX \

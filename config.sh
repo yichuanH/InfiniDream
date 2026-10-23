@@ -67,3 +67,7 @@ export BI_PYTHON INFINIGEN_ROOT INFINIGEN_TEMPLATES CLAUDE_BIN GPUS BI_HERO_SIMP
        BI_LIBRARY BI_LIBRARY_AUTOADD REF_IMAGE_PROVIDERS REF_LOCAL_IMAGE_MODEL \
        CLAUDE_MODEL VIDEO_CAMERA_MOVE_M
 export BLENDER_PYTHON="${BLENDER_PYTHON:-$BI_PYTHON}"
+
+# Shared Python modules live in core/; make them importable for anything launched from here.
+_BI_CORE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/core"
+case ":${PYTHONPATH:-}:" in *":$_BI_CORE:"*) ;; *) export PYTHONPATH="$_BI_CORE${PYTHONPATH:+:$PYTHONPATH}";; esac

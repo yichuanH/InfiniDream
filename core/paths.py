@@ -33,7 +33,7 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent   # repo root (this file lives in core/)
 OUTPUT_ROOT = ROOT / "output"
 TEST_ROOT = OUTPUT_ROOT / "_test"
 ASSET_ROOT = OUTPUT_ROOT / "asset"

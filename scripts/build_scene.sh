@@ -30,7 +30,7 @@ PY=$BI_PYTHON; INF=$INFINIGEN_ROOT
 D="$ROOT/scenes/$BIOME/seed$SEED"
 mkdir -p "$D"
 export CUDA_VISIBLE_DEVICES="${GPUS%%,*}"
-export PYTHONPATH="$INF:${PYTHONPATH:-}"
+export PYTHONPATH="$ROOT/core:$INF:${PYTHONPATH:-}"
 
 # Same gin parameters the reference scene bank was built with (terrain variety pool
 # capped at 1 instance for speed; 40 m populate radius). Changing them changes the scene.
